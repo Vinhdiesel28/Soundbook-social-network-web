@@ -1,0 +1,48 @@
+﻿
+> soundbook-social-network@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 5 modules transformed.
+node.exe : [31m✗[39m Build 
+failed in 77ms
+At C:\Program 
+Files\nodejs\npm.ps1:29 char:3
++   & $NODE_EXE $NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : Not 
+   Specified: ([31m✗[39m Build  
+   failed in 77ms:String) [], R   
+ emoteException
+    + FullyQualifiedErrorId : Nat 
+   iveCommandError
+ 
+[31merror during build:
+[31m[@tailwindcss/vite:generate:b
+uild] Cannot convert undefined or 
+null to object[31m
+file: [36mC:/Users/Dat/Documents/
+Study/JavaScript/soundbook-social-
+network/src/index.css[31m
+    at B.generate (file:///C:/User
+s/Dat/Documents/Study/JavaScript/s
+oundbook-social-network/node_modul
+es/@tailwindcss/vite/dist/index.mj
+s:1:5598)
+    at async Object.transform (fil
+e:///C:/Users/Dat/Documents/Study/
+JavaScript/soundbook-social-networ
+k/node_modules/@tailwindcss/vite/d
+ist/index.mjs:1:3630)
+    at async transform (file:///C:
+/Users/Dat/Documents/Study/JavaScr
+ipt/soundbook-social-network/node_
+modules/rollup/dist/es/shared/node
+-entry.js:21269:16)
+    at async 
+ModuleLoader.addModuleSource (file
+:///C:/Users/Dat/Documents/Study/J
+avaScript/soundbook-social-network
+/node_modules/rollup/dist/es/share
+d/node-entry.js:21497:36)[39m
