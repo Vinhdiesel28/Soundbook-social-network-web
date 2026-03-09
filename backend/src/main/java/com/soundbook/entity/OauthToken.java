@@ -1,6 +1,5 @@
 package com.soundbook.entity;
 
-import com.soundbook.entity.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,34 +8,33 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "oauth_tokens")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class OauthToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
-    private String email;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "oauth_account_id", nullable = false)
+    private OauthAccount oauthAccount;
 
-    @Column(name = "password_hash")
-    private String passwordHash;
+    @Column(name = "access_token", nullable = false, columnDefinition = "TEXT")
+    private String accessToken;
 
-    @Column(name = "google_sub", unique = true)
-    private String googleSub;
+    @Column(name = "refresh_token", columnDefinition = "TEXT")
+    private String refreshToken;
 
-    @Column(name = "display_name", nullable = false, length = 100)
-    private String displayName;
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiresAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private UserStatus status = UserStatus.ACTIVE;
+    @Column(name = "token_type", length = 20)
+    private String tokenType;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -45,5 +43,4 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
 }

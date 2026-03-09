@@ -1,9 +1,9 @@
 package com.soundbook.repository;
 
-import com.soundbook.entity.User;
+import com.soundbook.entity.PostMedia;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface PostMediaRepository extends JpaRepository<PostMedia, Long> {
 }
