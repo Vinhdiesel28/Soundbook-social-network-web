@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Music, Book, Check, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 
 const musicGenres = ['Pop', 'Rock', 'Hip Hop', 'R&B', 'Jazz', 'Classical', 'Electronic', 'Indie', 'Lo-Fi', 'Metal', 'K-Pop', 'Country'];
 const bookGenres = ['Fiction', 'Non-fiction', 'Sci-Fi', 'Fantasy', 'Romance', 'Mystery', 'Thriller', 'Biography', 'History', 'Self-help', 'Poetry', 'Business'];
@@ -11,6 +12,7 @@ const Onboarding = () => {
   const [selectedMusic, setSelectedMusic] = useState([]);
   const [selectedBooks, setSelectedBooks] = useState([]);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const toggleSelection = (item, type) => {
     if (type === 'music') {
@@ -51,8 +53,8 @@ const Onboarding = () => {
                   <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Music size={32} />
                   </div>
-                  <h2 className="text-2xl font-bold">What's your Music DNA?</h2>
-                  <p className="text-text-muted mt-2">Pick at least 3 genres to customize your feed.</p>
+                  <h2 className="text-2xl font-bold">{t('onboarding.step1_title')}</h2>
+                  <p className="text-text-muted mt-2">{t('onboarding.step1_desc')}</p>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto min-h-[250px] custom-scrollbar">
@@ -83,7 +85,7 @@ const Onboarding = () => {
                     disabled={selectedMusic.length < 3}
                     className="flex items-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-600 transition-colors"
                   >
-                    Next Step <ArrowRight size={18} />
+                    {t('onboarding.next_step')} <ArrowRight size={18} />
                   </button>
                 </div>
               </motion.div>
@@ -95,8 +97,8 @@ const Onboarding = () => {
                   <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Book size={32} />
                   </div>
-                  <h2 className="text-2xl font-bold">What books do you consume?</h2>
-                  <p className="text-text-muted mt-2">Pick at least 3 genres to find your reading buddies.</p>
+                  <h2 className="text-2xl font-bold">{t('onboarding.step2_title')}</h2>
+                  <p className="text-text-muted mt-2">{t('onboarding.step2_desc')}</p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto min-h-[250px] custom-scrollbar">
@@ -123,14 +125,14 @@ const Onboarding = () => {
 
                 <div className="mt-8 flex justify-between">
                   <button onClick={prevStep} className="flex items-center gap-2 px-6 py-3 text-text-muted hover:text-text-color transition-colors">
-                    <ArrowLeft size={18} /> Back
+                    <ArrowLeft size={18} /> {t('onboarding.back')}
                   </button>
                   <button 
                     onClick={nextStep}
                     disabled={selectedBooks.length < 3}
                     className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-600 transition-colors"
                   >
-                    Next Step <ArrowRight size={18} />
+                    {t('onboarding.next_step')} <ArrowRight size={18} />
                   </button>
                 </div>
               </motion.div>
@@ -142,23 +144,23 @@ const Onboarding = () => {
                   <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Music size={32} />
                   </div>
-                  <h2 className="text-2xl font-bold">Sync your Spotify</h2>
-                  <p className="text-text-muted mt-2">Connect your account to auto-generate your Music DNA and share currently playing tracks to your Live Radar.</p>
+                  <h2 className="text-2xl font-bold">{t('onboarding.step3_title')}</h2>
+                  <p className="text-text-muted mt-2">{t('onboarding.step3_desc')}</p>
                 </div>
 
                 <div className="flex-1 flex flex-col items-center justify-center min-h-[250px] space-y-4">
                   <button className="w-full max-w-sm flex items-center justify-center gap-3 px-6 py-4 bg-[#1DB954] text-white rounded-xl font-bold hover:bg-[#1ed760] transition-colors shadow-lg shadow-green-500/30">
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15.001 10.62 18.66 12.84c.361.181.54.78.301 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
-                    Connect Spotify
+                    {t('onboarding.connect_spotify')}
                   </button>
                   <button onClick={() => navigate('/feed')} className="w-full max-w-sm px-6 py-4 text-text-muted hover:text-text-color hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors font-medium">
-                    Skip for now
+                    {t('onboarding.skip')}
                   </button>
                 </div>
 
                 <div className="mt-8 flex justify-start">
                   <button onClick={prevStep} className="flex items-center gap-2 px-6 py-2 text-text-muted hover:text-text-color transition-colors">
-                    <ArrowLeft size={18} /> Back
+                    <ArrowLeft size={18} /> {t('onboarding.back')}
                   </button>
                 </div>
               </motion.div>

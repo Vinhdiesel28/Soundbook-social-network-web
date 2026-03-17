@@ -393,6 +393,49 @@ CREATE TABLE IF NOT EXISTS notifications (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ===================== REPORTS =====================
+CREATE TABLE IF NOT EXISTS reports (
+  id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+  reporter_id   BIGINT NOT NULL, -- người báo cáo
+  target_type   ENUM('POST','COMMENT','USER','DM_MESSAGE') NOT NULL,
+  target_id     BIGINT NOT NULL,
+
+  reason        ENUM(
+    'SPAM',
+    'HARASSMENT',
+    'HATE_SPEECH',
+    'NUDITY',
+    'VIOLENCE',
+    'MISINFORMATION',
+    'OTHER'
+  ) NOT NULL,
+
+  description   VARCHAR(500) NULL, -- user ghi thêm
+
+  status        ENUM('PENDING','REVIEWED','RESOLVED','REJECTED') 
+                NOT NULL DEFAULT 'PENDING',
+
+  reviewed_by   BIGINT NULL, -- admin/mod
+  reviewed_at   DATETIME NULL,
+
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  -- tránh spam report cùng 1 target
+  CONSTRAINT uq_report_once 
+    UNIQUE (reporter_id, target_type, target_id),
+
+  INDEX idx_reports_target (target_type, target_id),
+  INDEX idx_reports_status (status),
+
+  CONSTRAINT fk_reports_reporter
+    FOREIGN KEY (reporter_id) REFERENCES users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+  CONSTRAINT fk_reports_reviewer
+    FOREIGN KEY (reviewed_by) REFERENCES users(id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ===================== SEED =====================
 INSERT INTO bookshelves (id, code, name) VALUES
   (1, 'WILL_READ', 'Will Read'),

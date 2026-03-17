@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Disc3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', username: '', password: '' });
   const navigate = useNavigate();
+  const { t, language, setLanguage } = useLanguage();
 
   const handleToggle = () => setIsLogin(!isLogin);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Setup logic here (JWT auth simulation)
-    // Default flow: redirect to onboarding for new users or feed for returning
     navigate('/onboarding');
   };
 
@@ -36,10 +36,10 @@ const Login = () => {
             <h1 className="text-4xl font-black tracking-tight">Soundbook</h1>
           </div>
           <h2 className="text-5xl font-bold leading-tight mb-6">
-            Where Music & Books Connect Souls
+            {t('login.branding_tagline')}
           </h2>
           <p className="text-xl text-white/80 font-medium">
-            Discover a new kind of social network. Find friends with the same Music DNA, share what you're reading, and sync up your listening experience.
+            {t('login.branding_desc')}
           </p>
         </div>
       </div>
@@ -54,10 +54,10 @@ const Login = () => {
                <span className="text-2xl font-black">Soundbook</span>
             </div>
             <h2 className="text-3xl font-bold tracking-tight mb-2">
-              {isLogin ? 'Welcome back' : 'Create an account'}
+              {isLogin ? t('login.welcome_back') : t('login.create_account')}
             </h2>
             <p className="text-text-muted">
-              {isLogin ? 'Enter your details to access your account.' : 'Join to explore the best personalized feed.'}
+              {isLogin ? t('login.signin_desc') : t('login.register_desc')}
             </p>
           </div>
 
@@ -65,7 +65,7 @@ const Login = () => {
             
             {!isLogin && (
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">Username</label>
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_username')}</label>
                 <div className="relative">
                   <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
@@ -81,7 +81,7 @@ const Login = () => {
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">Email</label>
+              <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_email')}</label>
               <div className="relative">
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -96,7 +96,7 @@ const Login = () => {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">Password</label>
+              <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_password')}</label>
               <div className="relative">
                 <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -110,19 +110,19 @@ const Login = () => {
               </div>
               {isLogin && (
                 <div className="flex justify-end">
-                  <a href="#" className="text-xs font-medium text-primary-500 hover:underline">Forgot password?</a>
+                  <a href="#" className="text-xs font-medium text-primary-500 hover:underline">{t('login.forgot_password')}</a>
                 </div>
               )}
             </div>
 
             <button type="submit" className="w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4">
-              {isLogin ? 'Sign In' : 'Create Account'} <ArrowRight size={18} />
+              {isLogin ? t('login.signin_btn') : t('login.register_btn')} <ArrowRight size={18} />
             </button>
           </form>
 
           <div className="my-6 flex items-center gap-4">
             <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-            <span className="text-xs text-text-muted uppercase font-semibold">Or continue with</span>
+            <span className="text-xs text-text-muted uppercase font-semibold">{t('login.or_continue')}</span>
             <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
           </div>
 
@@ -132,12 +132,37 @@ const Login = () => {
           </button>
 
           <p className="mt-8 text-center text-sm text-text-muted">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
+            {isLogin ? t('login.no_account') + ' ' : t('login.have_account') + ' '}
             <button onClick={handleToggle} className="text-primary-500 font-semibold hover:underline">
-              {isLogin ? 'Sign up' : 'Log in'}
+              {isLogin ? t('login.signup_link') : t('login.login_link')}
             </button>
           </p>
 
+        </div>
+
+        {/* Language Switcher */}
+        <div className="absolute bottom-6 left-0 w-full flex items-center justify-center gap-1 text-sm">
+          <button
+            onClick={() => setLanguage('vi')}
+            className={`px-2 py-1 rounded-lg transition-colors font-medium ${
+              language === 'vi'
+                ? 'text-primary-500 font-semibold'
+                : 'text-text-muted hover:text-text-color'
+            }`}
+          >
+            Tiếng Việt
+          </button>
+          <span className="text-text-muted">|</span>
+          <button
+            onClick={() => setLanguage('en')}
+            className={`px-2 py-1 rounded-lg transition-colors font-medium ${
+              language === 'en'
+                ? 'text-primary-500 font-semibold'
+                : 'text-text-muted hover:text-text-color'
+            }`}
+          >
+            English (UK)
+          </button>
         </div>
       </div>
     </div>
