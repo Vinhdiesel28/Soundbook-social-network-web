@@ -2,7 +2,7 @@
 
 Dự án Mạng xã hội Âm nhạc & Sách.
 
-## 📂 Cấu trúc project
+## Cấu trúc project
 
 ```
 Soundbook-social-network-web/
