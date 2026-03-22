@@ -19,7 +19,7 @@ export const LanguageProvider = ({ children }) => {
     if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'vi')) {
       return savedLanguage;
     }
-    return 'vi'; // Default
+    return 'vi';
   });
 
   useEffect(() => {

@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 import { Play, Pause, SkipForward, SkipBack, Volume2, Maximize2, Users, MessageSquare, Heart, Settings, Plus, List, MoreHorizontal } from 'lucide-react';
+import RoomHeader from '../components/livesync/RoomHeader';
+import VisualizerCover from '../components/livesync/VisualizerCover';
+import TransportControls from '../components/livesync/TransportControls';
+import RoomChat from '../components/livesync/RoomChat';
+import RoomQueue from '../components/livesync/RoomQueue';
+import RoomMembers from '../components/livesync/RoomMembers';
 
 const QUEUE = [
   { id: 1, title: 'Starboy', artist: 'The Weeknd', cover: 'bg-gradient-to-br from-red-500 to-black', duration: '3:50', votes: 12 },
@@ -15,46 +21,36 @@ const MEMBERS = [
 ];
 
 const CHAT = [
-  { id: 1, user: 'Sarah', text: 'This intro is so good 🔥' },
+  { id: 1, user: 'Sarah', text: 'This intro is so good !' },
   { id: 2, user: 'Mike', text: 'Turn it up!!' },
   { id: 3, user: 'Dat Nguyen', text: 'Next song is a banger, trust me.' },
 ];
 
-import RoomHeader from '../components/livesync/RoomHeader';
-import VisualizerCover from '../components/livesync/VisualizerCover';
-import TransportControls from '../components/livesync/TransportControls';
-import RoomChat from '../components/livesync/RoomChat';
-import RoomQueue from '../components/livesync/RoomQueue';
-import RoomMembers from '../components/livesync/RoomMembers';
-
 const LiveSyncRoom = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [chatInput, setChatInput] = useState('');
-  const [activeRightPanel, setActiveRightPanel] = useState('chat'); // 'chat' | 'queue' | 'members'
+  const [activeRightPanel, setActiveRightPanel] = useState('chat');
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)]">
-      
-      {/* LEFT PANEL: Media Player (65%) */}
+
+      {/* Media Player */}
       <div className="flex-1 lg:w-[65%] flex flex-col gap-6 h-full">
-        
-        {/* Main Player Area */}
+
+        {/* Main */}
         <div className="flex-1 bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col relative">
-          
-          {/* Room Header Overlay */}
+
           <RoomHeader membersCount={MEMBERS.length} />
 
-          {/* Album Cover & Visualizer */}
           <VisualizerCover isPlaying={isPlaying} />
 
-          {/* Transport Controls */}
-          <TransportControls 
-            isPlaying={isPlaying} 
-            onTogglePlay={() => setIsPlaying(!isPlaying)} 
+          <TransportControls
+            isPlaying={isPlaying}
+            onTogglePlay={() => setIsPlaying(!isPlaying)}
           />
         </div>
 
-        {/* Up Next / Queue Snippet (Only visible on large screens to save space) */}
+        {/* Queue */}
         <div className="hidden lg:flex items-center justify-between bg-surface-color rounded-xl p-3 border border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-md ${QUEUE[1].cover}`}></div>
@@ -63,7 +59,7 @@ const LiveSyncRoom = () => {
               <p className="text-sm font-bold truncate">{QUEUE[1].title} • <span className="text-text-muted font-normal">{QUEUE[1].artist}</span></p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setActiveRightPanel('queue')}
             className="text-xs font-semibold px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
@@ -73,24 +69,23 @@ const LiveSyncRoom = () => {
 
       </div>
 
-      {/* RIGHT PANEL: Chat / Queue / Members (35%) */}
       <div className="flex-1 lg:w-[35%] bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col h-full overflow-hidden">
-        
-        {/* Panel Tabs */}
+
+        {/* Panel */}
         <div className="flex border-b border-gray-200 dark:border-gray-800">
-          <button 
+          <button
             onClick={() => setActiveRightPanel('chat')}
             className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${activeRightPanel === 'chat' ? 'text-primary-500 border-b-2 border-primary-500 bg-primary-500/5' : 'text-text-muted hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
           >
             <MessageSquare size={16} /> Chat
           </button>
-          <button 
+          <button
             onClick={() => setActiveRightPanel('queue')}
             className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${activeRightPanel === 'queue' ? 'text-primary-500 border-b-2 border-primary-500 bg-primary-500/5' : 'text-text-muted hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
           >
             <List size={16} /> Queue
           </button>
-          <button 
+          <button
             onClick={() => setActiveRightPanel('members')}
             className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${activeRightPanel === 'members' ? 'text-primary-500 border-b-2 border-primary-500 bg-primary-500/5' : 'text-text-muted hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
           >
@@ -100,10 +95,10 @@ const LiveSyncRoom = () => {
 
         {/* Panel Content */}
         {activeRightPanel === 'chat' && (
-          <RoomChat 
-            chatMessages={CHAT} 
-            chatInput={chatInput} 
-            setChatInput={setChatInput} 
+          <RoomChat
+            chatMessages={CHAT}
+            chatInput={chatInput}
+            setChatInput={setChatInput}
           />
         )}
         {activeRightPanel === 'queue' && <RoomQueue queue={QUEUE} />}

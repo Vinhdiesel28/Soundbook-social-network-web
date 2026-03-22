@@ -26,10 +26,6 @@ const AdminOverview = ({ t }) => {
         ))}
       </div>
 
-      <div className="text-text-muted text-center py-20 flex flex-col items-center">
-        <Activity size={48} className="mb-4 text-gray-300 dark:text-gray-700" />
-        <p>Overview dashboard content goes here.</p>
-      </div>
     </div>
   );
 };

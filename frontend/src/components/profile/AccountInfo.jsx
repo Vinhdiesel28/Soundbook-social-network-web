@@ -18,7 +18,7 @@ const AccountInfo = ({ t, isGuest, isEditingAccount, setIsEditingAccount, accoun
 
       {isEditingAccount ? (
         <div className="space-y-4 mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
-          {/* Display Name */}
+          {/* Name */}
           <div>
             <label className="flex items-center text-xs font-semibold mb-1.5 text-text-muted">
               <User size={14} className="mr-1.5" />
@@ -49,7 +49,6 @@ const AccountInfo = ({ t, isGuest, isEditingAccount, setIsEditingAccount, accoun
             />
           </div>
 
-          {/* Google Sub */}
           <div>
             <label className="flex items-center text-xs font-semibold mb-1.5 text-text-muted">
               <Fingerprint size={14} className="mr-1.5" />
@@ -65,7 +64,7 @@ const AccountInfo = ({ t, isGuest, isEditingAccount, setIsEditingAccount, accoun
             />
           </div>
 
-          {/* Settings / Toggles */}
+          {/* Password */}
           <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
             <button
               onClick={() => setIsChangingPassword(!isChangingPassword)}
@@ -79,7 +78,6 @@ const AccountInfo = ({ t, isGuest, isEditingAccount, setIsEditingAccount, accoun
               </div>
             </button>
 
-            {/* Change Password Form */}
             {isChangingPassword && (
               <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div>

@@ -1,9 +1,5 @@
 import React, { useEffect } from 'react';
 
-/**
- * A simpler wrapper to update document meta tags dynamically without installing react-helmet.
- * Useful for SEO and sharing to social media since it updates the <head> tags accurately.
- */
 const SEO = ({ title, description, image, type = 'website', url }) => {
   useEffect(() => {
     // Update Title
@@ -20,7 +16,7 @@ const SEO = ({ title, description, image, type = 'website', url }) => {
       document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", description);
     }
 
-    // Update Image (for link previews)
+    // Update Image
     if (image) {
       document.querySelector('meta[property="og:image"]')?.setAttribute("content", image);
       document.querySelector('meta[name="twitter:image"]')?.setAttribute("content", image);
@@ -35,7 +31,7 @@ const SEO = ({ title, description, image, type = 'website', url }) => {
     }
   }, [title, description, image, type, url]);
 
-  return null; // This component does not render any UI
+  return null;
 };
 
 export default SEO;

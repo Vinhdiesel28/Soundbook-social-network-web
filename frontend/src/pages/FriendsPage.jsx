@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Search, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
-// Mock data — thay bằng API call theo useParams().id thực tế
 const ALL_FRIENDS = [
   { id: 1, name: 'Alex', avatar: 'bg-blue-500', isOnline: true, match: 91 },
   { id: 2, name: 'Sarah', avatar: 'bg-pink-500', isOnline: true, match: 88 },
@@ -54,7 +53,7 @@ const FriendsPage = () => {
         />
       </div>
 
-      {/* Friends Grid */}
+      {/* Friends */}
       <div className="bg-surface-color rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
         {filtered.length === 0 ? (
           <p className="text-center text-text-muted text-sm py-12">{t('common.no_results', { defaultValue: 'No friends found.' })}</p>

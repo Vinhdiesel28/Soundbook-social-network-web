@@ -9,14 +9,14 @@
     --text-color: #111827;
     --text-muted: #6b7280;
   }
-  
+
   .dark {
     --bg-color: #121212;
     --surface-color: #1e1e1e;
     --text-color: #f3f4f6;
     --text-muted: #9ca3af;
   }
-  
+
   body {
     background-color: var(--bg-color);
     color: var(--text-color);
@@ -30,9 +30,25 @@
     /* Firefox */
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     /* Chrome, Safari and Opera */
     display: none;
+  }
+
+  .animate-react-popup {
+    animation: reactPopup 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transform-origin: bottom center;
+  }
+}
+
+@keyframes reactPopup {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Play, MoreHorizontal, Flame, MessageCircle, Share2 } from 'lucide-react';
+import { Play, MoreHorizontal } from 'lucide-react';
+import PostReactionsBar from '../newsfeed/PostReactionsBar';
 
 const ProfilePosts = ({ t, posts }) => {
   return (
@@ -8,7 +9,7 @@ const ProfilePosts = ({ t, posts }) => {
       <div className="space-y-6 pb-10">
         {posts.map((post) => (
           <div key={post.id} className="bg-surface-color rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200 dark:border-gray-800">
-            {/* Post Header */}
+            {/* Header */}
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full ${post.user.avatar}`}></div>
@@ -22,18 +23,17 @@ const ProfilePosts = ({ t, posts }) => {
               </button>
             </div>
 
-            {/* Post Content */}
+            {/* Content */}
             <p className="text-sm mb-4 leading-relaxed">{post.content}</p>
 
-            {/* Media Card */}
             {post.type === 'audio' ? (
-              // Quick Note (Mini-player)
+
               <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 mb-4">
                 <div className={`w-16 h-16 rounded-lg flex-shrink-0 ${post.media.cover} shadow-md`}></div>
                 <div className="flex-1 min-w-0">
                   <h5 className="font-bold text-sm truncate">{post.media.title}</h5>
                   <p className="text-xs text-text-muted truncate">{post.media.artist}</p>
-                  {/* Fake Progress Bar */}
+
                   <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
                     <div className="h-full bg-primary-500 w-1/3"></div>
                   </div>
@@ -45,7 +45,6 @@ const ProfilePosts = ({ t, posts }) => {
                 </button>
               </div>
             ) : (
-              // Review Card
               <div className="flex gap-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-4">
                 <div className={`w-24 h-36 rounded-md flex-shrink-0 ${post.media.cover} shadow-md`}></div>
                 <div className="flex-1">
@@ -61,27 +60,8 @@ const ProfilePosts = ({ t, posts }) => {
               </div>
             )}
 
-            {/* Reactions Bar */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-4">
-                <button className="flex items-center gap-1.5 text-text-muted hover:text-rose-500 transition-colors group">
-                  <Flame size={18} className="group-hover:fill-rose-500" />
-                  <span className="text-xs font-medium">{post.reactions.flame}</span>
-                </button>
-                <button className="flex items-center gap-1.5 text-text-muted hover:text-blue-500 transition-colors group">
-                  <span className="text-lg leading-none mb-1 group-hover:scale-110 transition-transform">💔</span>
-                  <span className="text-xs font-medium">{post.reactions.sad}</span>
-                </button>
-                <button className="flex items-center gap-1.5 text-text-muted hover:text-primary-500 transition-colors">
-                  <MessageCircle size={18} />
-                  <span className="text-xs font-medium">{post.reactions.comments}</span>
-                </button>
-                <button className="flex items-center gap-1.5 text-text-muted hover:text-green-500 transition-colors">
-                  <Share2 size={18} />
-                  <span className="text-xs font-medium hidden sm:inline">{post.reactions.shares}</span>
-                </button>
-              </div>
-            </div>
+            {/* Reactions */}
+            <PostReactionsBar post={post} />
 
           </div>
         ))}

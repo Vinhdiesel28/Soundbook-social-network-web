@@ -22,7 +22,7 @@ const ChatList = ({ t, chats, activeChat, setActiveChat }) => {
         </div>
       </div>
 
-      {/* Chat Items */}
+      {/* Chat */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
         {chats.map(chat => (
           <div

@@ -49,8 +49,6 @@ export const en = {
   'post.save': 'Save',
   'post.listening_to': 'is listening to',
   'post.reading': 'is reading the book',
-  'post.1.content': 'Can\'t stop listening to this masterpiece 🎧',
-  'post.2.content': 'Just finished "Dune". The world-building is absolutely incredible. Frank Herbert created a masterpiece that still holds up today. The political intrigue, the ecology of Arrakis, everything is just top-tier science fiction.',
   'post.read_full_review': 'Read Full Review',
   'post.follow': 'Follow',
   'post.unfollow': 'Unfollow',

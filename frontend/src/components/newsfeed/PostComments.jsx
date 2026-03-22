@@ -14,7 +14,7 @@ const PostComments = ({ comments }) => {
 
   return (
     <div className="mt-4 space-y-3">
-      {/* View all link */}
+
       {comments.length > 2 && !showAllComments && (
         <button
           onClick={() => setShowAllComments(true)}
@@ -24,12 +24,11 @@ const PostComments = ({ comments }) => {
         </button>
       )}
 
-      {/* Comment list */}
+      {/* Comment */}
       {visibleComments.map(comment => (
         <CommentItem key={comment.id} comment={comment} />
       ))}
 
-      {/* Show less */}
       {showAllComments && comments.length > 2 && (
         <button
           onClick={() => setShowAllComments(false)}

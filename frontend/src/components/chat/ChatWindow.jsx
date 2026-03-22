@@ -7,7 +7,7 @@ const ChatWindow = ({ t, activeData, messages, playingId, setPlayingId }) => {
     <div className="flex-1 flex flex-col h-full bg-surface-color">
       {activeData ? (
         <>
-          {/* Window Header */}
+          {/* Window */}
           <div className="h-16 border-b border-gray-200 dark:border-gray-800 px-6 flex items-center justify-between bg-surface-color shadow-sm z-10">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-full ${activeData.avatar} ${activeData.type === 'group' && 'rounded-xl'}`}></div>
@@ -33,21 +33,21 @@ const ChatWindow = ({ t, activeData, messages, playingId, setPlayingId }) => {
             </div>
           </div>
 
-          {/* Messages Area */}
+          {/* Messages */}
           <div className="flex-1 overflow-y-auto custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-repeat bg-[length:100px] relative">
             <div className="min-h-full bg-white/95 dark:bg-[#121212]/95 px-6 py-6 space-y-6 flex flex-col justify-end">
               {messages.map(msg => (
-                <ChatMessage 
-                  key={msg.id} 
-                  msg={msg} 
-                  playingId={playingId} 
-                  setPlayingId={setPlayingId} 
+                <ChatMessage
+                  key={msg.id}
+                  msg={msg}
+                  playingId={playingId}
+                  setPlayingId={setPlayingId}
                 />
               ))}
             </div>
           </div>
 
-          {/* Input Area */}
+          {/* Input */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-surface-color">
             <div className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 rounded-2xl p-2 pb-2">
               <button className="p-2 text-gray-500 hover:text-primary-500 transition-colors shrink-0">

@@ -10,7 +10,7 @@ const AdminProfile = ({ t }) => {
         <h3 className="text-xl font-bold mb-6 text-center">{t('admin.nav.profile')}</h3>
 
         <div className="flex flex-col items-center gap-10">
-          {/* Avatar Section */}
+          {/* Avatar */}
           <div className="flex flex-col items-center gap-4 shrink-0">
             <div className="relative group">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-400 to-blue-500 border-4 border-surface-color shadow-lg overflow-hidden flex items-center justify-center">
@@ -28,7 +28,7 @@ const AdminProfile = ({ t }) => {
             </span>
           </div>
 
-          {/* Details Section */}
+          {/* Info */}
           <div className="w-full max-w-2xl space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
@@ -77,7 +77,7 @@ const AdminProfile = ({ t }) => {
               </button>
             </div>
 
-            {/* Inline Password Change Form */}
+            {/* Password */}
             {isPasswordModalOpen && (
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800 animate-in slide-in-from-top-4 duration-300">
                 <h4 className="text-sm font-bold mb-4">{t('admin.profile.change_password')}</h4>

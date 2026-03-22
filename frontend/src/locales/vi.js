@@ -49,7 +49,7 @@ export const vi = {
   'post.save': 'Lưu',
   'post.listening_to': 'đang nghe',
   'post.reading': 'đang đọc quyển sách',
-  'post.1.content': 'Không thể ngừng nghe kiệt tác này 🎧',
+  'post.1.content': 'Không thể ngừng nghe kiệt tác này !',
   'post.2.content': 'Vừa đọc xong "Dune". Cấu trúc thế giới thực sự đáng kinh ngạc. Frank Herbert đã tạo ra một kiệt tác vẫn còn giá trị đến tận ngày nay. Những âm mưu chính trị, hệ sinh thái của Arrakis, mọi thứ đều là khoa học viễn tưởng đỉnh cao.',
   'post.read_full_review': 'Đọc toàn bộ đánh giá',
   'post.follow': 'Theo dõi',

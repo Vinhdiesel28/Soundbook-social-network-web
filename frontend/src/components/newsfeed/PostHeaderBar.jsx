@@ -17,9 +17,8 @@ const PostHeaderBar = ({ post }) => {
             <h4 className="font-semibold text-sm">{post.user.name}</h4>
             <button
               onClick={() => setFollowed(f => !f)}
-              className={`text-xs font-semibold transition-colors ${
-                followed ? 'text-text-muted hover:text-rose-500' : 'text-primary-500 hover:text-primary-600'
-              }`}
+              className={`text-xs font-semibold transition-colors ${followed ? 'text-text-muted hover:text-rose-500' : 'text-primary-500 hover:text-primary-600'
+                }`}
             >
               · {followed ? t('post.unfollow') : t('post.follow')}
             </button>
@@ -28,7 +27,7 @@ const PostHeaderBar = ({ post }) => {
         </div>
       </div>
 
-      {/* ... menu */}
+      {/* Menu */}
       <div className="relative">
         <button
           onClick={() => setShowPostMenu(m => !m)}

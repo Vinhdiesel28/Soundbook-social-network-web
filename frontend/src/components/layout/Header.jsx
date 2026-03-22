@@ -19,17 +19,17 @@ const Header = () => {
 
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center gap-2">
-            <Link to="/" className="flex items-center gap-2 outline-none">
+            <a href="/feed" className="flex items-center gap-2 outline-none">
               <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold dark:animate-pulse">
                 SB
               </div>
               <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary-500 to-purple-500 bg-clip-text text-transparent hidden sm:block">
                 {t('app.name')}
               </span>
-            </Link>
+            </a>
           </div>
 
-          {/* Search Bar - Center */}
+          {/* Search Bar */}
           <div className="flex-1 max-w-2xl px-4 mx-auto relative">
             <div className={`relative flex items-center w-full h-10 rounded-full bg-gray-100 dark:bg-gray-800 border transition-all duration-300 ${isSearchFocused ? 'border-primary-500 ring-2 ring-primary-500/20' : 'border-transparent'}`}>
               <div className="pl-4 pr-2 text-gray-400">
@@ -46,7 +46,7 @@ const Header = () => {
               />
             </div>
 
-            {/* Quick Results Dropdown */}
+            {/* Dropdown */}
             {isSearchFocused && searchQuery && (
               <div className="absolute top-12 left-4 right-4 bg-surface-color rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden transform opacity-100 scale-100 transition-all duration-200 origin-top">
                 <div className="p-2">
@@ -75,9 +75,8 @@ const Header = () => {
             )}
           </div>
 
-          {/* Actions - Right */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            {/* Theme Toggle */}
+
             <button
               onClick={toggleTheme}
               className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
@@ -86,7 +85,6 @@ const Header = () => {
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
 
-            {/* Language Toggle */}
             <button
               onClick={toggleLanguage}
               className="px-2 py-1 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 font-semibold text-xs tracking-wider transition-colors border border-gray-200 dark:border-gray-700 uppercase"
@@ -102,7 +100,7 @@ const Header = () => {
               title={t('header.messages')}
             >
               <MessageCircle size={20} />
-              {/* Unread message badge */}
+              {/* Unread message */}
               <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none border border-white dark:border-gray-900">
                 3
               </span>

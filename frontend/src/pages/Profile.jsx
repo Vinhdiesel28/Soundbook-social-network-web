@@ -11,7 +11,6 @@ import ConnectedAccounts from '../components/profile/ConnectedAccounts';
 import ProfileShelves from '../components/profile/ProfileShelves';
 import ProfilePosts from '../components/profile/ProfilePosts';
 
-// Mock Data
 const PROFILE_DATA = {
   name: 'Dat Nguyen',
   username: '@datnguyen',
@@ -79,11 +78,10 @@ const Profile = ({ isGuest = false }) => {
   const [viewMode, setViewMode] = useState('shelf');
   const [isEditingInfo, setIsEditingInfo] = useState(false);
 
-  // Mock initial data for Profile Info
   const [formData, setFormData] = useState({
     username: PROFILE_DATA.username,
     bio: PROFILE_DATA.bio,
-    pinnedTrack: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT', // Space Song by Beach House
+    pinnedTrack: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
     allowPreview: true,
   });
 
@@ -100,7 +98,6 @@ const Profile = ({ isGuest = false }) => {
 
   const handleSaveInfo = () => {
     console.log('Saving profile info:', formData);
-    // Here you would typically make an API call to save the data
     setIsEditingInfo(false);
   };
 
@@ -108,7 +105,7 @@ const Profile = ({ isGuest = false }) => {
   const [accountData, setAccountData] = useState({
     email: 'datnguyen@soundbook.vn',
     displayName: PROFILE_DATA.username,
-    googleSub: '103829491820491823901' // Mock Google sub
+    googleSub: '103829491820491823901'
   });
 
   const handleAccountInputChange = (e) => {
@@ -136,7 +133,6 @@ const Profile = ({ isGuest = false }) => {
   const handleSavePassword = () => {
     console.log('Saving new password...', passwordData);
 
-    // Reset after saving
     setIsChangingPassword(false);
     setPasswordData({
       currentPassword: '',
@@ -146,21 +142,18 @@ const Profile = ({ isGuest = false }) => {
   };
 
   return (
-    <div className="flex flex-col gap-6 -mt-6"> {/* Negative margin to offset layout padding for full width header header */}
+    <div className="flex flex-col gap-6 -mt-6">
 
-      {/* Dynamic Header */}
-      <ProfileHeader 
-        profileData={PROFILE_DATA} 
-        isGuest={isGuest} 
-        isPlaying={isPlaying} 
-        onTogglePlay={() => setIsPlaying(!isPlaying)} 
-        t={t} 
+      <ProfileHeader
+        profileData={PROFILE_DATA}
+        isGuest={isGuest}
+        isPlaying={isPlaying}
+        onTogglePlay={() => setIsPlaying(!isPlaying)}
+        t={t}
       />
 
-      {/* Main Body (Kệ sách/đĩa) */}
       <div className="max-w-screen-xl mx-auto w-full px-4 sm:px-6 lg:px-8 space-y-10 pb-20 pt-4">
 
-        {/* Controls */}
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-2xl font-bold tracking-tight">{t('profile.title')}</h2>
           <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -180,53 +173,49 @@ const Profile = ({ isGuest = false }) => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8 relative items-start">
-          {/* LEFT SIDEBAR: Friends (30%) */}
+          {/* Friends */}
           <div className="w-full lg:w-[30%] space-y-6 lg:sticky lg:top-24 pb-4">
 
             {/* Personal Info */}
-            <PersonalInfo 
-              t={t} 
-              isGuest={isGuest} 
-              isEditingInfo={isEditingInfo} 
-              setIsEditingInfo={setIsEditingInfo} 
-              formData={formData} 
-              handleInputChange={handleInputChange} 
-              handleTogglePreview={handleTogglePreview} 
-              handleSaveInfo={handleSaveInfo} 
-              lastUpdate={lastUpdate} 
+            <PersonalInfo
+              t={t}
+              isGuest={isGuest}
+              isEditingInfo={isEditingInfo}
+              setIsEditingInfo={setIsEditingInfo}
+              formData={formData}
+              handleInputChange={handleInputChange}
+              handleTogglePreview={handleTogglePreview}
+              handleSaveInfo={handleSaveInfo}
+              lastUpdate={lastUpdate}
             />
 
             {/* Account Info */}
-            <AccountInfo 
-              t={t} 
-              isGuest={isGuest} 
-              isEditingAccount={isEditingAccount} 
-              setIsEditingAccount={setIsEditingAccount} 
-              accountData={accountData} 
-              handleAccountInputChange={handleAccountInputChange} 
-              handleSaveAccountInfo={handleSaveAccountInfo} 
-              isChangingPassword={isChangingPassword} 
-              setIsChangingPassword={setIsChangingPassword} 
-              passwordData={passwordData} 
-              handlePasswordInputChange={handlePasswordInputChange} 
-              handleSavePassword={handleSavePassword} 
-              lastUpdate={lastUpdate} 
+            <AccountInfo
+              t={t}
+              isGuest={isGuest}
+              isEditingAccount={isEditingAccount}
+              setIsEditingAccount={setIsEditingAccount}
+              accountData={accountData}
+              handleAccountInputChange={handleAccountInputChange}
+              handleSaveAccountInfo={handleSaveAccountInfo}
+              isChangingPassword={isChangingPassword}
+              setIsChangingPassword={setIsChangingPassword}
+              passwordData={passwordData}
+              handlePasswordInputChange={handlePasswordInputChange}
+              handleSavePassword={handleSavePassword}
+              lastUpdate={lastUpdate}
             />
 
-            {/* Friends */}
             <FriendsList t={t} friends={MOCK_FRIENDS} />
 
-            {/* Connected Accounts */}
             <ConnectedAccounts t={t} />
           </div>
 
-          {/* RIGHT CONTENT: Shelves & Posts (70%) */}
+          {/* Posts */}
           <div className="flex-1 w-full lg:w-[70%] space-y-16">
 
-            {/* Shelves */}
             <ProfileShelves t={t} shelves={getShelves(t)} isGuest={isGuest} />
 
-            {/* Posts Section */}
             <ProfilePosts t={t} posts={getProfilePosts(t)} />
 
           </div>

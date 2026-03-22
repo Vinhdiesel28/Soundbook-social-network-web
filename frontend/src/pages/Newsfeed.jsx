@@ -25,13 +25,15 @@ const getFeedPosts = (t) => [
     media: { title: 'Midnight City', artist: 'M83', cover: 'bg-gradient-to-br from-purple-500 to-indigo-600' },
     reactions: { flame: 124, sad: 2, comments: 18, shares: 5 },
     comments: [
-      { id: 1, user: { name: 'Alex', avatar: 'bg-blue-500' }, text: 'Bài này đỉnh thật sự, nghe mãi không chán 🔥', time: t('time.1h_ago'), reacts: 12,
+      {
+        id: 1, user: { name: 'Alex', avatar: 'bg-blue-500' }, text: 'Bài này đỉnh thật sự, nghe mãi không chán !!!', time: t('time.1h_ago'), reacts: 12,
         reactors: [
           { name: 'Sarah Connor', react: 'fire' }, { name: 'Mike', react: 'like' },
           { name: 'Emma', react: 'heart' }, { name: 'John Doe', react: 'like' },
         ]
       },
-      { id: 2, user: { name: 'Emma', avatar: 'bg-purple-500' }, text: 'M83 luôn là một level khác 😍 synthwave huyền thoại!', time: t('time.2h_ago'), reacts: 7,
+      {
+        id: 2, user: { name: 'Emma', avatar: 'bg-purple-500' }, text: 'M83 luôn là một level khác synthwave huyền thoại!', time: t('time.2h_ago'), reacts: 7,
         reactors: [
           { name: 'Dat Nguyen', react: 'fire' }, { name: 'Alex', react: 'like' },
           { name: 'Jane Smith', react: 'heart' },
@@ -48,7 +50,7 @@ const getFeedPosts = (t) => [
     reactions: { flame: 89, sad: 0, comments: 32, shares: 12 },
     comments: [
       { id: 1, user: { name: 'Mike', avatar: 'bg-green-500' }, text: 'Dune là một trong những cuốn sách tôi đọc nhiều lần nhất. Thế giới quan quá phức tạp và thú vị!', time: t('time.3h_ago') },
-      { id: 2, user: { name: 'John Doe', avatar: 'bg-teal-500' }, text: 'Bộ phim năm 2021 và 2024 cũng rất hay, xứng đáng với nguyên tác 👏', time: t('time.5h_ago') },
+      { id: 2, user: { name: 'John Doe', avatar: 'bg-teal-500' }, text: 'Bộ phim năm 2021 và 2024 cũng rất hay, xứng đáng với nguyên tác.', time: t('time.5h_ago') },
       { id: 3, user: { name: 'Jane Smith', avatar: 'bg-rose-500' }, text: 'Tôi cũng vừa đọc xong, phần 2 "Messiah of Dune" còn hay hơn nữa!', time: t('time.1d_ago') },
     ]
   }
@@ -72,23 +74,19 @@ const Newsfeed = () => {
   const [playingId, setPlayingId] = useState(null);
 
   const togglePlay = (id) => {
-    // Global Audio State Logic: If playing another, switch logic handles auto-pause.
     setPlayingId(playingId === id ? null : id);
   };
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
 
-      {/* LEFT COLUMN: Main Feed (70%) */}
+      {/* Left: Main */}
       <div className="flex-1 lg:w-[70%] space-y-6 overflow-hidden">
 
-        {/* Live Radar */}
         <LiveRadar radarData={LIVE_RADAR} />
 
-        {/* Create Post */}
         <CreatePost />
 
-        {/* Tabs */}
         <div className="flex gap-6 border-b border-gray-200 dark:border-gray-800 px-2">
           <button
             className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === 'following' ? 'text-primary-500' : 'text-text-muted hover:text-text-color'}`}
@@ -106,20 +104,20 @@ const Newsfeed = () => {
           </button>
         </div>
 
-        {/* Feed Posts */}
+        {/* Posts */}
         <div className="space-y-6 pb-20">
           {getFeedPosts(t).map((post) => (
-            <FeedPost 
-              key={post.id} 
-              post={post} 
-              isPlaying={playingId === post.id} 
-              onTogglePlay={() => togglePlay(post.id)} 
+            <FeedPost
+              key={post.id}
+              post={post}
+              isPlaying={playingId === post.id}
+              onTogglePlay={() => togglePlay(post.id)}
             />
           ))}
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Sidebar (30%) */}
+      {/* Right: Sidebar */}
       <NewsfeedSidebar suggestions={SUGGESTIONS} trending={TRENDING} />
 
     </div>

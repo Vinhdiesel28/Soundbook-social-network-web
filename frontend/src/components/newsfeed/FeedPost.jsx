@@ -11,7 +11,7 @@ const FeedPost = ({ post, isPlaying, onTogglePlay }) => {
     <div className="bg-surface-color rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200 dark:border-gray-800">
       <PostHeaderBar post={post} />
 
-      {/* Post Content */}
+      {/*Content */}
       <p className="text-sm mb-4 leading-relaxed">{post.content}</p>
 
       <PostMediaCard post={post} isPlaying={isPlaying} onTogglePlay={onTogglePlay} />

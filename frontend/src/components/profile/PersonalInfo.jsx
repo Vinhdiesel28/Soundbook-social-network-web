@@ -50,7 +50,7 @@ const PersonalInfo = ({ t, isGuest, isEditingInfo, setIsEditingInfo, formData, h
             />
           </div>
 
-          {/* Pinned Track (Spotify) */}
+          {/* Pinned Track */}
           <div>
             <label className="flex items-center text-xs font-semibold mb-1.5 text-text-muted">
               <Music size={14} className="mr-1.5" />
@@ -66,7 +66,7 @@ const PersonalInfo = ({ t, isGuest, isEditingInfo, setIsEditingInfo, formData, h
             />
           </div>
 
-          {/* Settings / Toggles */}
+          {/* Settings */}
           <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
             <div className="flex items-center justify-between">
               <div>

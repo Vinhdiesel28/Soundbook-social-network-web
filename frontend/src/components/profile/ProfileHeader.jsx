@@ -6,7 +6,7 @@ const ProfileHeader = ({ profileData, isGuest, isPlaying, onTogglePlay, t }) => 
     <div className={`w-full h-64 sm:h-80 relative overflow-hidden bg-gradient-to-b ${profileData.themeColor}`}>
       <div className="absolute inset-0 bg-black/20 dark:bg-black/40" />
 
-      {/* Actions inside header */}
+      {/* Header */}
       <div className="absolute top-6 right-6 flex gap-3 z-10">
         <button className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white transition-colors" title={t('profile.share', { defaultValue: 'Share Profile' })}>
           <Share2 size={20} />
@@ -23,13 +23,12 @@ const ProfileHeader = ({ profileData, isGuest, isPlaying, onTogglePlay, t }) => 
         )}
       </div>
 
-      {/* Profile Info & Pinned Mini-player */}
+      {/* Info */}
       <div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row items-end justify-between gap-6 z-10 w-auto">
 
-        {/* Avatar & Info */}
         <div className="flex items-end gap-x-6 gap-y-4 flex-wrap w-full sm:w-auto">
           <div className="relative group translate-y-1 sm:translate-y-2">
-            {/* Soundwave animation ring */}
+            {/* Soundwave animation*/}
             <div className="absolute -inset-2 rounded-full border-4 border-white/20 animate-pulse" />
             <div className="absolute -inset-4 rounded-full border-4 border-white/10 animate-ping" style={{ animationDuration: '3s' }} />
 
@@ -51,7 +50,7 @@ const ProfileHeader = ({ profileData, isGuest, isPlaying, onTogglePlay, t }) => 
           </div>
         </div>
 
-        {/* Match Score (If Guest) */}
+        {/* Match Score */}
         {isGuest && (
           <div className="hidden sm:flex flex-col items-center bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xl">
             <span className="text-xs text-white/80 font-semibold uppercase tracking-wider mb-1">{t('profile.match_score')}</span>
@@ -59,7 +58,7 @@ const ProfileHeader = ({ profileData, isGuest, isPlaying, onTogglePlay, t }) => 
           </div>
         )}
 
-        {/* Pinned Mini-player */}
+        {/* Pinned Track */}
         <div className="w-full sm:w-64 bg-black/40 backdrop-blur-xl rounded-2xl p-3 border border-white/10 shadow-2xl flex items-center gap-3">
           <div className={`relative w-14 h-14 rounded-full shadow-lg overflow-hidden flex-shrink-0 ${profileData.pinnedSong.cover} ${isPlaying ? 'animate-[spin_4s_linear_infinite]' : ''}`}>
             <div className="absolute inset-0 border-4 border-black/50 rounded-full" />

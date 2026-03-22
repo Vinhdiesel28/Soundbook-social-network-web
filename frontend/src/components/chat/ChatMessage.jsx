@@ -10,14 +10,14 @@ const ChatMessage = ({ msg, playingId, setPlayingId }) => {
       <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'}`}>
         {!msg.isMe && <span className="text-[10px] text-text-muted ml-1 mb-1">{msg.user}</span>}
 
-        {/* Normal Text Message */}
+        {/* Message */}
         {msg.text && (
           <div className={`px-4 py-2.5 rounded-2xl shadow-sm text-sm ${msg.isMe ? 'bg-primary-500 text-white rounded-br-sm' : 'bg-gray-100 dark:bg-gray-800 text-text-color rounded-bl-sm'}`}>
             {msg.text}
           </div>
         )}
 
-        {/* Embed Audio/Book */}
+        {/* Audio/Book */}
         {msg.media && (
           <div className={`mt-1 bg-surface-color border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex gap-3 shadow-md w-64 ${msg.isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}>
             <div className={`w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center relative overflow-hidden ${msg.media.cover}`}>

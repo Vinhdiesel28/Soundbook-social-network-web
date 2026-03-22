@@ -44,21 +44,19 @@ const Chat = () => {
   return (
     <div className="flex h-[calc(100vh-8rem)] bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
 
-      {/* LEFT SIDEBAR: Chat List (320px) */}
-      <ChatList 
-        t={t} 
-        chats={CHATS} 
-        activeChat={activeChat} 
-        setActiveChat={setActiveChat} 
+      <ChatList
+        t={t}
+        chats={CHATS}
+        activeChat={activeChat}
+        setActiveChat={setActiveChat}
       />
 
-      {/* RIGHT MAIN: Chat Window (flex-1) */}
-      <ChatWindow 
-        t={t} 
-        activeData={activeData} 
-        messages={MESSAGES} 
-        playingId={playingId} 
-        setPlayingId={setPlayingId} 
+      <ChatWindow
+        t={t}
+        activeData={activeData}
+        messages={MESSAGES}
+        playingId={playingId}
+        setPlayingId={setPlayingId}
       />
 
     </div>

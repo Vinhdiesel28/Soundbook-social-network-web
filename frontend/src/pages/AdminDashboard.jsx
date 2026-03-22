@@ -25,7 +25,6 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-bg-color text-text-color flex">
 
-      {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -96,10 +95,9 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-        {/* Topbar */}
         <header className="h-16 shrink-0 bg-surface-color border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-3">
             <button
@@ -112,7 +110,7 @@ const AdminDashboard = () => {
             <h1 className="text-lg font-bold capitalize">{t(`admin.nav.${activeTab}`)}</h1>
           </div>
           <div className="flex items-center gap-4">
-            {/* Language Toggle */}
+
             <button
               onClick={toggleLanguage}
               className="px-2 py-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg text-text-muted hover:text-text-color font-semibold text-xs tracking-wider transition-colors border border-gray-200 dark:border-gray-700 uppercase"
@@ -139,10 +137,8 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* Dynamic Content */}
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 bg-gray-50/50 dark:bg-black/10">
 
-          {/* Dynamic Render Based on activeTab */}
           {activeTab === 'overview' && <AdminOverview t={t} />}
           {activeTab === 'users' && <AdminUsers t={t} />}
 

@@ -29,7 +29,7 @@ const NewsfeedSidebar = ({ suggestions, trending }) => {
         </div>
       </div>
 
-      {/* Trending Now */}
+      {/* Trending */}
       <div className="bg-surface-color rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800">
         <h3 className="font-bold text-sm mb-4 uppercase tracking-wider text-text-muted">{t('feed.trending_now')}</h3>
         <div className="space-y-4">
@@ -49,7 +49,6 @@ const NewsfeedSidebar = ({ suggestions, trending }) => {
         </div>
       </div>
 
-      {/* Footer Links */}
       <div className="text-xs text-text-muted flex flex-wrap justify-center gap-x-3 gap-y-2 px-2">
         <a href="#" className="hover:underline">© 2026 Soundbook</a>
       </div>
