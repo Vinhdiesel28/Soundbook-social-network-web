@@ -1,4 +1,4 @@
-# Soundbook — Hướng dẫn Setup cho Team
+# Soundbook Social Network
 
 Dự án Mạng xã hội Âm nhạc & Sách.
 
@@ -33,7 +33,7 @@ Soundbook-social-network-web/
 
 ---
 
-## Bước 1 — Clone project
+## Bước 1 - Clone project
 
 Mở Terminal / Git Bash và chạy:
 
@@ -44,7 +44,7 @@ cd Soundbook-social-network-web
 
 ---
 
-## Bước 2 — Khởi tạo Database MySQL
+## Bước 2 - Khởi tạo Database MySQL
 
 Mở **MySQL Workbench** hoặc **DBeaver**, đăng nhập bằng tài khoản `root` (hoặc tài khoản local của bạn), rồi chạy SQL sau:
 
@@ -58,11 +58,11 @@ CREATE DATABASE soundbook_db
 USE soundbook_db;
 ```
 
-**Lưu ý quan trọng**: Sau khi tạo xong database `soundbook_db`, bạn cần mở file `backend/src/main/resources/db/schema.sql` và **chạy toàn bộ script trong file đó** để tạo các bảng (tables) cơ sở dữ liệu.
+**Lưu ý quan trọng**: Sau khi tạo xong database `soundbook_db`, cần mở file `backend/src/main/resources/db/schema.sql` và **chạy toàn bộ script trong file đó** để tạo các bảng (tables) cơ sở dữ liệu.
 
 ---
 
-## Bước 3 — Cấu hình Backend
+## Bước 3 - Cấu hình Backend
 
 Mở file thiết lập môi trường tại `backend/src/main/resources/application.properties` và **đảm bảo thông tin đăng nhập đúng với MySQL local của bạn**:
 
@@ -80,7 +80,7 @@ spring.datasource.password=MẬT_KHẨU_MYSQL_CỦA_BẠN_Ở_ĐÂY
 
 ---
 
-## Bước 4 — Chạy Backend (Spring Boot)
+## Bước 4 - Chạy Backend (Spring Boot)
 
 ### Cách 1: Dùng IntelliJ IDEA (Khuyên dùng)
 
@@ -100,7 +100,7 @@ Backend khởi chạy thành công khi log báo:
 
 ---
 
-## Bước 5 — Chạy Frontend (React + Vite)
+## Bước 5 - Chạy Frontend (React + Vite)
 
 Mở một cửa sổ Terminal **MỚI**, trỏ vào thư mục `frontend`:
 
