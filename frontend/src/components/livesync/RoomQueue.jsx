@@ -1,12 +1,14 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 const RoomQueue = ({ queue }) => {
+  const { t } = useLanguage();
   return (
     <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/50 dark:bg-black/10">
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-sm">Now Playing</h3>
+          <h3 className="font-bold text-sm">{t('room.now_playing')}</h3>
         </div>
         <div className="flex items-center gap-3 p-2 bg-primary-500/10 rounded-xl border border-primary-500/20">
           <div className={`w-12 h-12 rounded-lg ${queue[0].cover} shadow-md flex items-center justify-center`}>
@@ -20,8 +22,8 @@ const RoomQueue = ({ queue }) => {
         </div>
 
         <div className="flex items-center justify-between mt-6 mb-2">
-          <h3 className="font-bold text-sm">Up Next</h3>
-          <button className="text-xs text-primary-500 font-semibold hover:underline">Add Song</button>
+          <h3 className="font-bold text-sm">{t('room.up_next')}</h3>
+          <button className="text-xs text-primary-500 font-semibold hover:underline">{t('room.add_song')}</button>
         </div>
         <div className="space-y-2">
           {queue.slice(1).map((song) => (

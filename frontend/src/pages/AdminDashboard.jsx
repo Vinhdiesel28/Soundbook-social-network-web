@@ -7,6 +7,7 @@ import AdminUsers from '../components/admin/AdminUsers';
 import AdminPosts from '../components/admin/AdminPosts';
 import AdminMessages from '../components/admin/AdminMessages';
 import AdminRooms from '../components/admin/AdminRooms';
+import AdminReports from '../components/admin/AdminReports';
 import AdminProfile from '../components/admin/AdminProfile';
 
 const AdminDashboard = () => {
@@ -38,7 +39,7 @@ const AdminDashboard = () => {
           <div className="w-8 h-8 rounded-lg bg-primary-500 text-white flex items-center justify-center shrink-0">
             <Disc3 size={20} />
           </div>
-          {isSidebarOpen && <span className="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden">Admin<span className="text-primary-500">Panel</span></span>}
+          {isSidebarOpen && <span className="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden">Soundbook <span className="text-primary-500">Admin</span></span>}
         </div>
 
         <div className="flex-1 py-6 px-3 space-y-2 overflow-y-auto overflow-x-hidden">
@@ -81,6 +82,14 @@ const AdminDashboard = () => {
           >
             <Video size={18} className="shrink-0" />
             {isSidebarOpen && <span className="whitespace-nowrap">{t('admin.nav.rooms')}</span>}
+          </button>
+          <button
+            onClick={() => handleTabChange('reports')}
+            className={`w-full flex items-center ${isSidebarOpen ? 'gap-3 px-4' : 'justify-center px-0'} py-3 rounded-xl transition-colors font-medium text-sm ${activeTab === 'reports' ? 'bg-primary-500/10 text-primary-500' : 'text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+            title={!isSidebarOpen ? t('admin.nav.reports') : ''}
+          >
+            <ShieldAlert size={18} className="shrink-0" />
+            {isSidebarOpen && <span className="whitespace-nowrap">{t('admin.nav.reports')}</span>}
           </button>
         </div>
 
@@ -146,6 +155,7 @@ const AdminDashboard = () => {
           {activeTab === 'messages' && <AdminMessages t={t} />}
 
           {activeTab === 'rooms' && <AdminRooms t={t} />}
+          {activeTab === 'reports' && <AdminReports t={t} />}
           {activeTab === 'profile' && <AdminProfile t={t} />}
         </main>
       </div>

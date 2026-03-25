@@ -4,15 +4,15 @@ import { ArrowLeft, Search, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const ALL_FRIENDS = [
-  { id: 1, name: 'Alex', avatar: 'bg-blue-500', isOnline: true, match: 91 },
-  { id: 2, name: 'Sarah', avatar: 'bg-pink-500', isOnline: true, match: 88 },
-  { id: 3, name: 'Mike', avatar: 'bg-green-500', isOnline: false, match: 76 },
-  { id: 4, name: 'Emma', avatar: 'bg-purple-500', isOnline: true, match: 82 },
-  { id: 5, name: 'John Doe', avatar: 'bg-teal-500', isOnline: false, match: 65 },
-  { id: 6, name: 'Jane Smith', avatar: 'bg-rose-500', isOnline: true, match: 79 },
-  { id: 7, name: 'Bob Wilson', avatar: 'bg-indigo-500', isOnline: false, match: 71 },
-  { id: 8, name: 'Lily Park', avatar: 'bg-yellow-500', isOnline: true, match: 94 },
-  { id: 9, name: 'Omar Ray', avatar: 'bg-orange-500', isOnline: false, match: 60 },
+  { id: 1, name: 'Hải Đăng', avatar: 'bg-blue-500', isOnline: true, match: 91 },
+  { id: 2, name: 'Mai Linh', avatar: 'bg-pink-500', isOnline: true, match: 88 },
+  { id: 3, name: 'Minh Tuấn', avatar: 'bg-green-500', isOnline: false, match: 76 },
+  { id: 4, name: 'Bảo Trâm', avatar: 'bg-purple-500', isOnline: true, match: 82 },
+  { id: 5, name: 'Thanh Sơn', avatar: 'bg-teal-500', isOnline: false, match: 65 },
+  { id: 6, name: 'Hương Giang', avatar: 'bg-rose-500', isOnline: true, match: 79 },
+  { id: 7, name: 'Tuấn Kiệt', avatar: 'bg-indigo-500', isOnline: false, match: 71 },
+  { id: 8, name: 'Phương Ly', avatar: 'bg-yellow-500', isOnline: true, match: 94 },
+  { id: 9, name: 'Quốc Anh', avatar: 'bg-orange-500', isOnline: false, match: 60 },
 ];
 
 const FriendsPage = () => {

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Search, Ban } from 'lucide-react';
+import { Search, Ban, Eye } from 'lucide-react';
 
 const getLiveRooms = (t) => [
-  { id: 1, host: 'DJ Kha', title: 'Friday Night Mix', listeners: 1250, status: 'Live' },
-  { id: 2, host: 'BookClub', title: 'Discussing atomic habits', listeners: 45, status: 'Ended' },
+  { id: 1, host: 'DJ Kha', title: 'Nhạc trẻ cuối tuần', listeners: 1250, status: 'Đang Live' },
+  { id: 2, host: 'BookClub', title: 'Thảo luận sách Thói quen nguyên tử', listeners: 45, status: 'Đã kết thúc' },
 ];
 
 const AdminRooms = ({ t }) => {
@@ -46,13 +46,16 @@ const AdminRooms = ({ t }) => {
                 <td className="px-6 py-4 text-sm text-text-muted">{room.listeners}</td>
                 <td className="px-6 py-4">
                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    room.status === 'Live' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    room.status === 'Đang Live' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                   }`}>
                     {room.status}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="p-1 text-text-muted hover:text-red-500"><Ban size={16} /></button>
+                  <div className="flex items-center justify-end gap-2 text-text-muted">
+                    <button className="p-1 hover:text-blue-500"><Eye size={16} /></button>
+                    <button className="p-1 hover:text-red-500"><Ban size={16} /></button>
+                  </div>
                 </td>
               </tr>
             ))}

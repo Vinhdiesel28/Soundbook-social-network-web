@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Search, Edit, Ban } from 'lucide-react';
+import { Search, Edit, Ban, Eye } from 'lucide-react';
 
 const getUsers = (t) => [
-  { id: 1, name: 'Dat Nguyen', email: 'dat@soundbook.com', role: 'Admin', status: 'Active', joined: 'Jan 15, 2026' },
-  { id: 2, name: 'Sarah Connor', email: 'sarah@example.com', role: 'User', status: 'Active', joined: 'Feb 02, 2026' },
-  { id: 3, name: 'John Doe', email: 'john@example.com', role: 'User', status: 'Warning', joined: 'Feb 20, 2026' },
+  { id: 1, name: 'Dat Nguyen', email: 'dat@soundbook.com', role: 'Admin', status: 'Hoạt động', joined: '15/01/2026' },
+  { id: 2, name: 'Nguyễn Văn A', email: 'vana@example.com', role: 'User', status: 'Bị cấm', joined: '02/02/2026' },
+  { id: 3, name: 'Trần Thị B', email: 'thib@example.com', role: 'User', status: 'Đã xóa', joined: '20/02/2026' },
 ];
 
 const AdminUsers = ({ t }) => {
@@ -51,7 +51,9 @@ const AdminUsers = ({ t }) => {
                 <td className="px-6 py-4 text-sm">{user.role}</td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    user.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    user.status === 'Hoạt động' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
+                    user.status === 'Bị cấm' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 
+                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
                   }`}>
                     {user.status}
                   </span>
@@ -59,7 +61,8 @@ const AdminUsers = ({ t }) => {
                 <td className="px-6 py-4 text-sm text-text-muted">{user.joined}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2 text-text-muted">
-                    <button className="p-1 hover:text-blue-500"><Edit size={16} /></button>
+                    <button className="p-1 hover:text-blue-500"><Eye size={16} /></button>
+                    <button className="p-1 hover:text-green-500"><Edit size={16} /></button>
                     <button className="p-1 hover:text-red-500"><Ban size={16} /></button>
                   </div>
                 </td>

@@ -6,27 +6,29 @@ import TransportControls from '../components/livesync/TransportControls';
 import RoomChat from '../components/livesync/RoomChat';
 import RoomQueue from '../components/livesync/RoomQueue';
 import RoomMembers from '../components/livesync/RoomMembers';
+import { useLanguage } from '../context/LanguageContext';
 
 const QUEUE = [
-  { id: 1, title: 'Starboy', artist: 'The Weeknd', cover: 'bg-gradient-to-br from-red-500 to-black', duration: '3:50', votes: 12 },
-  { id: 2, title: 'Blinding Lights', artist: 'The Weeknd', cover: 'bg-gradient-to-br from-red-600 to-yellow-500', duration: '3:20', votes: 8 },
-  { id: 3, title: 'Midnight City', artist: 'M83', cover: 'bg-gradient-to-br from-indigo-500 to-purple-600', duration: '4:03', votes: 5 },
+  { id: 1, title: 'In love', artist: 'Low G (ft. JustaTee)', cover: 'bg-gradient-to-br from-red-500 to-black', duration: '3:50', votes: 12 },
+  { id: 2, title: 'Na na na', artist: 'Daux Mysie', cover: 'bg-gradient-to-br from-red-600 to-yellow-500', duration: '3:20', votes: 8 },
+  { id: 3, title: 'Âm thầm bên em', artist: 'Sơn Tùng M-TP', cover: 'bg-gradient-to-br from-indigo-500 to-purple-600', duration: '4:03', votes: 5 },
 ];
 
 const MEMBERS = [
-  { id: 1, name: 'Dat Nguyen (Host)', avatar: 'bg-orange-500', isHost: true },
-  { id: 2, name: 'Sarah', avatar: 'bg-pink-500', isHost: false },
-  { id: 3, name: 'Mike', avatar: 'bg-green-500', isHost: false },
-  { id: 4, name: 'Emma', avatar: 'bg-purple-500', isHost: false },
+  { id: 1, name: 'Đạt Nguyễn', avatar: 'bg-orange-500', isHost: true },
+  { id: 2, name: 'Mai Linh', avatar: 'bg-pink-500', isHost: false },
+  { id: 3, name: 'Minh Tuấn', avatar: 'bg-green-500', isHost: false },
+  { id: 4, name: 'Bảo Trâm', avatar: 'bg-purple-500', isHost: false },
 ];
 
 const CHAT = [
-  { id: 1, user: 'Sarah', text: 'This intro is so good !' },
-  { id: 2, user: 'Mike', text: 'Turn it up!!' },
-  { id: 3, user: 'Dat Nguyen', text: 'Next song is a banger, trust me.' },
+  { id: 1, user: 'Mai Linh', text: 'Đoạn intro này đỉnh quá!' },
+  { id: 2, user: 'Minh Tuấn', text: 'Bật to lên anh em!!' },
+  { id: 3, user: 'Đạt Nguyễn', text: 'Cháy hơn phi phai.' },
 ];
 
 const LiveSyncRoom = () => {
+  const { t } = useLanguage();
   const [isPlaying, setIsPlaying] = useState(true);
   const [chatInput, setChatInput] = useState('');
   const [activeRightPanel, setActiveRightPanel] = useState('chat');
@@ -55,7 +57,7 @@ const LiveSyncRoom = () => {
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-md ${QUEUE[1].cover}`}></div>
             <div>
-              <p className="text-xs text-text-muted font-bold uppercase tracking-wider mb-0.5">Up Next</p>
+              <p className="text-xs text-text-muted font-bold uppercase tracking-wider mb-0.5">{t('room.up_next')}</p>
               <p className="text-sm font-bold truncate">{QUEUE[1].title} • <span className="text-text-muted font-normal">{QUEUE[1].artist}</span></p>
             </div>
           </div>
@@ -63,7 +65,7 @@ const LiveSyncRoom = () => {
             onClick={() => setActiveRightPanel('queue')}
             className="text-xs font-semibold px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
-            View Queue
+            {t('room.view_queue')}
           </button>
         </div>
 
@@ -77,13 +79,13 @@ const LiveSyncRoom = () => {
             onClick={() => setActiveRightPanel('chat')}
             className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${activeRightPanel === 'chat' ? 'text-primary-500 border-b-2 border-primary-500 bg-primary-500/5' : 'text-text-muted hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
           >
-            <MessageSquare size={16} /> Chat
+            <MessageSquare size={16} /> {t('room.chat')}
           </button>
           <button
             onClick={() => setActiveRightPanel('queue')}
             className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${activeRightPanel === 'queue' ? 'text-primary-500 border-b-2 border-primary-500 bg-primary-500/5' : 'text-text-muted hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
           >
-            <List size={16} /> Queue
+            <List size={16} /> {t('room.queue')}
           </button>
           <button
             onClick={() => setActiveRightPanel('members')}

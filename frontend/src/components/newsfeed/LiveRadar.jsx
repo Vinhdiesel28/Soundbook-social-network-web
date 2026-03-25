@@ -6,7 +6,7 @@ const LiveRadar = ({ radarData }) => {
     <div className="bg-surface-color rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-gray-800 overflow-x-auto custom-scrollbar">
       <div className="flex gap-4 min-w-max pb-2">
         {radarData.map((item) => (
-          <div key={item.id} className="flex flex-col items-center gap-1 cursor-pointer group w-16">
+          <div key={item.id} className={`flex flex-col items-center gap-1 cursor-pointer group flex-shrink-0 ${item.isRoom ? 'w-[72px]' : 'w-16'}`}>
             <div className={`relative w-14 h-14 rounded-full p-0.5 ${item.isLive ? 'bg-gradient-to-tr from-primary-500 to-purple-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
               <div className={`w-full h-full rounded-full border-2 border-surface-color ${item.avatar} flex items-center justify-center`}>
                 {item.isRoom && <Music size={20} className="text-white" />}
@@ -19,7 +19,7 @@ const LiveRadar = ({ radarData }) => {
                 </div>
               )}
             </div>
-            <span className="text-xs font-medium text-center truncate w-full">{item.name}</span>
+            <span className={`text-[11px] font-medium text-center leading-tight ${item.isRoom ? 'w-full line-clamp-2' : 'truncate w-full'}`}>{item.name}</span>
           </div>
         ))}
       </div>

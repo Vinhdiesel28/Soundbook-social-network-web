@@ -1,11 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { MessageCircle, Share2, Plus, Heart, ThumbsUp, Flame } from 'lucide-react';
+import { MessageCircle, Share2, Heart, ThumbsUp, Flame, Smile, Frown, Angry } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 const POST_REACTS_KEYS = [
   { key: 'like', icon: ThumbsUp, labelKey: 'react.like', color: 'text-blue-500' },
   { key: 'heart', icon: Heart, labelKey: 'react.heart', color: 'text-rose-500' },
   { key: 'fire', icon: Flame, labelKey: 'react.fire', color: 'text-orange-500' },
+  { key: 'smile', icon: Smile, labelKey: 'react.smile', color: 'text-yellow-500', noFill: true },
+  { key: 'sad', icon: Frown, labelKey: 'react.sad', color: 'text-indigo-400', noFill: true },
+  { key: 'angry', icon: Angry, labelKey: 'react.angry', color: 'text-red-500', noFill: true },
 ];
 
 const PostReactionsBar = ({ post }) => {
@@ -36,7 +39,7 @@ const PostReactionsBar = ({ post }) => {
       {postReactCount > 0 && (
         <div className="flex items-center gap-1.5 mb-2">
           <span className="flex items-center justify-center leading-none">
-            {currentPostReact ? <currentPostReact.icon size={14} fill="currentColor" className={currentPostReact.color} /> : <Heart size={14} fill="currentColor" className="text-rose-500" />}
+            {currentPostReact ? <currentPostReact.icon size={14} fill={currentPostReact.noFill ? "none" : "currentColor"} className={currentPostReact.color} /> : <Heart size={14} fill="currentColor" className="text-rose-500" />}
           </span>
           <span className="text-xs text-text-muted">
             {postReact
@@ -49,8 +52,8 @@ const PostReactionsBar = ({ post }) => {
       )}
 
       {/* Reactions */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 -mx-1">
+      <div className="flex items-center">
+        <div className="flex items-center gap-8 -mx-1">
 
           <div className="relative" onMouseEnter={handlePostReactEnter} onMouseLeave={handlePostReactLeave}>
             {showPostReacts && (
@@ -69,7 +72,7 @@ const PostReactionsBar = ({ post }) => {
                     }}
                     className={`transition-transform hover:scale-125 ${r.color}`}
                   >
-                    <r.icon size={20} fill={postReact === r.key ? "currentColor" : "none"} />
+                    <r.icon size={20} fill={postReact === r.key && !r.noFill ? "currentColor" : "none"} />
                   </button>
                 ))}
               </div>
@@ -83,7 +86,7 @@ const PostReactionsBar = ({ post }) => {
                 }`}
             >
               <span className="flex items-center justify-center leading-none">
-                {currentPostReact ? <currentPostReact.icon size={18} fill="currentColor" /> : <ThumbsUp size={18} />}
+                {currentPostReact ? <currentPostReact.icon size={18} fill={currentPostReact.noFill ? "none" : "currentColor"} /> : <ThumbsUp size={18} />}
               </span>
               {currentPostReact ? currentPostReact.labelKey ? t(currentPostReact.labelKey) : currentPostReact.label : t('react.like')}
             </button>
@@ -93,9 +96,6 @@ const PostReactionsBar = ({ post }) => {
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <MessageCircle size={16} />
             {t('post.comment')}
-            {post.reactions.comments > 0 && (
-              <span className="text-xs opacity-70">· {post.reactions.comments}</span>
-            )}
           </button>
 
           {/* Share */}
@@ -104,10 +104,6 @@ const PostReactionsBar = ({ post }) => {
             {t('post.share')}
           </button>
         </div>
-
-        <button className="text-text-muted hover:text-primary-500 p-1 bg-gray-100 dark:bg-gray-800 rounded-full transition-colors">
-          <Plus size={18} />
-        </button>
       </div>
     </div>
   );

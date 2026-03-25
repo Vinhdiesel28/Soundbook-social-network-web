@@ -1,7 +1,9 @@
 import React from 'react';
 import { Heart } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 const RoomChat = ({ chatMessages, chatInput, setChatInput }) => {
+  const { t } = useLanguage();
   return (
     <>
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/50 dark:bg-black/10">
@@ -28,7 +30,7 @@ const RoomChat = ({ chatMessages, chatInput, setChatInput }) => {
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Say something nice..."
+            placeholder={t('room.chat_placeholder')}
             className="w-full bg-gray-100 dark:bg-gray-800 border-none outline-none rounded-full py-2.5 pl-4 pr-12 text-sm text-text-color placeholder-gray-500"
           />
           <button className="absolute right-1 top-1 bottom-1 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center hover:bg-primary-600 transition-colors">

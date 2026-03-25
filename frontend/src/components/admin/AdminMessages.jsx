@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Eye, Trash2 } from 'lucide-react';
 
 const getMessages = (t) => [
-  { id: 1, sender: 'System', recipient: 'All Users', content: 'Scheduled maintenance tonight.', date: 'Just now' },
-  { id: 2, sender: 'User_X', recipient: 'Support', content: 'I cannot login, please help.', date: '1 hour ago' },
+  { id: 1, sender: 'Hệ thống', recipient: 'Tất cả người dùng', content: 'Bảo trì hệ thống vào tối nay.', date: '25/03/2026' },
+  { id: 2, sender: 'User_X', recipient: 'Hỗ trợ', content: 'Tôi không thể đăng nhập, vui lòng giúp đỡ.', date: '25/03/2026' },
 ];
 
 const AdminMessages = ({ t }) => {
@@ -32,6 +32,7 @@ const AdminMessages = ({ t }) => {
               <th className="px-6 py-4 font-medium">{t('admin.table.recipient')}</th>
               <th className="px-6 py-4 font-medium">{t('admin.table.message')}</th>
               <th className="px-6 py-4 font-medium">{t('admin.table.date')}</th>
+              <th className="px-6 py-4 font-medium text-right">{t('admin.table.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -44,6 +45,12 @@ const AdminMessages = ({ t }) => {
                 <td className="px-6 py-4 text-sm">{msg.recipient}</td>
                 <td className="px-6 py-4 text-sm text-text-muted">{msg.content}</td>
                 <td className="px-6 py-4 text-sm">{msg.date}</td>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex items-center justify-end gap-2 text-text-muted">
+                    <button className="p-1 hover:text-blue-500"><Eye size={16} /></button>
+                    <button className="p-1 hover:text-red-500"><Trash2 size={16} /></button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

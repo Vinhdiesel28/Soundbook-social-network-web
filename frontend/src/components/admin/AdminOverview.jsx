@@ -5,7 +5,7 @@ const getStats = (t) => [
   { label: t('admin.stats.users'), value: '24,592', change: '+12%', isPositive: true },
   { label: t('admin.stats.rooms'), value: '142', change: '+5%', isPositive: true },
   { label: t('admin.stats.posts'), value: '1,284', change: '+18%', isPositive: true },
-  { label: t('admin.stats.load'), value: '42%', change: '+1%', isPositive: false },
+  { label: t('admin.stats.reports'), value: '15', change: '-2%', isPositive: true },
 ];
 
 const AdminOverview = ({ t }) => {

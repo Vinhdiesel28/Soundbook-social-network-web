@@ -67,7 +67,7 @@ const ProfileShelves = ({ t, shelves, isGuest = false }) => {
                     </button>
                   )}
 
-                  <div className={`shadow-xl transition-shadow duration-300 group-hover:shadow-2xl ${item.style} flex items-center justify-center text-white/50 text-xs font-bold text-center p-2 break-words`}>
+                  <div className={`shadow-xl transition-shadow duration-300 group-hover:shadow-2xl ${item.style} flex items-center justify-center text-white/90 drop-shadow-sm text-sm font-bold text-center p-2 break-words leading-tight`}>
                     {item.title}
                   </div>
 
@@ -89,7 +89,6 @@ const ProfileShelves = ({ t, shelves, isGuest = false }) => {
                           {'★'.repeat(item.rating)}
                         </div>
                       )}
-                      <p className="text-xs mt-2 line-clamp-2 text-gray-500 italic">"{t('profile.review_placeholder')}"</p>
                     </div>
 
                     <div className="w-3 h-3 bg-surface-color border-b border-r border-gray-200 dark:border-gray-700 absolute -bottom-1.5 left-1/2 -translate-x-1/2 rotate-45" />

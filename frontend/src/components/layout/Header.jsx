@@ -53,19 +53,19 @@ const Header = () => {
                   <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider">{t('header.search_users')}</div>
                   <div className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
                     <div className="w-8 h-8 rounded-full bg-blue-500"></div>
-                    <div className="text-sm font-medium">Alex Chen <span className="text-xs text-gray-500">85% Match</span></div>
+                    <div className="text-sm font-medium">Hải Đăng <span className="text-xs text-gray-500">85% Match</span></div>
                   </div>
 
                   <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider mt-2">{t('header.search_music')}</div>
                   <div className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
                     <div className="w-8 h-8 rounded-md bg-purple-500 flex items-center justify-center text-white text-xs">🎵</div>
-                    <div className="text-sm font-medium">Midnight City <span className="text-xs text-gray-500">M83</span></div>
+                    <div className="text-sm font-medium">Sau Lời Từ Khước <span className="text-xs text-gray-500">Phan Mạnh Quỳnh</span></div>
                   </div>
 
                   <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider mt-2">{t('header.search_books')}</div>
                   <div className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
                     <div className="w-6 h-8 rounded-sm bg-orange-500 flex items-center justify-center text-white text-xs">📚</div>
-                    <div className="text-sm font-medium">Dune <span className="text-xs text-gray-500">Frank Herbert</span></div>
+                    <div className="text-sm font-medium">Đắc Nhân Tâm <span className="text-xs text-gray-500">Dale Carnegie</span></div>
                   </div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-900/50 p-3 text-center text-sm text-primary-500 hover:text-primary-600 cursor-pointer font-medium border-t border-gray-200 dark:border-gray-800">
@@ -129,7 +129,7 @@ const Header = () => {
                       <div key={i} className="p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors flex gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex-shrink-0" />
                         <div>
-                          <p className="text-sm"><span className="font-semibold">Sarah</span> {t('header.notification.liked_review')} "The Great Gatsby"</p>
+                          <p className="text-sm"><span className="font-semibold">Mai Linh</span> {t('header.notification.liked_review')} "Đắc Nhân Tâm"</p>
                           <p className="text-xs text-gray-500 mt-1">{t('time.2h_ago')}</p>
                         </div>
                       </div>

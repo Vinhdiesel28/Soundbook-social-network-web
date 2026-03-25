@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Smile } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import CommentItem from './CommentItem';
 
@@ -49,6 +49,9 @@ const PostComments = ({ comments }) => {
             placeholder={t('post.comment') + '...'}
             className="flex-1 bg-transparent text-xs outline-none text-text-color placeholder:text-text-muted"
           />
+          <button type="button" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0">
+            <Smile size={16} />
+          </button>
           <button
             className={`text-primary-500 transition-opacity ${commentInput ? 'opacity-100' : 'opacity-30'}`}
             disabled={!commentInput}

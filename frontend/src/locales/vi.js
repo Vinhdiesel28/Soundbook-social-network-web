@@ -63,7 +63,10 @@ export const vi = {
   // Reacts
   'react.like': 'Thích',
   'react.heart': 'Yêu thích',
-  'react.fire': 'Bùng cháy',
+  'react.fire': 'Cực cháy',
+  'react.smile': 'Haha',
+  'react.sad': 'Buồn',
+  'react.angry': 'Phẫn nộ',
   'react.reactions_title': 'Cảm xúc',
   'react.you': 'Bạn',
   'react.you_and_others': 'Bạn và {count} người khác',
@@ -91,7 +94,6 @@ export const vi = {
   // Profile
   'profile.match_score': 'Mức độ tương hợp',
   'profile.title': 'Căn phòng tâm hồn',
-  'profile.review_placeholder': 'Ghi chú review của chủ nhà nằm ở đây, tối đa 2 dòng...',
   'profile.shelf.playlists': 'Danh sách phát',
   'profile.shelf.library': 'Thư viện',
   'profile.posts_title': 'Bài viết',
@@ -130,6 +132,7 @@ export const vi = {
   'admin.nav.posts': 'Bài đăng',
   'admin.nav.messages': 'Tin nhắn',
   'admin.nav.rooms': 'Phòng Live',
+  'admin.nav.reports': 'Báo cáo vi phạm',
   'admin.nav.settings': 'Cài đặt',
   'admin.nav.profile': 'Hồ sơ',
 
@@ -155,12 +158,13 @@ export const vi = {
   'admin.stats.users': 'Tổng Người dùng',
   'admin.stats.rooms': 'Phòng Live Đang hoạt động',
   'admin.stats.posts': 'Tổng Bài đăng',
-  'admin.stats.load': 'Tải Máy chủ',
+  'admin.stats.reports': 'Báo cáo vi phạm',
 
   'admin.title.users': 'Quản lý Người dùng',
   'admin.title.posts': 'Quản lý Bài đăng',
   'admin.title.messages': 'Quản lý Tin nhắn',
   'admin.title.rooms': 'Quản lý Phòng Live',
+  'admin.title.reports': 'Quản lý Báo cáo vi phạm',
 
   'admin.action.add_user': 'Thêm người dùng',
 
@@ -177,9 +181,14 @@ export const vi = {
   'admin.table.recipient': 'Người nhận',
   'admin.table.message': 'Tin nhắn',
   'admin.table.date': 'Thời gian',
+  'admin.table.created_date': 'Ngày tạo',
   'admin.table.room_host': 'Host',
   'admin.table.room_title': 'Tiêu đề',
   'admin.table.listeners': 'Người nghe',
+  'admin.table.reporter': 'Người báo cáo',
+  'admin.table.target': 'Đối tượng',
+  'admin.table.reason': 'Lý do',
+  'admin.table.action_taken': 'Đã xử lý',
 
   // Chat
   'chat.title': 'Tin nhắn',
@@ -220,4 +229,16 @@ export const vi = {
   'onboarding.back': 'Quay lại',
   'onboarding.connect_spotify': 'Kết nối Spotify',
   'onboarding.skip': 'Bỏ qua bước này',
+
+  // Live Room
+  'room.listening': 'người đang nghe',
+  'room.chat': 'Trò chuyện',
+  'room.queue': 'Danh sách',
+  'room.up_next': 'Tiếp theo',
+  'room.view_queue': 'Xem danh sách',
+  'room.now_playing': 'Đang phát',
+  'room.add_song': 'Thêm bài',
+  'room.host': 'Chủ phòng',
+  'room.invite_friends': 'Mời bạn bè',
+  'room.chat_placeholder': 'Nói gì đó đi...',
 };

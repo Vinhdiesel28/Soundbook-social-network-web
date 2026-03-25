@@ -9,63 +9,63 @@ import NewsfeedSidebar from '../components/newsfeed/NewsfeedSidebar';
 
 // Mock Data
 const LIVE_RADAR = [
-  { id: 1, name: 'Alex', avatar: 'bg-blue-500', isLive: true },
-  { id: 2, name: 'Sarah', avatar: 'bg-pink-500', isLive: true },
-  { id: 3, name: 'Mike', avatar: 'bg-green-500', isLive: false },
-  { id: 4, name: 'Emma', avatar: 'bg-purple-500', isLive: false },
-  { id: 5, name: 'Chill Room', avatar: 'bg-yellow-500', isRoom: true },
+  { id: 1, name: 'Hải Đăng', avatar: 'bg-blue-500', isLive: true },
+  { id: 2, name: 'Mai Linh', avatar: 'bg-pink-500', isLive: true },
+  { id: 3, name: 'Minh Tuấn', avatar: 'bg-green-500', isLive: false },
+  { id: 4, name: 'Bảo Trâm', avatar: 'bg-purple-500', isLive: false },
+  { id: 5, name: 'Phòng thư giãn', avatar: 'bg-yellow-500', isRoom: true },
 ];
 
 const getFeedPosts = (t) => [
   {
     id: 1,
-    user: { name: 'Dat Nguyen', avatar: 'bg-orange-500', time: t('time.2h_ago') },
+    user: { name: 'Đạt Nguyễn', avatar: 'bg-orange-500', time: t('time.2h_ago') },
     type: 'audio',
-    content: t('post.1.content'),
-    media: { title: 'Midnight City', artist: 'M83', cover: 'bg-gradient-to-br from-purple-500 to-indigo-600' },
+    content: "Không thể ngừng nghe !",
+    media: { title: 'Đừng Làm Trái Tim Anh Đau', artist: 'Sơn Tùng M-TP', cover: 'bg-gradient-to-br from-purple-500 to-indigo-600' },
     reactions: { flame: 124, sad: 2, comments: 18, shares: 5 },
     comments: [
       {
-        id: 1, user: { name: 'Alex', avatar: 'bg-blue-500' }, text: 'Bài này đỉnh thật sự, nghe mãi không chán !!!', time: t('time.1h_ago'), reacts: 12,
+        id: 1, user: { name: 'Hải Đăng', avatar: 'bg-blue-500' }, text: 'Bài này đỉnh thật sự, nghe mãi không chán !!!', time: t('time.1h_ago'), reacts: 12,
         reactors: [
-          { name: 'Sarah Connor', react: 'fire' }, { name: 'Mike', react: 'like' },
-          { name: 'Emma', react: 'heart' }, { name: 'John Doe', react: 'like' },
+          { name: 'Mai Linh', react: 'fire' }, { name: 'Minh Tuấn', react: 'like' },
+          { name: 'Bảo Trâm', react: 'heart' }, { name: 'Thanh Sơn', react: 'like' },
         ]
       },
       {
-        id: 2, user: { name: 'Emma', avatar: 'bg-purple-500' }, text: 'M83 luôn là một level khác synthwave huyền thoại!', time: t('time.2h_ago'), reacts: 7,
+        id: 2, user: { name: 'Bảo Trâm', avatar: 'bg-purple-500' }, text: 'Sếp luôn là một level khác!', time: t('time.2h_ago'), reacts: 7,
         reactors: [
-          { name: 'Dat Nguyen', react: 'fire' }, { name: 'Alex', react: 'like' },
-          { name: 'Jane Smith', react: 'heart' },
+          { name: 'Đạt Nguyễn', react: 'fire' }, { name: 'Hải Đăng', react: 'like' },
+          { name: 'Hương Giang', react: 'heart' },
         ]
       },
     ]
   },
   {
     id: 2,
-    user: { name: 'Sarah Connor', avatar: 'bg-pink-500', time: t('time.5h_ago') },
+    user: { name: 'Trần Quỳnh', avatar: 'bg-pink-500', time: t('time.5h_ago') },
     type: 'book_review',
-    content: t('post.2.content'),
-    media: { title: 'Dune', author: 'Frank Herbert', cover: 'bg-gradient-to-br from-orange-400 to-red-600', rating: 5 },
+    content: "Vừa đọc xong 'CTDL&GT'. Tôi đã khóc.",
+    media: { title: 'Cấu Trúc Dữ Liệu & Giải Thuật', author: 'PTIT', cover: 'bg-gradient-to-br from-orange-400 to-red-600', rating: 5 },
     reactions: { flame: 89, sad: 0, comments: 32, shares: 12 },
     comments: [
-      { id: 1, user: { name: 'Mike', avatar: 'bg-green-500' }, text: 'Dune là một trong những cuốn sách tôi đọc nhiều lần nhất. Thế giới quan quá phức tạp và thú vị!', time: t('time.3h_ago') },
-      { id: 2, user: { name: 'John Doe', avatar: 'bg-teal-500' }, text: 'Bộ phim năm 2021 và 2024 cũng rất hay, xứng đáng với nguyên tác.', time: t('time.5h_ago') },
-      { id: 3, user: { name: 'Jane Smith', avatar: 'bg-rose-500' }, text: 'Tôi cũng vừa đọc xong, phần 2 "Messiah of Dune" còn hay hơn nữa!', time: t('time.1d_ago') },
+      { id: 1, user: { name: 'Minh Tuấn', avatar: 'bg-green-500' }, text: 'CTDL&GT là cuốn sách tôi đọc nhiều lần nhất sau cuốn Hệ điều hành. Rất hay!', time: t('time.3h_ago') },
+      { id: 2, user: { name: 'Thanh Sơn', avatar: 'bg-teal-500' }, text: 'Quá đẳng cấp.', time: t('time.5h_ago') },
+      { id: 3, user: { name: 'Hương Giang', avatar: 'bg-rose-500' }, text: 'Tôi cũng vừa đọc xong, phần 2 "Messiah of Dune" còn hay hơn nữa!', time: t('time.1d_ago') },
     ]
   }
 ];
 
 const TRENDING = [
-  { id: 1, title: 'Starboy', subtitle: 'The Weeknd', type: 'music', count: '1.2k mentions' },
-  { id: 2, title: 'Atomic Habits', subtitle: 'James Clear', type: 'book', count: '856 mentions' },
-  { id: 3, title: 'Die With A Smile', subtitle: 'Lady Gaga, Bruno Mars', type: 'music', count: '645 mentions' },
+  { id: 1, title: 'Na na na', subtitle: 'Daux Mysie', type: 'music', count: '1.2k lượt nghe' },
+  { id: 2, title: 'Hệ điều hành', subtitle: 'PTIT', type: 'book', count: '856 lượt đọc' },
+  { id: 3, title: 'Die With A Smile', subtitle: 'Lady Gaga, Bruno Mars', type: 'music', count: '645 lượt nghe' },
 ];
 
 const SUGGESTIONS = [
-  { id: 1, name: 'John Doe', match: 92, avatar: 'bg-teal-500' },
-  { id: 2, name: 'Jane Smith', match: 88, avatar: 'bg-rose-500' },
-  { id: 3, name: 'Bob Wilson', match: 81, avatar: 'bg-indigo-500' },
+  { id: 1, name: 'Nguyễn Văn Nam', match: 92, avatar: 'bg-teal-500' },
+  { id: 2, name: 'Lê Kiều', match: 88, avatar: 'bg-rose-500' },
+  { id: 3, name: 'Trần Bách', match: 81, avatar: 'bg-indigo-500' },
 ];
 
 const Newsfeed = () => {

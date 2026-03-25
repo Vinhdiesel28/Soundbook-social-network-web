@@ -36,7 +36,7 @@ const ChatMessage = ({ msg, playingId, setPlayingId }) => {
                 </button>
               )}
               {msg.type === 'book' && (
-                <button className="text-[10px] font-bold text-orange-500 mt-1 hover:underline">View Book</button>
+                <button className="text-[10px] font-bold text-orange-500 mt-1 hover:underline">Đọc sách</button>
               )}
             </div>
           </div>

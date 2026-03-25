@@ -4,33 +4,33 @@ import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
 
 const CHATS = [
-  { id: 1, name: 'Dat Nguyen', type: 'direct', avatar: 'bg-orange-500', unread: 2, lastMsg: 'Wait till you hear this new track...', time: '10:42 AM', isLive: true },
-  { id: 2, name: 'Indie Heads 🎸', type: 'group', avatar: 'bg-indigo-500', unread: 0, lastMsg: 'Sarah: Just finished reading Dune!', time: 'Yesterday' },
-  { id: 3, name: 'Synthwave Chill', type: 'group', avatar: 'bg-purple-600', unread: 5, lastMsg: 'Mike started a Live Sync Room', time: 'Tuesday', isLive: true },
-  { id: 4, name: 'Emma', type: 'direct', avatar: 'bg-pink-500', unread: 0, lastMsg: 'Thanks for the recommendation', time: 'Mon' },
+  { id: 1, name: 'Đạt Nguyễn', type: 'direct', avatar: 'bg-orange-500', unread: 2, lastMsg: 'Đợi đến khi ông nghe bài này...', time: '10:42 SA', isLive: true },
+  { id: 2, name: 'Hội Indie 🎸', type: 'group', avatar: 'bg-indigo-500', unread: 0, lastMsg: 'Mai Linh: Vừa đọc xong cuốn Dune!', time: 'Hôm qua' },
+  { id: 3, name: 'Chill cùng Synthwave', type: 'group', avatar: 'bg-purple-600', unread: 5, lastMsg: 'Minh Tuấn đã bắt đầu một Phòng Nghe chung', time: 'Thứ Ba', isLive: true },
+  { id: 4, name: 'Bảo Trâm', type: 'direct', avatar: 'bg-pink-500', unread: 0, lastMsg: 'Cảm ơn vì lời giới thiệu nhé', time: 'Thứ Hai' },
 ];
 
 const MESSAGES = [
-  { id: 1, user: 'Dat Nguyen', isMe: false, text: 'Hey! Did you check out that album I sent?', time: '10:30 AM', avatar: 'bg-orange-500' },
-  { id: 2, user: 'Me', isMe: true, text: 'Yeah I did! The production is insane. Especially track 3.', time: '10:35 AM' },
-  { id: 3, user: 'Dat Nguyen', isMe: false, text: 'Right?? Wait till you hear this new track...', time: '10:42 AM', avatar: 'bg-orange-500' },
+  { id: 1, user: 'Đạt Nguyễn', isMe: false, text: 'Ê! Ông nghe thử album tôi gửi chưa?', time: '10:30 SA', avatar: 'bg-orange-500' },
+  { id: 2, user: 'Tôi', isMe: true, text: 'Nghe rồi! Bản phối đỉnh thật sự. Nhất là bài số 3.', time: '10:35 SA' },
+  { id: 3, user: 'Đạt Nguyễn', isMe: false, text: 'Đúng không?? Đợi đến khi ông nghe bài này...', time: '10:42 SA', avatar: 'bg-orange-500' },
   {
     id: 4,
-    user: 'Dat Nguyen',
+    user: 'Đạt Nguyễn',
     isMe: false,
     type: 'audio',
-    media: { title: 'Neon Night', artist: 'Synthwave Runner', cover: 'bg-gradient-to-br from-fuchsia-500 to-cyan-500' },
-    time: '10:43 AM',
+    media: { title: 'Na na na', artist: 'Daux Mysie', cover: 'bg-gradient-to-br from-fuchsia-500 to-cyan-500' },
+    time: '10:43 SA',
     avatar: 'bg-orange-500'
   },
   {
     id: 5,
-    user: 'Me',
+    user: 'Tôi',
     isMe: true,
     type: 'book',
-    text: 'Nice! While we are sharing stuff, you have to read this:',
-    media: { title: 'Neuromancer', author: 'William Gibson', cover: 'bg-gray-800' },
-    time: '10:45 AM'
+    text: 'Quá đỉnh! Nhân tiện đang chia sẻ đồ hay, ông phải đọc thử cuốn này:',
+    media: { title: 'Lịch sử Đảng Cộng Sản Việt Nam', author: 'PTIT', cover: 'bg-gray-800' },
+    time: '10:45 SA'
   }
 ];
 

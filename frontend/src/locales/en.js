@@ -62,6 +62,9 @@ export const en = {
   'react.like': 'Like',
   'react.heart': 'Love',
   'react.fire': 'Fire',
+  'react.smile': 'Haha',
+  'react.sad': 'Sad',
+  'react.angry': 'Angry',
   'react.reactions_title': 'Reactions',
   'react.you': 'You',
   'react.you_and_others': 'You and {count} others',
@@ -89,7 +92,6 @@ export const en = {
   // Profile
   'profile.match_score': 'Match Score',
   'profile.title': 'Soul Room',
-  'profile.review_placeholder': 'Owner\'s review notes go here, maximum 2 lines...',
   'profile.shelf.playlists': 'Playlists',
   'profile.shelf.library': 'Library',
   'profile.posts_title': 'Posts',
@@ -128,6 +130,7 @@ export const en = {
   'admin.nav.posts': 'Posts',
   'admin.nav.messages': 'Messages',
   'admin.nav.rooms': 'Live Rooms',
+  'admin.nav.reports': 'Violation Reports',
   'admin.nav.settings': 'Settings',
   'admin.nav.profile': 'Profile',
 
@@ -153,12 +156,13 @@ export const en = {
   'admin.stats.users': 'Total Users',
   'admin.stats.rooms': 'Active Live Rooms',
   'admin.stats.posts': 'Total Posts',
-  'admin.stats.load': 'Server Load',
+  'admin.stats.reports': 'Violation Reports',
 
   'admin.title.users': 'Users Management',
   'admin.title.posts': 'Posts Management',
   'admin.title.messages': 'Messages Management',
   'admin.title.rooms': 'Live Rooms Management',
+  'admin.title.reports': 'Reports Management',
 
   'admin.action.add_user': 'Add User',
 
@@ -175,9 +179,14 @@ export const en = {
   'admin.table.recipient': 'Recipient',
   'admin.table.message': 'Message',
   'admin.table.date': 'Date',
+  'admin.table.created_date': 'Created Date',
   'admin.table.room_host': 'Host',
   'admin.table.room_title': 'Title',
   'admin.table.listeners': 'Listeners',
+  'admin.table.reporter': 'Reporter',
+  'admin.table.target': 'Target',
+  'admin.table.reason': 'Reason',
+  'admin.table.action_taken': 'Action Taken',
 
   // Chat
   'chat.title': 'Messages',
@@ -218,4 +227,16 @@ export const en = {
   'onboarding.back': 'Back',
   'onboarding.connect_spotify': 'Connect Spotify',
   'onboarding.skip': 'Skip for now',
+
+  // Live Room
+  'room.listening': 'listening',
+  'room.chat': 'Chat',
+  'room.queue': 'Queue',
+  'room.up_next': 'Up Next',
+  'room.view_queue': 'View Queue',
+  'room.now_playing': 'Now Playing',
+  'room.add_song': 'Add Song',
+  'room.host': 'Host',
+  'room.invite_friends': 'Invite Friends',
+  'room.chat_placeholder': 'Say something nice...',
 };
