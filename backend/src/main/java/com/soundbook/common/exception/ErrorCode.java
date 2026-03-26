@@ -17,6 +17,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(404, "User not found", HttpStatus.NOT_FOUND),
     POST_NOT_FOUND(404, "Post not found", HttpStatus.NOT_FOUND),
     ROOM_NOT_FOUND(404, "Room not found", HttpStatus.NOT_FOUND),
+    ROOM_MEMBER_NOT_FOUND(404, "Room member not found", HttpStatus.NOT_FOUND),
 
     // Lỗi Đăng nhập / Xác thực (401/403)
     UNAUTHENTICATED(401, "Unauthenticated", HttpStatus.UNAUTHORIZED),
@@ -27,6 +28,8 @@ public enum ErrorCode {
     // Lỗi Xung đột dữ liệu / Logic (409/400)
     USER_EXISTED(400, "User with this email already exists", HttpStatus.BAD_REQUEST),
     ALREADY_FRIENDS(400, "You are already friends", HttpStatus.BAD_REQUEST),
+    ROOM_ALREADY_JOINED(400, "User already joined this room", HttpStatus.BAD_REQUEST),
+    ROOM_ALREADY_ENDED(400, "Room is already ended", HttpStatus.BAD_REQUEST),
     ;
 
     ErrorCode(int code, String message, HttpStatus statusCode) {
