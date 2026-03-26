@@ -1,5 +1,149 @@
 package com.soundbook.service;
 
-// TODO: Define business logic here
+import com.soundbook.dto.request.LoginRequest;
+import com.soundbook.dto.request.RegisterRequest;
+import com.soundbook.dto.response.AuthResponse;
+import com.soundbook.entity.User;
+import com.soundbook.entity.UserProfile;
+import com.soundbook.entity.UserOnboarding;
+import com.soundbook.entity.enums.ThemeMode;
+import com.soundbook.entity.enums.UserRole;
+import com.soundbook.entity.enums.UserStatus;
+import com.soundbook.repository.UserOnboardingRepository;
+import com.soundbook.repository.UserProfileRepository;
+import com.soundbook.repository.UserRepository;
+import com.soundbook.security.JwtService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collections;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
 public class AuthService {
+
+    private final AuthenticationManager authenticationManager;
+    private final UserDetailsService userDetailsService;
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final UserProfileRepository userProfileRepository;
+    private final UserOnboardingRepository userOnboardingRepository;
+
+    @Value("${google.client-id}")
+    private String googleClientId;
+
+    public AuthResponse login(LoginRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+        );
+        return generateAuthResponse(request.getEmail());
+    }
+
+    @Transactional
+    public AuthResponse register(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email đã được sử dụng!");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .displayName(request.getDisplayName())
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        user = userRepository.save(user);
+        createDefaultProfileAndOnboarding(user, null);
+
+        return generateAuthResponse(user.getEmail());
+    }
+
+    @Transactional
+    public AuthResponse loginWithGoogle(String idTokenString) {
+        try {
+            // KIỂM TRA LỖI NULL CLIENT ID NGAY TẠI ĐÂY
+            if (googleClientId == null || googleClientId.trim().isEmpty()) {
+                System.err.println("--- ERROR: googleClientId is NULL/EMPTY! Check application.properties ---");
+                throw new RuntimeException("Cấu hình google.client-id bị thiếu ở Backend.");
+            }
+
+            // In ra console để bạn kiểm tra (xem ở tab Run/Console của IntelliJ)
+            System.out.println("Sử dụng Google Client ID: " + googleClientId);
+
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            if (idToken == null) throw new RuntimeException("Xác thực Google với server Google thất bại!");
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+            String googleSub = payload.getSubject();
+            String name = (String) payload.get("name");
+            String pictureUrl = (String) payload.get("picture");
+
+            User user = userRepository.findByEmail(email).orElseGet(() -> {
+                User newUser = User.builder()
+                        .email(email)
+                        .googleSub(googleSub)
+                        .displayName(name)
+                        .role(UserRole.USER)
+                        .status(UserStatus.ACTIVE)
+                        .build();
+                newUser = userRepository.save(newUser);
+                createDefaultProfileAndOnboarding(newUser, pictureUrl);
+                return newUser;
+            });
+
+            return generateAuthResponse(user.getEmail());
+        } catch (Exception e) {
+            // In log chi tiết lỗi ra console để debug
+            e.printStackTrace();
+            throw new RuntimeException("Lỗi đăng nhập Google: " + e.getMessage());
+        }
+    }
+
+    private AuthResponse generateAuthResponse(String email) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        String jwtToken = jwtService.generateToken(userDetails);
+        return AuthResponse.builder().token(jwtToken).type("Bearer").build();
+    }
+
+    private void createDefaultProfileAndOnboarding(User user, String avatarUrl) {
+        String baseUsername = user.getEmail().split("@")[0].replaceAll("[^a-zA-Z0-9]", "");
+        String uniqueUsername = baseUsername + "_" + UUID.randomUUID().toString().substring(0, 5);
+
+        UserProfile profile = UserProfile.builder()
+                .user(user)
+                .username(uniqueUsername)
+                .avatarUrl(avatarUrl)
+                .themeMode(ThemeMode.AUTO)
+                .allowPreviewPlayer(true)
+                .build();
+        userProfileRepository.save(profile);
+
+        UserOnboarding onboarding = UserOnboarding.builder()
+                .user(user)
+                .musicConnected(false)
+                .musicDnaReady(false)
+                .bookDnaReady(false)
+                .tasteDnaReady(false)
+                .build();
+        userOnboardingRepository.save(onboarding);
+    }
 }
