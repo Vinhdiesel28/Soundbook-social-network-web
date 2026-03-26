@@ -327,6 +327,43 @@ CREATE TABLE IF NOT EXISTS room_playback_state (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS room_messages (
+  id           BIGINT PRIMARY KEY AUTO_INCREMENT,
+  room_id      BIGINT NOT NULL,
+  sender_id    BIGINT NOT NULL,
+  content_type ENUM('TEXT','EMOJI','REACTION_GIF') NOT NULL DEFAULT 'TEXT',
+  content_text TEXT NULL,
+  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_room_messages_room_created (room_id, created_at),
+  INDEX idx_room_messages_sender (sender_id),
+  CONSTRAINT fk_room_messages_room
+    FOREIGN KEY (room_id) REFERENCES rooms(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_room_messages_sender
+    FOREIGN KEY (sender_id) REFERENCES users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS room_queue (
+  id                 BIGINT PRIMARY KEY AUTO_INCREMENT,
+  room_id            BIGINT NOT NULL,
+  track_id           VARCHAR(64) NOT NULL,
+  track_payload_json JSON NOT NULL,
+  added_by_id        BIGINT NOT NULL,
+  vote_count         INT NOT NULL DEFAULT 0,
+  position_order     INT NOT NULL DEFAULT 0,
+  played_at          DATETIME NULL,
+  created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_room_queue_room_order (room_id, position_order),
+  INDEX idx_room_queue_room_played (room_id, played_at),
+  CONSTRAINT fk_room_queue_room
+    FOREIGN KEY (room_id) REFERENCES rooms(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_room_queue_added_by
+    FOREIGN KEY (added_by_id) REFERENCES users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ===================== DM =====================
 CREATE TABLE IF NOT EXISTS dm_threads (
   id         BIGINT PRIMARY KEY AUTO_INCREMENT,
