@@ -2,167 +2,246 @@ import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Disc3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-
+import { GoogleLogin } from '@react-oauth/google';
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ email: '', username: '', password: '' });
+  // Thêm displayName vào formData để khớp với API Register
+  const [formData, setFormData] = useState({ email: '', username: '', password: '', displayName: '' });
+  const [loading, setLoading] = useState(false); // Thêm state loading để chặn bấm nút liên tục
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
 
-  const handleToggle = () => setIsLogin(!isLogin);
+  const handleGoogleLogin = async (idToken) => {
+    if (!idToken) {
+      alert('Google không trả về ID token hợp lệ. Vui lòng thử lại.');
+      return;
+    }
 
-  const handleSubmit = (e) => {
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8081/api/v1/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('token', result.data.token);
+        navigate('/feed');
+      } else {
+        alert(result.message || 'Đăng nhập Google thất bại.');
+      }
+    } catch (error) {
+      console.error("Lỗi đăng nhập Google:", error);
+      alert('Không thể kết nối đến Backend khi đăng nhập bằng Google.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggle = () => {
+    setIsLogin(!isLogin);
+    // Reset form khi chuyển chế độ
+    setFormData({ email: '', username: '', password: '', displayName: '' });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate('/onboarding');
+    setLoading(true);
+
+    // URL Backend của bạn (vì vite.config.js không đổi được nên dùng URL đầy đủ)
+    const BASE_URL = 'http://localhost:8081/api/v1';
+    const endpoint = isLogin ? `${BASE_URL}/auth/login` : `${BASE_URL}/auth/register`;
+
+    // Chuẩn bị dữ liệu gửi lên
+    const body = isLogin
+        ? { email: formData.email, password: formData.password }
+        : {
+          email: formData.email,
+          password: formData.password,
+          // Ưu tiên dùng username làm displayName nếu không nhập displayName
+          displayName: formData.displayName || formData.username
+        };
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // 1. Lưu JWT Token vào LocalStorage để dùng cho các trang sau
+        localStorage.setItem('token', result.data.token);
+
+        // 2. Điều hướng người dùng
+        if (isLogin) {
+          navigate('/feed');
+        } else {
+          // Người mới đăng ký thì đi qua trang Onboarding
+          navigate('/onboarding');
+        }
+      } else {
+        // Hiển thị thông báo lỗi từ Backend (Sai mật khẩu, Email đã tồn tại...)
+        alert(result.message || "Thao tác thất bại. Vui lòng kiểm tra lại.");
+      }
+    } catch (error) {
+      console.error("Lỗi kết nối:", error);
+      alert("Không thể kết nối đến Backend (Cổng 8081). Hãy chắc chắn bạn đã chạy ứng dụng Spring Boot.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-bg-color text-text-color flex flex-col md:flex-row">
+      <div className="min-h-screen bg-bg-color text-text-color flex flex-col md:flex-row">
 
-      {/* Left side */}
-      <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-primary-600 via-purple-700 to-black overflow-hidden items-center justify-center p-12">
-        {/* Background */}
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob" />
-        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-fuchsia-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000" />
-        <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-yellow-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000" />
+        {/* Left side (Giữ nguyên giao diện đẹp của bạn) */}
+        <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-primary-600 via-purple-700 to-black overflow-hidden items-center justify-center p-12">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob" />
+          <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-fuchsia-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000" />
+          <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-yellow-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000" />
 
-        <div className="relative z-10 text-white max-w-lg">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-primary-600 animate-[spin_10s_linear_infinite]">
-              <Disc3 size={28} />
+          <div className="relative z-10 text-white max-w-lg">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-primary-600 animate-[spin_10s_linear_infinite]">
+                <Disc3 size={28} />
+              </div>
+              <h1 className="text-4xl font-black tracking-tight">Soundbook</h1>
             </div>
-            <h1 className="text-4xl font-black tracking-tight">Soundbook</h1>
+            <h2 className="text-5xl font-bold leading-tight mb-6">{t('login.branding_tagline')}</h2>
+            <p className="text-xl text-white/80 font-medium">{t('login.branding_desc')}</p>
           </div>
-          <h2 className="text-5xl font-bold leading-tight mb-6">
-            {t('login.branding_tagline')}
-          </h2>
-          <p className="text-xl text-white/80 font-medium">
-            {t('login.branding_desc')}
-          </p>
         </div>
-      </div>
 
-      {/* Right side */}
-      <div className="flex-1 flex items-center justify-center p-8 sm:p-12 lg:p-24 relative">
-        <div className="w-full max-w-sm relative z-10">
-
-          <div className="mb-10 text-center md:text-left">
-            <div className="md:hidden flex items-center justify-center gap-2 mb-6 text-primary-500">
-              <Disc3 size={32} className="animate-[spin_10s_linear_infinite]" />
-              <span className="text-2xl font-black">Soundbook</span>
+        {/* Right side */}
+        <div className="flex-1 flex items-center justify-center p-8 sm:p-12 lg:p-24 relative">
+          <div className="w-full max-sm relative z-10">
+            <div className="mb-10 text-center md:text-left">
+              <div className="md:hidden flex items-center justify-center gap-2 mb-6 text-primary-500">
+                <Disc3 size={32} className="animate-[spin_10s_linear_infinite]" />
+                <span className="text-2xl font-black">Soundbook</span>
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight mb-2">
+                {isLogin ? t('login.welcome_back') : t('login.create_account')}
+              </h2>
+              <p className="text-text-muted">
+                {isLogin ? t('login.signin_desc') : t('login.register_desc')}
+              </p>
             </div>
-            <h2 className="text-3xl font-bold tracking-tight mb-2">
-              {isLogin ? t('login.welcome_back') : t('login.create_account')}
-            </h2>
-            <p className="text-text-muted">
-              {isLogin ? t('login.signin_desc') : t('login.register_desc')}
-            </p>
-          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Username/DisplayName - Chỉ hiện khi đăng ký */}
+              {!isLogin && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_username')}</label>
+                    <div className="relative">
+                      <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <input
+                          type="text"
+                          required
+                          placeholder="johndoe"
+                          className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm"
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value, displayName: e.target.value })}
+                      />
+                    </div>
+                  </div>
+              )}
 
-            {!isLogin && (
+              {/* Email */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_username')}</label>
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_email')}</label>
                 <div className="relative">
-                  <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
-                    type="text"
-                    required
-                    placeholder="johndoe"
-                    className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      type="email"
+                      required
+                      placeholder="name@example.com"
+                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
               </div>
-            )}
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_email')}</label>
-              <div className="relative">
-                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_password')}</label>
-              <div className="relative">
-                <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="password"
-                  required
-                  placeholder="......"
-                  className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm mb-1"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                />
-              </div>
-              {isLogin && (
-                <div className="flex justify-end">
-                  <a href="#" className="text-xs font-medium text-primary-500 hover:underline">{t('login.forgot_password')}</a>
+              {/* Password */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_password')}</label>
+                <div className="relative">
+                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                      type="password"
+                      required
+                      placeholder="......"
+                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm mb-1"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
                 </div>
-              )}
+              </div>
+
+              <button
+                  type="submit"
+                  disabled={loading} // Vô hiệu hóa nút khi đang gửi request
+                  className={`w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {loading ? '...' : (isLogin ? t('login.signin_btn') : t('login.register_btn'))}
+                <ArrowRight size={18} />
+              </button>
+            </form>
+
+            {/* ... Các thành phần Google và Toggle giữ nguyên ... */}
+            <div className="my-6 flex items-center gap-4">
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+              <span className="text-xs text-text-muted uppercase font-semibold">{t('login.or_continue')}</span>
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
             </div>
 
-            <button type="submit" className="w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4">
-              {isLogin ? t('login.signin_btn') : t('login.register_btn')} <ArrowRight size={18} />
-            </button>
-          </form>
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                  onSuccess={(credentialResponse) => {
+                    console.log('Token từ Google:', credentialResponse.credential);
+                    handleGoogleLogin(credentialResponse?.credential);
+                  }}
+                  onError={() => {
+                    console.log('Đăng nhập Google thất bại');
+                    alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
+                  }}
+                  useOneTap
+                  shape="pill"
+                  theme="filled_blue"
+              />
+            </div>
 
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-            <span className="text-xs text-text-muted uppercase font-semibold">{t('login.or_continue')}</span>
-            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+            <p className="mt-8 text-center text-sm text-text-muted">
+              {isLogin ? t('login.no_account') + ' ' : t('login.have_account') + ' '}
+              <button onClick={handleToggle} className="text-primary-500 font-semibold hover:underline">
+                {isLogin ? t('login.signup_link') : t('login.login_link')}
+              </button>
+            </p>
           </div>
 
-          <button className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 font-semibold hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-3">
-            <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
-            Google
-          </button>
-
-          <p className="mt-8 text-center text-sm text-text-muted">
-            {isLogin ? t('login.no_account') + ' ' : t('login.have_account') + ' '}
-            <button onClick={handleToggle} className="text-primary-500 font-semibold hover:underline">
-              {isLogin ? t('login.signup_link') : t('login.login_link')}
-            </button>
-          </p>
-
-        </div>
-
-        {/* Language */}
-        <div className="absolute bottom-6 left-0 w-full flex items-center justify-center gap-1 text-sm">
-          <button
-            onClick={() => setLanguage('vi')}
-            className={`px-2 py-1 rounded-lg transition-colors font-medium ${language === 'vi'
-                ? 'text-primary-500 font-semibold'
-                : 'text-text-muted hover:text-text-color'
-              }`}
-          >
-            Tiếng Việt
-          </button>
-          <span className="text-text-muted">|</span>
-          <button
-            onClick={() => setLanguage('en')}
-            className={`px-2 py-1 rounded-lg transition-colors font-medium ${language === 'en'
-                ? 'text-primary-500 font-semibold'
-                : 'text-text-muted hover:text-text-color'
-              }`}
-          >
-            English (UK)
-          </button>
+          {/* Language Selection (Giữ nguyên) */}
+          <div className="absolute bottom-6 left-0 w-full flex items-center justify-center gap-1 text-sm">
+            <button onClick={() => setLanguage('vi')} className={`px-2 py-1 rounded-lg transition-colors font-medium ${language === 'vi' ? 'text-primary-500 font-semibold' : 'text-text-muted hover:text-text-color'}`}>Tiếng Việt</button>
+            <span className="text-text-muted">|</span>
+            <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded-lg transition-colors font-medium ${language === 'en' ? 'text-primary-500 font-semibold' : 'text-text-muted hover:text-text-color'}`}>English (UK)</button>
+          </div>
         </div>
       </div>
-    </div>
   );
 };
 
