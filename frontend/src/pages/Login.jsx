@@ -12,25 +12,36 @@ const Login = () => {
   const { t, language, setLanguage } = useLanguage();
 
   const handleGoogleLogin = async (idToken) => {
+    if (!idToken) {
+      alert('Google không trả về ID token hợp lệ. Vui lòng thử lại.');
+      return;
+    }
+
+    setLoading(true);
+
     try {
       const response = await fetch('http://localhost:8081/api/v1/auth/google', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: JSON.stringify({ idToken: idToken }), // Gửi cái mã Google trả về lên Backend
+        body: JSON.stringify({ idToken }),
       });
 
       const result = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('token', result.data.token); // Lưu JWT của Backend cấp
-        navigate('/feed'); // Bay sang trang feed luôn!
+        localStorage.setItem('token', result.data.token);
+        navigate('/feed');
       } else {
-        alert(result.message);
+        alert(result.message || 'Đăng nhập Google thất bại.');
       }
     } catch (error) {
-      console.error("Lỗi:", error);
+      console.error("Lỗi đăng nhập Google:", error);
+      alert('Không thể kết nối đến Backend khi đăng nhập bằng Google.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -201,15 +212,15 @@ const Login = () => {
 
             <div className="flex justify-center w-full">
               <GoogleLogin
-                  onSuccess={credentialResponse => {
-                    console.log("Token từ Google:", credentialResponse.credential);
-                    // Đây mới là lúc gửi sang Backend xử lý
-                    handleGoogleLogin(credentialResponse.credential);
+                  onSuccess={(credentialResponse) => {
+                    console.log('Token từ Google:', credentialResponse.credential);
+                    handleGoogleLogin(credentialResponse?.credential);
                   }}
                   onError={() => {
                     console.log('Đăng nhập Google thất bại');
+                    alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
                   }}
-                  useOneTap // Hiện gợi ý đăng nhập nhanh ở góc màn hình
+                  useOneTap
                   shape="pill"
                   theme="filled_blue"
               />
