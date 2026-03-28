@@ -1,11 +1,12 @@
 package com.soundbook.entity;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.soundbook.entity.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
+import com.soundbook.entity.enums.UserRole;
 import java.time.LocalDateTime;
 
 @Entity
@@ -45,5 +46,10 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private UserRole role = UserRole.USER;
 
 }
