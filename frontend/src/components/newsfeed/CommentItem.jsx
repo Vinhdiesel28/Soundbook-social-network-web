@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { MoreHorizontal, Send, Flag, Heart, ThumbsUp, Flame, Smile, Frown, Angry } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import ReportModal from '../common/ReportModal';
 
 const CommentItem = ({ comment }) => {
   const { t } = useLanguage();
@@ -11,6 +12,7 @@ const CommentItem = ({ comment }) => {
   const [replyText, setReplyText] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [reported, setReported] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [showReactors, setShowReactors] = useState(false);
   const reactTimeout = useRef(null);
 
@@ -57,7 +59,7 @@ const CommentItem = ({ comment }) => {
               <span className="text-[13px] leading-snug">{comment.text}</span>
             </div>
           </div>
-          
+
           {/* Report */}
           <div className={`relative shrink-0 transition-opacity ${showMenu ? 'opacity-100' : 'opacity-0 group-hover/comment:opacity-100'}`}>
             <button
@@ -69,7 +71,7 @@ const CommentItem = ({ comment }) => {
             {showMenu && (
               <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 min-w-[140px]">
                 <button
-                  onClick={() => { setReported(true); setShowMenu(false); }}
+                  onClick={() => { setShowMenu(false); setIsReportModalOpen(true); }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-xs text-rose-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
                 >
                   <Flag size={12} />
@@ -137,10 +139,10 @@ const CommentItem = ({ comment }) => {
                 <div className="flex -space-x-1">
                   {topReacts.map((r, i) => (
                     <div key={i} style={{ zIndex: 3 - i }} className={`p-0.5 bg-white dark:bg-gray-800 rounded-full ring-[1.5px] ring-white dark:ring-gray-800`}>
-                      <r.icon 
-                        size={14} 
-                        fill={r.noFill ? "none" : "currentColor"} 
-                        className={r.color} 
+                      <r.icon
+                        size={14}
+                        fill={r.noFill ? "none" : "currentColor"}
+                        className={r.color}
                       />
                     </div>
                   ))}
@@ -191,6 +193,17 @@ const CommentItem = ({ comment }) => {
           </div>
         )}
       </div>
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        onSubmit={({ reason, description }) => {
+          console.log('Submit comment report:', { target_type: 'COMMENT', target_id: comment?.id, reason, description });
+          setReported(true);
+        }}
+        type="COMMENT"
+        targetId={comment?.id}
+      />
     </div>
   );
 };

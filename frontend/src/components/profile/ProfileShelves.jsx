@@ -67,8 +67,11 @@ const ProfileShelves = ({ t, shelves, isGuest = false }) => {
                     </button>
                   )}
 
-                  <div className={`shadow-xl transition-shadow duration-300 group-hover:shadow-2xl ${item.style} flex items-center justify-center text-white/90 drop-shadow-sm text-sm font-bold text-center p-2 break-words leading-tight`}>
-                    {item.title}
+                  <div className={`shadow-xl transition-shadow duration-300 group-hover:shadow-2xl ${item.style} ${!item.image ? 'flex items-center justify-center text-white/90 drop-shadow-sm text-sm font-bold text-center p-2 break-words leading-tight' : 'overflow-hidden'}`}>
+                    {item.image
+                      ? <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                      : item.title
+                    }
                   </div>
 
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-[90%] h-2 bg-black/20 dark:bg-black/50 blur-sm rounded-full" />

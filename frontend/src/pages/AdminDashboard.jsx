@@ -148,7 +148,7 @@ const AdminDashboard = () => {
 
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 bg-gray-50/50 dark:bg-black/10">
 
-          {activeTab === 'overview' && <AdminOverview t={t} />}
+          {activeTab === 'overview' && <AdminOverview t={t} onNavigate={handleTabChange} />}
           {activeTab === 'users' && <AdminUsers t={t} />}
 
           {activeTab === 'posts' && <AdminPosts t={t} />}
