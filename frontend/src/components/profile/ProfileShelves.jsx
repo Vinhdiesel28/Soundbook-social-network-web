@@ -85,8 +85,8 @@ const ProfileShelves = ({ t, shelves, isGuest = false }) => {
 
                   <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-30">
                     <div className="bg-surface-color text-text-color rounded-xl shadow-2xl p-3 text-sm w-48 border border-gray-200 dark:border-gray-700 transform scale-95 group-hover:scale-100 transition-transform">
-                      <p className="font-bold truncate">{item.title}</p>
-                      <p className="text-text-muted text-xs truncate mb-1">{item.author}</p>
+                      <p className="font-bold break-words leading-snug">{item.title}</p>
+                      <p className="text-text-muted text-xs break-words mb-1">{item.author}</p>
                       {item.rating && (
                         <div className="flex text-yellow-500 text-[10px]">
                           {'★'.repeat(item.rating)}

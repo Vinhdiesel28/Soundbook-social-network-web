@@ -27,19 +27,17 @@ const PostMediaCard = ({ post, isPlaying, onTogglePlay }) => {
   }
 
   return (
-    <div className="flex gap-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-4">
-      <div className={`w-24 h-36 rounded-md flex-shrink-0 ${post.media.cover} shadow-md`}></div>
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-1">
-          <h5 className="font-bold text-lg leading-tight">{post.media.title}</h5>
-          <div className="flex items-center text-yellow-500 text-xs">
+    <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-4">
+      <div className={`w-20 h-28 rounded-md flex-shrink-0 ${post.media.cover} shadow-md`}></div>
+      <div className="flex-1 flex flex-col justify-center gap-1">
+        <h5 className="font-bold text-base leading-tight">{post.media.title}</h5>
+        <p className="text-sm text-text-muted">{post.media.author}</p>
+        {post.media.rating && (
+          <div className="flex items-center text-yellow-400 text-sm mt-1">
             {'★'.repeat(post.media.rating)}
+            <span className="text-xs text-text-muted ml-1.5">{post.media.rating}/5</span>
           </div>
-        </div>
-        <p className="text-sm text-text-muted mb-2">{post.media.author}</p>
-        <button className="text-xs font-semibold text-primary-500 mt-2 hover:underline">
-          {t('post.read_full_review')}
-        </button>
+        )}
       </div>
     </div>
   );
