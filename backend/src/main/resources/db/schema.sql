@@ -449,7 +449,7 @@ CREATE TABLE IF NOT EXISTS reports (
 
   description   VARCHAR(500) NULL, -- user ghi thêm
 
-  status        ENUM('PENDING','REVIEWED','RESOLVED','REJECTED') 
+  status        ENUM('PENDING','REVIEWED','RESOLVED','REJECTED')
                 NOT NULL DEFAULT 'PENDING',
 
   reviewed_by   BIGINT NULL, -- admin/mod
@@ -458,7 +458,7 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   -- tránh spam report cùng 1 target
-  CONSTRAINT uq_report_once 
+  CONSTRAINT uq_report_once
     UNIQUE (reporter_id, target_type, target_id),
 
   INDEX idx_reports_target (target_type, target_id),
