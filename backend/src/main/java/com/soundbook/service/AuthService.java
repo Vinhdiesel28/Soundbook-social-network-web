@@ -1,5 +1,9 @@
 package com.soundbook.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
 import com.soundbook.dto.request.LoginRequest;
@@ -15,14 +19,12 @@ import com.soundbook.repository.UserOnboardingRepository;
 import com.soundbook.repository.UserProfileRepository;
 import com.soundbook.repository.UserRepository;
 import com.soundbook.security.JwtService;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,7 +32,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -44,16 +45,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final UserProfileRepository userProfileRepository;
     private final UserOnboardingRepository userOnboardingRepository;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${google.client-id}")
     private String googleClientId;
 
     public AuthResponse login(LoginRequest request) {
-        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
-        if (existingUser.isPresent()
-                && hasNoPassword(existingUser.get())
-                && existingUser.get().getGoogleSub() != null
-                && !existingUser.get().getGoogleSub().isBlank()) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Incorrect email or password"));
+
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
             throw new AppException(ErrorCode.USER_MOVED);
         }
 
@@ -86,8 +87,8 @@ public class AuthService {
     @Transactional
     public AuthResponse loginWithGoogle(String idTokenString) {
         try {
-            if (idTokenString == null || idTokenString.trim().isEmpty()) {
-                throw new RuntimeException("Google ID token bị thiếu.");
+            if (idTokenString == null || idTokenString.isBlank()) {
+                throw new RuntimeException("Google idToken bị thiếu.");
             }
 
             if (googleClientId == null || googleClientId.trim().isEmpty()) {
@@ -111,11 +112,35 @@ public class AuthService {
             String googleSub = payload.getSubject();
             String name = (String) payload.get("name");
             String pictureUrl = (String) payload.get("picture");
-            String displayName = resolveDisplayName(name, email);
 
-            User user = userRepository.findByEmail(email)
-                    .map(existingUser -> updateGoogleAccountInfo(existingUser, googleSub, displayName))
-                    .orElseGet(() -> createGoogleUser(email, googleSub, displayName, pictureUrl));
+            User user = userRepository.findByEmail(email).map(existingUser -> {
+                boolean changed = false;
+
+                if ((existingUser.getGoogleSub() == null || existingUser.getGoogleSub().isBlank())
+                        && googleSub != null && !googleSub.isBlank()) {
+                    existingUser.setGoogleSub(googleSub);
+                    changed = true;
+                }
+
+                if ((existingUser.getDisplayName() == null || existingUser.getDisplayName().isBlank())
+                        && name != null && !name.isBlank()) {
+                    existingUser.setDisplayName(name);
+                    changed = true;
+                }
+
+                return changed ? userRepository.save(existingUser) : existingUser;
+            }).orElseGet(() -> {
+                User newUser = User.builder()
+                        .email(email)
+                        .googleSub(googleSub)
+                        .displayName(name != null && !name.isBlank() ? name : email)
+                        .role(UserRole.USER)
+                        .status(UserStatus.ACTIVE)
+                        .build();
+                User savedUser = userRepository.save(newUser);
+                createDefaultProfileAndOnboarding(savedUser, pictureUrl);
+                return savedUser;
+            });
 
             return generateAuthResponse(user.getEmail());
         } catch (Exception e) {
@@ -124,51 +149,38 @@ public class AuthService {
         }
     }
 
+    public void logout(String email, String authorizationHeader) {
+        try {
+            if (email == null || email.isBlank()) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            String token = authorizationHeader.substring(7).trim();
+            if (token.isEmpty()) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            if (!email.equals(jwtService.extractUsername(token))) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            tokenBlacklistService.blacklistToken(token, jwtService.extractExpiration(token));
+            SecurityContextHolder.clearContext();
+        } catch (AppException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+    }
+
     private AuthResponse generateAuthResponse(String email) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
         String jwtToken = jwtService.generateToken(userDetails);
         return AuthResponse.builder().token(jwtToken).type("Bearer").build();
-    }
-
-    private User createGoogleUser(String email, String googleSub, String displayName, String pictureUrl) {
-        User newUser = User.builder()
-                .email(email)
-                .googleSub(googleSub)
-                .displayName(displayName)
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
-
-        User savedUser = userRepository.save(newUser);
-        createDefaultProfileAndOnboarding(savedUser, pictureUrl);
-        return savedUser;
-    }
-
-    private User updateGoogleAccountInfo(User user, String googleSub, String displayName) {
-        boolean changed = false;
-
-        if ((user.getGoogleSub() == null || user.getGoogleSub().isBlank()) && googleSub != null && !googleSub.isBlank()) {
-            user.setGoogleSub(googleSub);
-            changed = true;
-        }
-
-        if (user.getDisplayName() == null || user.getDisplayName().isBlank()) {
-            user.setDisplayName(displayName);
-            changed = true;
-        }
-
-        return changed ? userRepository.save(user) : user;
-    }
-
-    private String resolveDisplayName(String googleName, String email) {
-        if (googleName != null && !googleName.isBlank()) {
-            return googleName;
-        }
-        return email != null && email.contains("@") ? email.substring(0, email.indexOf('@')) : "Google User";
-    }
-
-    private boolean hasNoPassword(User user) {
-        return user.getPasswordHash() == null || user.getPasswordHash().isBlank();
     }
 
     private void createDefaultProfileAndOnboarding(User user, String avatarUrl) {

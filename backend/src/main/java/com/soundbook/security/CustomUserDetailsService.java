@@ -15,7 +15,7 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private static final String OAUTH_PLACEHOLDER_PASSWORD = "__OAUTH_ONLY_ACCOUNT__";
+    private static final String OAUTH_PASSWORD_PLACEHOLDER = "[OAUTH_USER_NO_LOCAL_PASSWORD]";
 
     private final UserRepository userRepository;
 
@@ -24,14 +24,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy email: " + email));
 
-        String password = (user.getPasswordHash() == null || user.getPasswordHash().trim().isEmpty())
-                ? OAUTH_PLACEHOLDER_PASSWORD
-                : user.getPasswordHash();
+        String password = user.getPasswordHash();
+        if (password == null || password.isBlank()) {
+            password = OAUTH_PASSWORD_PLACEHOLDER;
+        }
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 password,
-                // Lấy role từ DB và thêm tiền tố ROLE_ để Spring Security nhận diện
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }
