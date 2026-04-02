@@ -12,6 +12,8 @@ public enum ErrorCode {
     // Lỗi Client vớ vẩn (400)
     INVALID_KEY(400, "Uncategorized error key", HttpStatus.BAD_REQUEST),
     INVALID_REQUEST(400, "Invalid request body or parameters", HttpStatus.BAD_REQUEST),
+    INVALID_OAUTH_STATE(400, "Invalid or expired OAuth state", HttpStatus.BAD_REQUEST),
+    SPOTIFY_NOT_CONNECTED(400, "Spotify account is not connected", HttpStatus.BAD_REQUEST),
 
     // Lỗi Tài nguyên (404)
     USER_NOT_FOUND(404, "User not found", HttpStatus.NOT_FOUND),
@@ -27,7 +29,7 @@ public enum ErrorCode {
     // Lỗi Xung đột dữ liệu / Logic (409/400)
     USER_EXISTED(400, "User with this email already exists", HttpStatus.BAD_REQUEST),
     ALREADY_FRIENDS(400, "You are already friends", HttpStatus.BAD_REQUEST),
-    ;
+    SPOTIFY_ACCOUNT_ALREADY_LINKED(409, "This Spotify account is already linked to another user", HttpStatus.CONFLICT);
 
     ErrorCode(int code, String message, HttpStatus statusCode) {
         this.code = code;
