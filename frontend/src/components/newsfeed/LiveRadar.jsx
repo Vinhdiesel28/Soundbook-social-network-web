@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { Music, Disc3, LogIn, Radio, X, ArrowLeft, Keyboard } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +13,7 @@ const RoomModal = ({ room, onClose }) => {
 
   const handleClose = () => { setView('menu'); setCode(''); setRoomName(''); onClose(); };
 
-  return (
+  return ReactDOM.createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
       onClick={handleClose}
@@ -143,7 +144,8 @@ const RoomModal = ({ room, onClose }) => {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

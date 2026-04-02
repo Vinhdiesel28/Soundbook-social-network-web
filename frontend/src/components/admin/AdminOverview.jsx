@@ -9,10 +9,10 @@ const getStats = (t) => [
 ];
 
 const TRENDING_POSTS = [
-  { id: 1, author: 'Đạt Nguyễn', avatar: 'bg-orange-500', content: 'Không thể ngừng nghe kiệt tác này!', type: 'music', likes: 1240, comments: 88 },
+  { id: 1, author: 'Đạt Nguyễn', avatar: 'bg-orange-500', content: 'Không thể ngừng nghe siêu phẩm này!', type: 'music', likes: 1240, comments: 88 },
   { id: 2, author: 'Trần Quỳnh', avatar: 'bg-pink-500', content: "Vừa đọc xong 'CTDL&GT'. Tôi đã khóc.", type: 'book', likes: 980, comments: 65 },
   { id: 3, author: 'Minh Tuấn', avatar: 'bg-green-500', content: 'Những bản nhạc acoustic buổi tối.', type: 'music', likes: 812, comments: 42 },
-  { id: 4, author: 'Mai Linh', avatar: 'bg-blue-500', content: 'Review sách "Sapiens" — 5 sao không đủ.', type: 'book', likes: 730, comments: 31 },
+  { id: 4, author: 'Mai Linh', avatar: 'bg-blue-500', content: 'Review sách "Sapiens" - 5 sao không đủ.', type: 'book', likes: 730, comments: 31 },
 ];
 
 const PENDING_REPORTS = [

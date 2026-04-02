@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Edit, Ban, Eye } from 'lucide-react';
+import { Search, Edit, Ban, Trash2, Eye } from 'lucide-react';
 
 const getUsers = (t) => [
   { id: 1, name: 'Dat Nguyen', email: 'dat@soundbook.com', role: 'Admin', status: 'Hoạt động', joined: '15/01/2026' },
@@ -63,7 +63,7 @@ const AdminUsers = ({ t }) => {
                   <div className="flex items-center justify-end gap-2 text-text-muted">
                     <button className="p-1 hover:text-blue-500"><Eye size={16} /></button>
                     <button className="p-1 hover:text-green-500"><Edit size={16} /></button>
-                    <button className="p-1 hover:text-red-500"><Ban size={16} /></button>
+                    <button className="p-1 hover:text-red-500"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>

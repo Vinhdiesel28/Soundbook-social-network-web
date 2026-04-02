@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Search, Bell, Sun, Moon, Menu, MessageCircle, User, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const { theme, toggleTheme } = useTheme();
@@ -11,6 +12,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-50 w-full bg-surface-color border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300">
@@ -146,7 +148,7 @@ const Header = () => {
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
+                onBlur={() => setTimeout(() => setShowProfileMenu(false), 300)}
                 className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 border-2 border-white dark:border-gray-800 relative">
@@ -162,10 +164,23 @@ const Header = () => {
                     <p className="text-xs text-gray-500">@datnguyen</p>
                   </div>
                   <div className="p-2 flex flex-col gap-1">
-                    <Link to="/profile/me" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    {/* <Link to="/profile/me" 
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                       <User size={16} />
                       {t('header.profile')}
-                    </Link>
+                    </Link> */}
+
+                    <div
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        navigate("/profile/me");
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+                    >
+                      <User size={16} />
+                      {t('header.profile')}
+                    </div>
                     <button className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors">
                       <LogOut size={16} />
                       {t('header.logout')}
