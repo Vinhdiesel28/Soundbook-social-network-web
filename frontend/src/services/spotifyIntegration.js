@@ -1,0 +1,26 @@
+import { API_BASE_URL, getToken, request } from './auth';
+
+export const spotifyIntegrationApi = {
+    async getStatus() {
+        try {
+            const payload = await request('/integrations/spotify/status', {
+                method: 'GET',
+                auth: true,
+            });
+            return payload?.data || { connected: false };
+        } catch {
+            return { connected: false };
+        }
+    },
+};
+
+export const startSpotifyConnect = async (returnPath = '/onboarding') => {
+    const token = getToken();
+    if (!token) {
+        throw new Error('Bạn cần đăng nhập trước khi kết nối Spotify.');
+    }
+
+    const backendBaseUrl = API_BASE_URL.replace(/\/api\/v1$/, '');
+    const returnTo = encodeURIComponent(returnPath);
+    window.location.href = `${backendBaseUrl}/api/v1/integrations/spotify/connect?returnTo=${returnTo}`;
+};

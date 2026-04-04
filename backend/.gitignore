@@ -46,5 +46,12 @@ out/
 ehthumbs.db
 Thumbs.db
 
-# Application properties (Không commit cấu hình nhạy cảm mang Password thật)
-application.properties
+# Local secrets / env
+.env
+.env.*
+application-local.properties
+node_modules/
+.idea/
+dist/
+build/
+.env

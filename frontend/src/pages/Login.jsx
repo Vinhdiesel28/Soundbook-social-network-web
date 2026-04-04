@@ -1,15 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Disc3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { GoogleLogin } from '@react-oauth/google';
+import {
+  canSwitchAccount,
+  getCurrentUser,
+  getStoredAuth,
+  login,
+  loginWithGoogle,
+  register,
+  resolveHomePath,
+} from '../services/auth';
+
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
-  // Thêm displayName vào formData để khớp với API Register
   const [formData, setFormData] = useState({ email: '', username: '', password: '', displayName: '' });
-  const [loading, setLoading] = useState(false); // Thêm state loading để chặn bấm nút liên tục
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
+
+  const currentSession = useMemo(() => getStoredAuth(), []);
+  const currentUser = currentSession?.user || getCurrentUser();
+  const sessionLocked = !canSwitchAccount();
+
+  useEffect(() => {
+    if (currentSession?.token && currentSession?.user?.role) {
+      navigate(resolveHomePath(currentSession.user.role), { replace: true });
+    }
+  }, [currentSession, navigate]);
 
   const handleGoogleLogin = async (idToken) => {
     if (!idToken) {
@@ -17,88 +36,64 @@ const Login = () => {
       return;
     }
 
+    if (sessionLocked) {
+      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8081/api/v1/auth/google', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('token', result.data.token);
-        navigate('/feed');
-      } else {
-        alert(result.message || 'Đăng nhập Google thất bại.');
-      }
+      const result = await loginWithGoogle(idToken);
+      navigate(resolveHomePath(result?.data?.role), { replace: true });
     } catch (error) {
-      console.error("Lỗi đăng nhập Google:", error);
-      alert('Không thể kết nối đến Backend khi đăng nhập bằng Google.');
+      console.error('Lỗi đăng nhập Google:', error);
+      alert(error.message || 'Đăng nhập Google thất bại.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleToggle = () => {
+    if (sessionLocked) {
+      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      return;
+    }
+
     setIsLogin(!isLogin);
-    // Reset form khi chuyển chế độ
     setFormData({ email: '', username: '', password: '', displayName: '' });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (sessionLocked) {
+      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      return;
+    }
+
     setLoading(true);
 
-    // URL Backend của bạn (vì vite.config.js không đổi được nên dùng URL đầy đủ)
-    const BASE_URL = 'http://localhost:8081/api/v1';
-    const endpoint = isLogin ? `${BASE_URL}/auth/login` : `${BASE_URL}/auth/register`;
-
-    // Chuẩn bị dữ liệu gửi lên
-    const body = isLogin
-        ? { email: formData.email, password: formData.password }
-        : {
-          email: formData.email,
-          password: formData.password,
-          // Ưu tiên dùng username làm displayName nếu không nhập displayName
-          displayName: formData.displayName || formData.username
-        };
-
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
+      const result = isLogin
+          ? await login({
+            email: formData.email,
+            password: formData.password,
+          })
+          : await register({
+            email: formData.email,
+            password: formData.password,
+            displayName: formData.displayName || formData.username,
+          });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        // 1. Lưu JWT Token vào LocalStorage để dùng cho các trang sau
-        localStorage.setItem('token', result.data.token);
-
-        // 2. Điều hướng người dùng
-        if (isLogin) {
-          navigate('/feed');
-        } else {
-          // Người mới đăng ký thì đi qua trang Onboarding
-          navigate('/onboarding');
-        }
+      if (isLogin) {
+        navigate(resolveHomePath(result?.data?.role), { replace: true });
       } else {
-        // Hiển thị thông báo lỗi từ Backend (Sai mật khẩu, Email đã tồn tại...)
-        alert(result.message || "Thao tác thất bại. Vui lòng kiểm tra lại.");
+        navigate('/onboarding', { replace: true });
       }
     } catch (error) {
-      console.error("Lỗi kết nối:", error);
-      alert("Không thể kết nối đến Backend (Cổng 8081). Hãy chắc chắn bạn đã chạy ứng dụng Spring Boot.");
+      console.error('Lỗi kết nối:', error);
+      alert(error.message || 'Thao tác thất bại. Vui lòng kiểm tra lại.');
     } finally {
       setLoading(false);
     }
@@ -106,8 +101,6 @@ const Login = () => {
 
   return (
       <div className="min-h-screen bg-bg-color text-text-color flex flex-col md:flex-row">
-
-        {/* Left side (Giữ nguyên giao diện đẹp của bạn) */}
         <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-primary-600 via-purple-700 to-black overflow-hidden items-center justify-center p-12">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob" />
@@ -126,7 +119,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Right side */}
         <div className="flex-1 flex items-center justify-center p-8 sm:p-12 lg:p-24 relative">
           <div className="w-full max-sm relative z-10">
             <div className="mb-10 text-center md:text-left">
@@ -142,8 +134,13 @@ const Login = () => {
               </p>
             </div>
 
+            {sessionLocked && (
+                <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                  Bạn đang đăng nhập bằng <strong>{currentUser?.displayName || currentUser?.email}</strong>. Hãy logout trước khi đăng nhập tài khoản khác.
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Username/DisplayName - Chỉ hiện khi đăng ký */}
               {!isLogin && (
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_username')}</label>
@@ -152,8 +149,9 @@ const Login = () => {
                       <input
                           type="text"
                           required
+                          disabled={loading || sessionLocked}
                           placeholder="johndoe"
-                          className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm"
+                          className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                           value={formData.username}
                           onChange={(e) => setFormData({ ...formData, username: e.target.value, displayName: e.target.value })}
                       />
@@ -161,7 +159,6 @@ const Login = () => {
                   </div>
               )}
 
-              {/* Email */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_email')}</label>
                 <div className="relative">
@@ -169,15 +166,15 @@ const Login = () => {
                   <input
                       type="email"
                       required
+                      disabled={loading || sessionLocked}
                       placeholder="name@example.com"
-                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm"
+                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
               </div>
 
-              {/* Password */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_password')}</label>
                 <div className="relative">
@@ -185,8 +182,9 @@ const Login = () => {
                   <input
                       type="password"
                       required
+                      disabled={loading || sessionLocked}
                       placeholder="......"
-                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm mb-1"
+                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm mb-1 disabled:opacity-60 disabled:cursor-not-allowed"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   />
@@ -195,15 +193,14 @@ const Login = () => {
 
               <button
                   type="submit"
-                  disabled={loading} // Vô hiệu hóa nút khi đang gửi request
-                  className={`w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  disabled={loading || sessionLocked}
+                  className={`w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4 ${(loading || sessionLocked) ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {loading ? '...' : (isLogin ? t('login.signin_btn') : t('login.register_btn'))}
                 <ArrowRight size={18} />
               </button>
             </form>
 
-            {/* ... Các thành phần Google và Toggle giữ nguyên ... */}
             <div className="my-6 flex items-center gap-4">
               <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               <span className="text-xs text-text-muted uppercase font-semibold">{t('login.or_continue')}</span>
@@ -211,30 +208,33 @@ const Login = () => {
             </div>
 
             <div className="flex justify-center w-full">
-              <GoogleLogin
-                  onSuccess={(credentialResponse) => {
-                    console.log('Token từ Google:', credentialResponse.credential);
-                    handleGoogleLogin(credentialResponse?.credential);
-                  }}
-                  onError={() => {
-                    console.log('Đăng nhập Google thất bại');
-                    alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
-                  }}
-                  useOneTap
-                  shape="pill"
-                  theme="filled_blue"
-              />
+              <div className={sessionLocked ? 'pointer-events-none opacity-60' : ''}>
+                <GoogleLogin
+                    onSuccess={(credentialResponse) => {
+                      handleGoogleLogin(credentialResponse?.credential);
+                    }}
+                    onError={() => {
+                      alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
+                    }}
+                    useOneTap
+                    shape="pill"
+                    theme="filled_blue"
+                />
+              </div>
             </div>
 
             <p className="mt-8 text-center text-sm text-text-muted">
-              {isLogin ? t('login.no_account') + ' ' : t('login.have_account') + ' '}
-              <button onClick={handleToggle} className="text-primary-500 font-semibold hover:underline">
+              {isLogin ? `${t('login.no_account')} ` : `${t('login.have_account')} `}
+              <button
+                  onClick={handleToggle}
+                  disabled={sessionLocked}
+                  className="text-primary-500 font-semibold hover:underline disabled:opacity-60 disabled:no-underline"
+              >
                 {isLogin ? t('login.signup_link') : t('login.login_link')}
               </button>
             </p>
           </div>
 
-          {/* Language Selection (Giữ nguyên) */}
           <div className="absolute bottom-6 left-0 w-full flex items-center justify-center gap-1 text-sm">
             <button onClick={() => setLanguage('vi')} className={`px-2 py-1 rounded-lg transition-colors font-medium ${language === 'vi' ? 'text-primary-500 font-semibold' : 'text-text-muted hover:text-text-color'}`}>Tiếng Việt</button>
             <span className="text-text-muted">|</span>
