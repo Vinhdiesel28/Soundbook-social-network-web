@@ -18,7 +18,7 @@ const PROFILE_DATA = {
   description: 'Đam mê kết nối mọi người qua âm nhạc và những trang sách. Luôn tìm kiếm góc nhìn mới và sẵn sàng chia sẻ câu chuyện của chính mình.',
   avatar: 'bg-orange-500',
   themeColor: 'from-orange-500/20 to-purple-900/40',
-  matchScore: null, // null means owner viewing
+  matchScore: null,
   pinnedSong: { title: 'In love', artist: 'Low G (ft. JustaTee)', cover: 'bg-gradient-to-br from-indigo-500 to-purple-600' }
 };
 
@@ -27,18 +27,18 @@ const getShelves = (t) => [
     id: 'playlists',
     title: t('profile.shelf.playlists', { defaultValue: 'Playlists' }),
     items: [
-      { id: 1, type: 'music', title: 'In love', author: 'Low G (ft. JustaTee)', style: 'bg-blue-900 rounded-md shrink-0 aspect-square w-24 sm:w-32' },
-      { id: 2, type: 'music', title: 'Đừng về trễ', author: 'Sơn Tùng M-TP', style: 'bg-indigo-700 rounded-md shrink-0 aspect-square w-24 sm:w-32' },
-      { id: 3, type: 'music', title: 'Đoạn tuyệt nàng đi', author: 'Đạt Nguyễn', style: 'bg-teal-600 rounded-md shrink-0 aspect-square w-24 sm:w-32' },
+      { id: 1, type: 'music', title: 'In love', author: 'Low G (ft. JustaTee)', image: '/in-love.png', style: 'rounded-md shrink-0 aspect-square w-24 sm:w-32' },
+      { id: 2, type: 'music', title: 'Dừng làm trái tim anh đau', author: 'Sơn Tùng M-TP', image: '/dung-lam-trai-tim-anh-dau.png', style: 'rounded-md shrink-0 aspect-square w-24 sm:w-32' },
+      { id: 3, type: 'music', title: 'Nếu cả đời này không rực rỡ', author: 'Unknown', image: '/neu-ca-doi-khong-ruc-ro.png', style: 'rounded-md shrink-0 aspect-square w-24 sm:w-32' },
     ]
   },
   {
     id: 'library',
     title: t('profile.shelf.library', { defaultValue: 'Library' }),
     items: [
-      { id: 4, type: 'music', title: 'Thép đã tôi thế đấy', author: 'Nikolai Ostrovsky', style: 'bg-lime-400 rounded-md shrink-0 aspect-square w-24 sm:w-32', rating: 5 },
-      { id: 5, type: 'book', title: 'Những người khốn khổ', author: 'Victor Hugo', style: 'bg-blue-600 rounded-sm shrink-0 w-16 sm:w-20 h-28 sm:h-36', progress: 65 },
-      { id: 6, type: 'book', title: 'Ai bảo hắn tu tiên', author: 'Đạt Nguyễn', style: 'bg-gray-800 rounded-sm shrink-0 w-16 sm:w-20 h-28 sm:h-36 border border-gray-600 opacity-80' },
+      { id: 4, type: 'book', title: 'Thép đã tôi thế đấy', author: 'Nikolai Ostrovsky', image: '/thep-da-toi-the-day.png', style: 'rounded-sm shrink-0 w-16 sm:w-20 h-28 sm:h-36', rating: 5 },
+      { id: 5, type: 'book', title: 'Những người khốn khổ', author: 'Victor Hugo', image: '/nhung-nguoi-khon-kho.png', style: 'rounded-sm shrink-0 w-16 sm:w-20 h-28 sm:h-36', progress: 65 },
+      { id: 6, type: 'book', title: 'Ai bảo hắn tu tiên', author: 'Đạt Nguyễn', image: '/ai-bao-han-tu-tien.png', style: 'rounded-sm shrink-0 w-16 sm:w-20 h-28 sm:h-36' },
     ]
   }
 ];

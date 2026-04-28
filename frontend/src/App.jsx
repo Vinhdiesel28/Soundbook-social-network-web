@@ -1,48 +1,94 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { ThemeProvider } from './context/ThemeContext'
-import { LanguageProvider } from './context/LanguageContext'
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
-import Layout from './components/layout/Layout'
-import Onboarding from './pages/Onboarding'
-import Newsfeed from './pages/Newsfeed'
-import Profile from './pages/Profile'
-import FriendsPage from './pages/FriendsPage'
-import LiveSyncRoom from './pages/LiveSyncRoom'
-import Chat from './pages/Chat'
-import Login from './pages/Login'
-import AdminDashboard from './pages/AdminDashboard'
+import Layout from './components/layout/Layout';
+import Onboarding from './pages/Onboarding';
+import Newsfeed from './pages/Newsfeed';
+import Profile from './pages/Profile';
+import FriendsPage from './pages/FriendsPage';
+import LiveSyncRoom from './pages/LiveSyncRoom';
+import Chat from './pages/Chat';
+import Login from './pages/Login';
+import AdminDashboard from './pages/AdminDashboard';
+import { getCurrentUser, isAdminRole, isLoggedIn, resolveHomePath } from './services/auth';
 
-// Pages placeholder
-const Discovery = () => <div>Discovery Page</div>
-const NotFound = () => <div className="min-h-screen grid flex-col items-center justify-center">404 Not Found</div>
+const Discovery = () => <div>Discovery Page</div>;
+const NotFound = () => <div className="min-h-screen grid flex-col items-center justify-center">404 Not Found</div>;
+
+const PublicOnlyRoute = () => {
+  const user = getCurrentUser();
+
+  if (isLoggedIn() && user?.role) {
+    return <Navigate to={resolveHomePath(user.role)} replace />;
+  }
+
+  return <Outlet />;
+};
+
+const RequireAuth = () => {
+  const location = useLocation();
+
+  if (!isLoggedIn()) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return <Outlet />;
+};
+
+const RequireAdmin = () => {
+  const user = getCurrentUser();
+
+  if (!isLoggedIn()) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdminRole(user?.role)) {
+    return <Navigate to="/feed" replace />;
+  }
+
+  return <Outlet />;
+};
 
 function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <ThemeProvider>
+          <LanguageProvider>
+            <Router>
+              <Routes>
+                <Route element={<PublicOnlyRoute />}>
+                  <Route path="/login" element={<Login />} />
+                </Route>
 
-            {/* Main App Routes */}
-            <Route element={<Layout />}>
-              <Route path="/" element={<Navigate to="/login" />} />
-              <Route path="/feed" element={<Newsfeed />} />
-              <Route path="/discovery" element={<Discovery />} />
-              <Route path="/profile/:id" element={<Profile />} />
-              <Route path="/profile/:id/friends" element={<FriendsPage />} />
-              <Route path="/room/:id" element={<LiveSyncRoom />} />
-              <Route path="/chat" element={<Chat />} />
-            </Route>
+                <Route element={<RequireAuth />}>
+                  <Route path="/onboarding" element={<Onboarding />} />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Router>
-      </LanguageProvider>
-    </ThemeProvider>
-  )
+                  <Route element={<RequireAdmin />}>
+                    <Route path="/admin" element={<AdminDashboard />} />
+                  </Route>
+
+                  <Route element={<Layout />}>
+                    <Route path="/" element={<Navigate to="/feed" replace />} />
+                    <Route path="/feed" element={<Newsfeed />} />
+                    <Route path="/discovery" element={<Discovery />} />
+                    <Route path="/profile/:id" element={<Profile />} />
+                    <Route path="/profile/:id/friends" element={<FriendsPage />} />
+                    <Route path="/room/:id" element={<LiveSyncRoom />} />
+                    <Route path="/chat" element={<Chat />} />
+                  </Route>
+                </Route>
+
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Router>
+          </LanguageProvider>
+        </ThemeProvider>
+      </GoogleOAuthProvider>
+  );
 }
 
-export default App
+export default App;

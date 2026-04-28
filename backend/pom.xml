@@ -23,13 +23,11 @@
   </properties>
 
   <dependencies>
-    <!-- Web -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
 
-    <!-- JPA + MySQL -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -40,13 +38,22 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- Security -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
-    <!-- JWT -->
+    <dependency>
+      <groupId>com.google.api-client</groupId>
+      <artifactId>google-api-client</artifactId>
+      <version>2.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.http-client</groupId>
+      <artifactId>google-http-client-gson</artifactId>
+      <version>1.43.3</version>
+    </dependency>
+
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-api</artifactId>
@@ -65,26 +72,22 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- WebSocket (Live Sync Rooms + DM) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-websocket</artifactId>
     </dependency>
 
-    <!-- Validation -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
 
-    <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <optional>true</optional>
+      <scope>provided</scope>
     </dependency>
 
-    <!-- DevTools -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-devtools</artifactId>
@@ -92,7 +95,6 @@
       <optional>true</optional>
     </dependency>
 
-    <!-- Test -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
