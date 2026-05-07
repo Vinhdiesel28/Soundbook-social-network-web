@@ -29,7 +29,11 @@ public enum ErrorCode {
     // Lỗi Xung đột dữ liệu / Logic (409/400)
     USER_EXISTED(400, "User with this email already exists", HttpStatus.BAD_REQUEST),
     ALREADY_FRIENDS(400, "You are already friends", HttpStatus.BAD_REQUEST),
-    SPOTIFY_ACCOUNT_ALREADY_LINKED(409, "This Spotify account is already linked to another user", HttpStatus.CONFLICT);
+    SPOTIFY_ACCOUNT_ALREADY_LINKED(409, "This Spotify account is already linked to another user", HttpStatus.CONFLICT),
+
+    OLD_PASSWORD_INCORRECT(2001, "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
+    PASSWORD_NOT_MATCHED(2002, "Xác nhận mật khẩu không khớp với mật khẩu mới", HttpStatus.BAD_REQUEST);
+
 
     ErrorCode(int code, String message, HttpStatus statusCode) {
         this.code = code;
