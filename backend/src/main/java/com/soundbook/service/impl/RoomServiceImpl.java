@@ -2,11 +2,7 @@ package com.soundbook.service.impl;
 
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
-import com.soundbook.dto.room.ActiveRoomResponse;
-import com.soundbook.dto.room.CreateRoomRequest;
-import com.soundbook.dto.room.RoomDetailResponse;
-import com.soundbook.dto.room.RoomMemberResponse;
-import com.soundbook.dto.room.RoomPlaybackStateResponse;
+import com.soundbook.dto.room.*;
 import com.soundbook.entity.*;
 import com.soundbook.entity.enums.RoomRole;
 import com.soundbook.entity.enums.RoomStatus;
@@ -14,6 +10,7 @@ import com.soundbook.repository.*;
 import com.soundbook.service.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,8 +28,11 @@ public class RoomServiceImpl implements RoomService {
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
     private final RoomPlaybackStateRepository roomPlaybackStateRepository;
+    private final RoomMessageRepository roomMessageRepository;
+    private final RoomQueueRepository roomQueueRepository;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     public RoomDetailResponse createRoom(CreateRoomRequest request) {
@@ -104,7 +104,14 @@ public class RoomServiceImpl implements RoomService {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
         if (room.getStatus() == RoomStatus.ENDED) {
-            throw new AppException(ErrorCode.ROOM_ALREADY_ENDED);
+            // Allow host to reopen the room if they accidentally left
+            if (room.getHost().getId().equals(userId)) {
+                room.setStatus(RoomStatus.LIVE);
+                room.setEndedAt(null);
+                roomRepository.save(room);
+            } else {
+                throw new AppException(ErrorCode.ROOM_ALREADY_ENDED);
+            }
         }
 
         User user = userRepository.findById(userId)
@@ -149,20 +156,48 @@ public class RoomServiceImpl implements RoomService {
         roomMember.setLeftAt(now);
         roomMemberRepository.save(roomMember);
 
-        if (roomMember.getRole() == RoomRole.HOST && room.getStatus() == RoomStatus.LIVE) {
-            room.setStatus(RoomStatus.ENDED);
-            room.setEndedAt(now);
-            roomRepository.save(room);
+                if (roomMember.getRole() == RoomRole.HOST && room.getStatus() == RoomStatus.LIVE) {
+                        // If host leaves, try to promote the next active member to HOST.
+                        List<RoomMember> activeMembers = roomMemberRepository.findByRoom_IdAndLeftAtIsNull(roomId);
 
-            List<RoomMember> activeMembers = roomMemberRepository.findByRoom_IdAndLeftAtIsNull(roomId);
-            for (RoomMember member : activeMembers) {
-                member.setLeftAt(now);
-            }
-            roomMemberRepository.saveAll(activeMembers);
-        }
+                        // Remove the leaving host from activeMembers list
+                        activeMembers = activeMembers.stream()
+                                        .filter(m -> !m.getUser().getId().equals(userId))
+                                        .sorted((a, b) -> a.getJoinedAt().compareTo(b.getJoinedAt()))
+                                        .toList();
+
+                        if (activeMembers.isEmpty()) {
+                                endRoom(room, now);
+                        } else {
+                                // Promote the earliest joined member to HOST
+                                RoomMember newHost = activeMembers.get(0);
+                                newHost.setRole(RoomRole.HOST);
+                                roomMemberRepository.save(newHost);
+                        }
+                } else if (room.getStatus() == RoomStatus.LIVE) {
+                        // Non-host member left — check if the room is now empty
+                        List<RoomMember> remaining = roomMemberRepository.findByRoom_IdAndLeftAtIsNull(roomId);
+                        boolean noOneLeft = remaining.stream().noneMatch(m -> !m.getUser().getId().equals(userId));
+                        if (noOneLeft) {
+                                endRoom(room, now);
+                        }
+                }
 
         return buildRoomDetail(room);
     }
+
+    /** Centralized helper: mark room ENDED and broadcast event via STOMP */
+    private void endRoom(Room room, LocalDateTime now) {
+        room.setStatus(RoomStatus.ENDED);
+        room.setEndedAt(now);
+        roomRepository.save(room);
+        // Notify all clients (including mini players on other pages) that this room has ended
+        messagingTemplate.convertAndSend(
+            "/topic/rooms/" + room.getId() + "/status",
+            java.util.Map.of("status", "ENDED", "roomId", room.getId())
+        );
+    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -229,5 +264,125 @@ public class RoomServiceImpl implements RoomService {
                 .updatedAt(state.getUpdatedAt())
                 .updatedByUserId(state.getUpdatedBy() != null ? state.getUpdatedBy().getId() : null)
                 .build();
+    }
+
+    @Override
+    public RoomMessageResponse sendRoomMessage(Long roomId, RoomMessageSendRequest request) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
+        
+        User sender = userRepository.findById(request.getSenderUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        RoomMessage message = RoomMessage.builder()
+                .room(room)
+                .sender(sender)
+                .contentText(request.getContentText())
+                .build();
+        
+        RoomMessage savedMessage = roomMessageRepository.save(message);
+        
+        return RoomMessageResponse.builder()
+                .messageId(savedMessage.getId())
+                .roomId(savedMessage.getRoom().getId())
+                .senderUserId(savedMessage.getSender().getId())
+                .senderDisplayName(savedMessage.getSender().getDisplayName())
+                .contentText(savedMessage.getContentText())
+                .createdAt(savedMessage.getCreatedAt())
+                .build();
+    }
+
+    @Override
+    public RoomPlaybackStateResponse updatePlaybackState(Long roomId, RoomPlaybackUpdateRequest request) {
+        RoomPlaybackState state = roomPlaybackStateRepository.findById(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
+        
+        User updatedBy = userRepository.findById(request.getUpdatedByUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        state.setTrackId(request.getTrackId());
+        state.setTrackPayloadJson(request.getTrackPayloadJson());
+        state.setPositionMs(request.getPositionMs());
+        state.setIsPlaying(request.getIsPlaying());
+        state.setUpdatedBy(updatedBy);
+        
+        RoomPlaybackState updated = roomPlaybackStateRepository.save(state);
+        return toStateResponse(updated);
+    }
+
+    @Override
+    public RoomQueueItemResponse addToQueue(Long roomId, RoomQueueAddRequest request) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
+        
+        User addedBy = userRepository.findById(request.getAddedByUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Integer maxOrder = roomQueueRepository.findMaxPositionOrderByRoomId(roomId)
+                .orElse(-1);
+        
+        RoomQueueItem item = RoomQueueItem.builder()
+                .room(room)
+                .trackId(request.getTrackId())
+                .trackPayloadJson(request.getTrackPayloadJson())
+                .addedBy(addedBy)
+                .voteCount(0)
+                .positionOrder(maxOrder + 1)
+                .build();
+        
+        RoomQueueItem saved = roomQueueRepository.save(item);
+        
+        return RoomQueueItemResponse.builder()
+                .id(saved.getId())
+                .roomId(saved.getRoom().getId())
+                .trackId(saved.getTrackId())
+                .trackPayloadJson(saved.getTrackPayloadJson())
+                .addedByUserId(saved.getAddedBy().getId())
+                .addedByDisplayName(saved.getAddedBy().getDisplayName())
+                .voteCount(saved.getVoteCount())
+                .positionOrder(saved.getPositionOrder())
+                .playedAt(saved.getPlayedAt())
+                .createdAt(saved.getCreatedAt())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomQueueItemResponse> getRoomQueue(Long roomId) {
+        List<RoomQueueItem> items = roomQueueRepository.findByRoom_IdOrderByPlayedAtDescPositionOrderAsc(roomId);
+        
+        return items.stream().map(item -> RoomQueueItemResponse.builder()
+                .id(item.getId())
+                .roomId(item.getRoom().getId())
+                .trackId(item.getTrackId())
+                .trackPayloadJson(item.getTrackPayloadJson())
+                .addedByUserId(item.getAddedBy().getId())
+                .addedByDisplayName(item.getAddedBy().getDisplayName())
+                .voteCount(item.getVoteCount())
+                .positionOrder(item.getPositionOrder())
+                .playedAt(item.getPlayedAt())
+                .createdAt(item.getCreatedAt())
+                .build()).toList();
+    }
+
+    @Override
+    public void voteQueueItem(Long queueItemId) {
+        RoomQueueItem item = roomQueueRepository.findById(queueItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_QUEUE_ITEM_NOT_FOUND));
+        
+        item.setVoteCount(item.getVoteCount() + 1);
+        roomQueueRepository.save(item);
+    }
+
+    @Override
+    public void removeQueueItem(Long roomId, Long queueItemId) {
+        RoomQueueItem item = roomQueueRepository.findById(queueItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_QUEUE_ITEM_NOT_FOUND));
+        
+        if (!item.getRoom().getId().equals(roomId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        
+        roomQueueRepository.delete(item);
     }
 }

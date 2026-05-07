@@ -20,6 +20,11 @@ public enum ErrorCode {
     POST_NOT_FOUND(404, "Post not found", HttpStatus.NOT_FOUND),
     ROOM_NOT_FOUND(404, "Room not found", HttpStatus.NOT_FOUND),
     ROOM_MEMBER_NOT_FOUND(404, "Room member not found", HttpStatus.NOT_FOUND),
+    ROOM_QUEUE_ITEM_NOT_FOUND(404, "Room queue item not found", HttpStatus.NOT_FOUND),
+    NOTIFICATION_NOT_FOUND(404, "Notification not found", HttpStatus.NOT_FOUND),
+    DM_THREAD_NOT_FOUND(404, "DM thread not found", HttpStatus.NOT_FOUND),
+    DM_THREAD_ACCESS_DENIED(403, "You do not have access to this DM thread", HttpStatus.FORBIDDEN),
+    DM_MESSAGE_NOT_FOUND(404, "DM message not found", HttpStatus.NOT_FOUND),
 
     // Lỗi Đăng nhập / Xác thực (401/403)
     UNAUTHENTICATED(401, "Unauthenticated", HttpStatus.UNAUTHORIZED),
@@ -32,8 +37,10 @@ public enum ErrorCode {
     ALREADY_FRIENDS(400, "You are already friends", HttpStatus.BAD_REQUEST),
     ROOM_ALREADY_JOINED(400, "User already joined this room", HttpStatus.BAD_REQUEST),
     ROOM_ALREADY_ENDED(400, "Room is already ended", HttpStatus.BAD_REQUEST),
-    ;
-    SPOTIFY_ACCOUNT_ALREADY_LINKED(409, "This Spotify account is already linked to another user", HttpStatus.CONFLICT);
+    SPOTIFY_ACCOUNT_ALREADY_LINKED(409, "This Spotify account is already linked to another user", HttpStatus.CONFLICT),
+    INVALID_CURSOR(400, "Invalid cursor", HttpStatus.BAD_REQUEST),
+    INVALID_DELETE_MODE(400, "Invalid delete mode", HttpStatus.BAD_REQUEST),
+    DM_DELETE_FORBIDDEN(403, "You cannot delete this message for everyone", HttpStatus.FORBIDDEN);
 
     ErrorCode(int code, String message, HttpStatus statusCode) {
         this.code = code;

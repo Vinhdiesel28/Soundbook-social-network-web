@@ -65,7 +65,7 @@ public class NotificationServiceImpl implements NotificationService {
         Pageable pageable = PageRequest.of(0, sanitizedLimit + 1);
         List<Notification> results = notificationRepository.findNotificationsWithCursor(
                 userId,
-                cursorCreatedAt != null ? cursorCreatedAt.toString() : null,
+            cursorCreatedAt,
                 cursorId,
                 pageable
         );

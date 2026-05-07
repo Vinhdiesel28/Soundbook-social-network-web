@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { RoomSessionProvider } from './context/RoomSessionContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 import Layout from './components/layout/Layout';
@@ -19,35 +20,24 @@ const NotFound = () => <div className="min-h-screen grid flex-col items-center j
 
 const PublicOnlyRoute = () => {
   const user = getCurrentUser();
-
   if (isLoggedIn() && user?.role) {
     return <Navigate to={resolveHomePath(user.role)} replace />;
   }
-
   return <Outlet />;
 };
 
 const RequireAuth = () => {
   const location = useLocation();
-
   if (!isLoggedIn()) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
-
   return <Outlet />;
 };
 
 const RequireAdmin = () => {
   const user = getCurrentUser();
-
-  if (!isLoggedIn()) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!isAdminRole(user?.role)) {
-    return <Navigate to="/feed" replace />;
-  }
-
+  if (!isLoggedIn()) return <Navigate to="/login" replace />;
+  if (!isAdminRole(user?.role)) return <Navigate to="/feed" replace />;
   return <Outlet />;
 };
 
@@ -55,9 +45,11 @@ function App() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   return (
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <ThemeProvider>
-          <LanguageProvider>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <ThemeProvider>
+        <LanguageProvider>
+          {/* RoomSessionProvider at root: one STOMP connection, survives navigation */}
+          <RoomSessionProvider>
             <Router>
               <Routes>
                 <Route element={<PublicOnlyRoute />}>
@@ -85,9 +77,10 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Router>
-          </LanguageProvider>
-        </ThemeProvider>
-      </GoogleOAuthProvider>
+          </RoomSessionProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }
 

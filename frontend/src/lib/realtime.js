@@ -60,3 +60,52 @@ export async function subscribeTopic(destination, onMessage) {
 
   return () => subscription.unsubscribe();
 }
+
+/**
+ * Disconnect từ STOMP server
+ * Gọi khi: user logout, tắt app, hoặc không cần realtime nữa
+ */
+export function disconnectRealtime() {
+  if (stompClient?.connected) {
+    stompClient.deactivate();
+    stompClient = null;
+  }
+  connectPromise = null;
+}
+
+/**
+ * Publish message tới một destination (gửi tin nhắn)
+ * @param {string} destination - Destination path (e.g., /app/chat/send)
+ * @param {object} body - Message body sẽ được stringify
+ */
+export async function publishMessage(destination, body) {
+  const client = await ensureRealtimeConnected();
+  client.publish({
+    destination,
+    body: JSON.stringify(body)
+  });
+}
+
+/**
+ * Get current connection status
+ */
+export function isConnected() {
+  return stompClient?.connected ?? false;
+}
+
+/**
+ * Setup auto-reconnect listener
+ * Gọi 1 lần lúc app init để tự động reconnect khi mất kết nối
+ */
+export function setupAutoReconnect(onReconnect) {
+  if (!stompClient) return;
+  
+  stompClient.onDisconnect = (frame) => {
+    console.log('Disconnected from STOMP:', frame);
+    stompClient = null;
+    connectPromise = null;
+    if (onReconnect) {
+      setTimeout(() => onReconnect(), 3000);
+    }
+  };
+}

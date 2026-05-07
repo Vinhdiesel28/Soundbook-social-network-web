@@ -13,6 +13,7 @@ import com.soundbook.repository.*;
 import com.soundbook.service.DmService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class DmServiceImpl implements DmService {
     private final DmMessageRepository dmMessageRepository;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -130,7 +133,10 @@ public class DmServiceImpl implements DmService {
 
         thread.setUpdatedAt(LocalDateTime.now());
         dmThreadRepository.save(thread);
-        return toMessageResponse(saved);
+
+        DmMessageResponse response = toMessageResponse(saved);
+        broadcastThreadMessage(thread.getId(), response);
+        return response;
     }
 
     @Override
@@ -139,12 +145,13 @@ public class DmServiceImpl implements DmService {
                 .orElseThrow(() -> new AppException(ErrorCode.DM_MESSAGE_NOT_FOUND));
 
         validateThreadAccess(message.getThread(), request.getUserId());
-        User user = getUser(request.getUserId());
 
         message.setCardPayloadJson(applyReactionToPayload(message.getCardPayloadJson(), request.getUserId(), request.getReaction()));
         DmMessage saved = dmMessageRepository.save(message);
 
-        return toMessageResponse(saved);
+        DmMessageResponse response = toMessageResponse(saved);
+        broadcastThreadMessage(saved.getThread().getId(), response);
+        return response;
     }
 
     @Override
@@ -167,7 +174,10 @@ public class DmServiceImpl implements DmService {
 
         thread.setUpdatedAt(LocalDateTime.now());
         dmThreadRepository.save(thread);
-        return toMessageResponse(saved);
+
+        DmMessageResponse response = toMessageResponse(saved);
+        broadcastThreadMessage(thread.getId(), response);
+        return response;
     }
 
     @Override
@@ -225,7 +235,10 @@ public class DmServiceImpl implements DmService {
 
         thread.setUpdatedAt(LocalDateTime.now());
         dmThreadRepository.save(thread);
-        return toMessageResponse(saved);
+
+        DmMessageResponse response = toMessageResponse(saved);
+        broadcastThreadMessage(thread.getId(), response);
+        return response;
     }
 
     private DmThread getThreadWithAccess(Long threadId, Long userId) {
@@ -273,18 +286,11 @@ public class DmServiceImpl implements DmService {
         }
 
         List<Long> senderIds = messages.stream().map(m -> m.getSender().getId()).distinct().toList();
-        Map<Long, UserProfile> profileByUserId = userProfileRepository.findAllById(senderIds)
-                .stream()
+        Map<Long, UserProfile> profileByUserId = StreamSupport.stream(userProfileRepository.findAllById(senderIds).spliterator(), false)
                 .collect(Collectors.toMap(UserProfile::getUserId, Function.identity()));
-
-        Map<Long, List<DmMessageReaction>> reactionsByMessageId = dmMessageReactionRepository
-            .findByMessage_IdIn(messages.stream().map(DmMessage::getId).toList())
-                .stream()
-                .collect(Collectors.groupingBy(r -> r.getMessage().getId()));
 
         return messages.stream()
                 .map(message -> {
-                    List<DmMessageReaction> reactions = reactionsByMessageId.getOrDefault(message.getId(), List.of());
                     UserProfile profile = profileByUserId.get(message.getSender().getId());
                     return DmMessageResponse.builder()
                             .messageId(message.getId())
@@ -369,6 +375,10 @@ public class DmServiceImpl implements DmService {
         } catch (Exception e) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
+    }
+
+    private void broadcastThreadMessage(Long threadId, DmMessageResponse response) {
+        messagingTemplate.convertAndSend("/topic/dm/threads/" + threadId + "/messages", response);
     }
 
     private CursorPayload parseCursor(String cursor) {

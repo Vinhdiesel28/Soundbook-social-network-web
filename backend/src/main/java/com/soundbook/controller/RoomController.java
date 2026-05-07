@@ -1,11 +1,7 @@
 package com.soundbook.controller;
 
 import com.soundbook.common.dto.ApiResponse;
-import com.soundbook.dto.room.ActiveRoomResponse;
-import com.soundbook.dto.room.CreateRoomRequest;
-import com.soundbook.dto.room.RoomActionRequest;
-import com.soundbook.dto.room.RoomDetailResponse;
-import com.soundbook.dto.room.RoomPlaybackStateResponse;
+import com.soundbook.dto.room.*;
 import com.soundbook.service.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,5 +49,23 @@ public class RoomController {
     @GetMapping("/{roomId}/state")
     public ApiResponse<RoomPlaybackStateResponse> getRoomState(@PathVariable Long roomId) {
         return ApiResponse.success(roomService.getRoomState(roomId));
+    }
+
+    @GetMapping("/{roomId}/queue")
+    public ApiResponse<List<RoomQueueItemResponse>> getRoomQueue(@PathVariable Long roomId) {
+        return ApiResponse.success(roomService.getRoomQueue(roomId));
+    }
+
+    @PostMapping("/{roomId}/queue")
+    public ApiResponse<RoomQueueItemResponse> addToQueue(
+            @PathVariable Long roomId,
+            @Valid @RequestBody RoomQueueAddRequest request) {
+        return ApiResponse.success(roomService.addToQueue(roomId, request));
+    }
+
+    @PostMapping("/{roomId}/queue/{queueItemId}/vote")
+    public ApiResponse<Void> voteQueueItem(@PathVariable Long queueItemId) {
+        roomService.voteQueueItem(queueItemId);
+        return ApiResponse.success(null);
     }
 }
