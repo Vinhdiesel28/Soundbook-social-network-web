@@ -49,6 +49,7 @@ export const saveAuth = (auth) => {
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedAuth));
+    console.log(normalizedAuth.user.role);
 
     if (normalizedAuth.token) {
         localStorage.setItem('token', normalizedAuth.token);

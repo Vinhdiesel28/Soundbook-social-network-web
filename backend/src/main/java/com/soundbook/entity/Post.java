@@ -1,5 +1,6 @@
 package com.soundbook.entity;
 
+import com.soundbook.entity.enums.PostStatus;
 import com.soundbook.entity.enums.PostType;
 import com.soundbook.entity.enums.Visibility;
 import jakarta.persistence.*;
@@ -34,6 +35,10 @@ public class Post {
     @Column(nullable = false)
     @Builder.Default
     private Visibility visibility = Visibility.PUBLIC;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PostStatus status = PostStatus.ACTIVE;
 
     @Column(columnDefinition = "TEXT")
     private String caption;

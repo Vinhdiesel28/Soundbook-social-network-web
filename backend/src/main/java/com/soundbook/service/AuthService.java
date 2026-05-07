@@ -55,6 +55,8 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadCredentialsException("Incorrect email or password"));
 
+        System.out.println(user.getRole());
+
         if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
             throw new AppException(ErrorCode.USER_MOVED);
         }

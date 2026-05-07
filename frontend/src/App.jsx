@@ -19,41 +19,41 @@ const NotFound = () => <div className="min-h-screen grid flex-col items-center j
 
 function App() {
   // THAY MÃ NÀY BẰNG CLIENT ID THẬT CỦA BẠN
-  const GOOGLE_CLIENT_ID = "320147041734-hkso7lionh433otua25vm34nbangsbns.apps.googleusercontent.com";
+  const GOOGLE_CLIENT_ID = "264640047149-qrrlqpraqqsoj9tijuk55tndve952opu.apps.googleusercontent.com";
 
   return (
-      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        <ThemeProvider>
-          <LanguageProvider>
-            <Router>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/admin" element={<AdminDashboard />} />
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <ThemeProvider>
+        <LanguageProvider>
+          <Router>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/admin" element={<AdminDashboard />} />
 
-                {/* Main App Routes (Các trang có Sidebar/Header) */}
-                <Route element={<Layout />}>
-                  {/* Khi vào trang chủ "/" sẽ tự động đá sang "/login" nếu chưa login */}
-                  <Route path="/" element={<Navigate to="/login" />} />
+              {/* Main App Routes (Các trang có Sidebar/Header) */}
+              <Route element={<Layout />}>
+                {/* Khi vào trang chủ "/" sẽ tự động đá sang "/login" nếu chưa login */}
+                <Route path="/" element={<Navigate to="/login" />} />
 
-                  {/* Route đã được đổi thành /feed như bạn muốn */}
-                  <Route path="/feed" element={<Newsfeed />} />
+                {/* Route đã được đổi thành /feed như bạn muốn */}
+                <Route path="/feed" element={<Newsfeed />} />
 
-                  <Route path="/discovery" element={<Discovery />} />
-                  <Route path="/profile/:id" element={<Profile />} />
-                  <Route path="/profile/:id/friends" element={<FriendsPage />} />
-                  <Route path="/room/:id" element={<LiveSyncRoom />} />
-                  <Route path="/chat" element={<Chat />} />
-                </Route>
+                <Route path="/discovery" element={<Discovery />} />
+                <Route path="/profile/:id" element={<Profile />} />
+                <Route path="/profile/:id/friends" element={<FriendsPage />} />
+                <Route path="/room/:id" element={<LiveSyncRoom />} />
+                <Route path="/chat" element={<Chat />} />
+              </Route>
 
-                {/* Trang lỗi 404 */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Router>
-          </LanguageProvider>
-        </ThemeProvider>
-      </GoogleOAuthProvider>
+              {/* Trang lỗi 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+        </LanguageProvider>
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   )
 }
 

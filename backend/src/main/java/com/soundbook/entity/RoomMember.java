@@ -40,4 +40,8 @@ public class RoomMember {
 
     @Column(name = "left_at")
     private LocalDateTime leftAt;
+
+    @Column(name = "is_banned", nullable = false)
+    @Builder.Default
+    private boolean isBanned = false;
 }

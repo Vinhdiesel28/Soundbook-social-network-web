@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, AlertTriangle, Activity, Search, Filter, MoreVertical, Ban, CheckCircle, Disc3, BookOpen, BarChart3, Settings, MessageSquare, Video, ShieldAlert, Key, Edit, Trash2, Camera, LogOut, Menu } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-
+import { useNavigate } from 'react-router-dom';
+import { isLoggedIn, getCurrentUser, isAdminRole, logout, fetchCurrentUser } from '../services/auth';
 import AdminOverview from '../components/admin/AdminOverview';
 import AdminUsers from '../components/admin/AdminUsers';
 import AdminPosts from '../components/admin/AdminPosts';
@@ -12,19 +13,88 @@ import AdminProfile from '../components/admin/AdminProfile';
 
 const AdminDashboard = () => {
   const { t, language, toggleLanguage } = useLanguage();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'users' | 'posts' | 'messages' | 'rooms' | 'profile'
+  const [tabParams, setTabParams] = useState({}); // { users: { searchQuery: '1' } }
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
 
-  const handleTabChange = (tab) => {
+  const [currentUser, setCurrentUser] = useState(getCurrentUser());
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  useEffect(() => {
+    const verifyAuth = async () => {
+      if (!isLoggedIn()) {
+        navigate('/login');
+        return;
+      }
+      
+      try {
+        const res = await fetchCurrentUser();
+        console.log("Response from fetchCurrentUser:", res);
+        
+        const latestUser = res?.data;
+        console.log("latestUser:", latestUser);
+        
+        setCurrentUser(latestUser);
+        
+        if (!latestUser || !isAdminRole(latestUser.role)) {
+          console.log("Access Denied condition met! isAdminRole:", latestUser ? isAdminRole(latestUser.role) : 'N/A');
+          setAccessDenied(true);
+        }
+      } catch (error) {
+        console.error("Auth verification failed", error);
+        navigate('/login');
+      } finally {
+        setIsVerifying(false);
+      }
+    };
+
+    verifyAuth();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const handleTabChange = (tab, params = null) => {
     setActiveTab(tab);
+    if (params) {
+      setTabParams(prev => ({ ...prev, [tab]: params }));
+    } else {
+      // Clear params if navigating via sidebar
+      setTabParams(prev => ({ ...prev, [tab]: null }));
+    }
     if (window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
   };
 
+  if (isVerifying) {
+    return <div className="min-h-screen flex items-center justify-center bg-bg-color text-text-color">Loading admin dashboard...</div>;
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-color text-text-color gap-4">
+        <AlertTriangle size={64} className="text-red-500" />
+        <h1 className="text-2xl font-bold">Access Denied</h1>
+        <p className="text-text-muted">You are logged in as <span className="font-bold text-white">{currentUser?.role || 'UNKNOWN'}</span>. You need ADMIN or MODERATOR role.</p>
+        <button onClick={() => navigate('/feed')} className="px-6 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors">
+          Return to Feed
+        </button>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn() || !currentUser) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-bg-color text-text-color flex">
+    <div className="h-screen bg-bg-color text-text-color flex overflow-hidden">
 
       {isSidebarOpen && (
         <div
@@ -95,6 +165,7 @@ const AdminDashboard = () => {
 
         <div className={`p-4 border-t border-gray-200 dark:border-gray-800 ${isSidebarOpen ? '' : 'flex justify-center px-2'}`}>
           <button
+            onClick={handleLogout}
             className={`flex items-center ${isSidebarOpen ? 'w-full gap-3 px-4' : 'justify-center p-3'} py-3 rounded-xl transition-colors font-medium text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10`}
             title={!isSidebarOpen ? t('admin.profile.logout') : ''}
           >
@@ -129,17 +200,23 @@ const AdminDashboard = () => {
             </button>
             <div className="relative">
               <div
-                className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-blue-500 border-2 border-surface-color cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-blue-500 border-2 border-surface-color cursor-pointer overflow-hidden flex items-center justify-center"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-              />
+              >
+                {currentUser?.avatarUrl ? (
+                  <img src={currentUser.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-white font-bold text-sm">{currentUser?.displayName?.[0] || 'A'}</span>
+                )}
+              </div>
               {showProfileMenu && (
                 <div className="absolute top-12 right-0 w-48 bg-surface-color rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 p-2 z-50">
                   <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 mb-1">
-                    <p className="font-semibold text-sm">Dat Nguyen</p>
+                    <p className="font-semibold text-sm">{currentUser?.displayName || 'Admin'}</p>
                     <p className="text-xs text-gray-500">{t('admin.profile.role')}</p>
                   </div>
                   <button onClick={() => { setActiveTab('profile'); setShowProfileMenu(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">{t('admin.profile.my_account')}</button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg mt-1">{t('admin.profile.logout')}</button>
+                  <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg mt-1">{t('admin.profile.logout')}</button>
                 </div>
               )}
             </div>
@@ -149,13 +226,13 @@ const AdminDashboard = () => {
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 bg-gray-50/50 dark:bg-black/10">
 
           {activeTab === 'overview' && <AdminOverview t={t} onNavigate={handleTabChange} />}
-          {activeTab === 'users' && <AdminUsers t={t} />}
+          {activeTab === 'users' && <AdminUsers t={t} initialSearchQuery={tabParams.users?.searchQuery} />}
 
-          {activeTab === 'posts' && <AdminPosts t={t} />}
-          {activeTab === 'messages' && <AdminMessages t={t} />}
+          {activeTab === 'posts' && <AdminPosts t={t} initialSearchQuery={tabParams.posts?.searchQuery} />}
+          {activeTab === 'messages' && <AdminMessages t={t} initialSearchQuery={tabParams.messages?.searchQuery} />}
 
-          {activeTab === 'rooms' && <AdminRooms t={t} />}
-          {activeTab === 'reports' && <AdminReports t={t} />}
+          {activeTab === 'rooms' && <AdminRooms t={t} initialSearchQuery={tabParams.rooms?.searchQuery} />}
+          {activeTab === 'reports' && <AdminReports t={t} onNavigate={handleTabChange} />}
           {activeTab === 'profile' && <AdminProfile t={t} />}
         </main>
       </div>

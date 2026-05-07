@@ -31,8 +31,13 @@ public enum ErrorCode {
     ALREADY_FRIENDS(400, "You are already friends", HttpStatus.BAD_REQUEST),
     SPOTIFY_ACCOUNT_ALREADY_LINKED(409, "This Spotify account is already linked to another user", HttpStatus.CONFLICT),
 
-    OLD_PASSWORD_INCORRECT(2001, "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
-    PASSWORD_NOT_MATCHED(2002, "Xác nhận mật khẩu không khớp với mật khẩu mới", HttpStatus.BAD_REQUEST);
+    OLD_PASSWORD_INCORRECT(400, "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
+    PASSWORD_NOT_MATCHED(400, "Xác nhận mật khẩu không khớp với mật khẩu mới", HttpStatus.BAD_REQUEST),
+
+    THREAD_NOT_FOUND(404, "Không tìm thấy cuộc hội thoại", HttpStatus.NOT_FOUND),
+    MESSAGE_NOT_FOUND(404, "Không tìm thấy tin nhắn", HttpStatus.NOT_FOUND),
+
+    REPORT_NOT_FOUND(404, "Không tìm thấy báo cáo", HttpStatus.NOT_FOUND);
 
 
     ErrorCode(int code, String message, HttpStatus statusCode) {

@@ -33,7 +33,23 @@ const Login = () => {
 
       if (response.ok) {
         localStorage.setItem('token', result.data.token);
-        navigate('/feed');
+        const auth = {
+            token: result.data.token,
+            user: {
+                id: result.data.userId,
+                email: result.data.email,
+                displayName: result.data.displayName,
+                role: result.data.role?.toUpperCase().replace(/^ROLE_/, '')
+            }
+        };
+        localStorage.setItem('soundbook_auth', JSON.stringify(auth));
+        
+        const isAdmin = ['ADMIN', 'MODERATOR'].includes(auth.user.role);
+        if (isAdmin) {
+          navigate('/admin');
+        } else {
+          navigate('/feed');
+        }
       } else {
         alert(result.message || 'Đăng nhập Google thất bại.');
       }
@@ -84,10 +100,27 @@ const Login = () => {
       if (response.ok) {
         // 1. Lưu JWT Token vào LocalStorage để dùng cho các trang sau
         localStorage.setItem('token', result.data.token);
+        
+        // Lưu thông tin user để dùng cho việc phân quyền (isLoggedIn, isAdminRole)
+        const auth = {
+            token: result.data.token,
+            user: {
+                id: result.data.userId,
+                email: result.data.email,
+                displayName: result.data.displayName,
+                role: result.data.role?.toUpperCase().replace(/^ROLE_/, '')
+            }
+        };
+        localStorage.setItem('soundbook_auth', JSON.stringify(auth));
 
         // 2. Điều hướng người dùng
         if (isLogin) {
-          navigate('/feed');
+          const isAdmin = ['ADMIN', 'MODERATOR'].includes(auth.user.role);
+          if (isAdmin) {
+            navigate('/admin');
+          } else {
+            navigate('/feed');
+          }
         } else {
           // Người mới đăng ký thì đi qua trang Onboarding
           navigate('/onboarding');

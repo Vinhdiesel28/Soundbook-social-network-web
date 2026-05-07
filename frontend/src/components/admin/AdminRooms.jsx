@@ -1,23 +1,125 @@
-import React, { useState } from 'react';
-import { Search, Ban, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Ban, Eye, X, Users, MessageSquare, ListMusic, Trash2 } from 'lucide-react';
+import { getRooms, endRoom, getRoomById, getRoomMembers, removeRoomMember, getRoomMessages, deleteRoomMessage, getRoomQueue, removeRoomQueueItem } from '../../services/adminApi';
 
-const getLiveRooms = (t) => [
-  { id: 1, host: 'DJ Kha', title: 'Nhạc trẻ cuối tuần', listeners: 1250, status: 'Đang Live' },
-  { id: 2, host: 'BookClub', title: 'Thảo luận sách Thói quen nguyên tử', listeners: 45, status: 'Đã kết thúc' },
-];
+const AdminRooms = ({ t, initialSearchQuery = '' }) => {
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-const AdminRooms = ({ t }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailRoom, setDetailRoom] = useState(null);
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [queue, setQueue] = useState([]);
+  const [activeTab, setActiveTab] = useState('info'); // 'info', 'members', 'messages', 'queue'
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  useEffect(() => {
+    if (initialSearchQuery !== undefined) {
+      setSearchQuery(initialSearchQuery || '');
+    }
+  }, [initialSearchQuery]);
+
+  const fetchRooms = async () => {
+    try {
+      setLoading(true);
+      const res = await getRooms();
+      if (res.data && res.data.content) {
+        setRooms(res.data.content);
+      } else if (res.data && Array.isArray(res.data)) {
+        setRooms(res.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch rooms:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEndRoom = async (id) => {
+    if (window.confirm("Are you sure you want to END this room?")) {
+      try {
+        await endRoom(id);
+        fetchRooms();
+        if (selectedRoomId === id) setShowDetailModal(false);
+      } catch (error) {
+        console.error("Failed to end room:", error);
+      }
+    }
+  };
+
+  const handleViewDetail = async (id) => {
+    try {
+      setSelectedRoomId(id);
+      setActiveTab('info');
+      const [roomRes, membersRes, messagesRes, queueRes] = await Promise.all([
+        getRoomById(id),
+        getRoomMembers(id).catch(() => ({ data: { content: [] } })),
+        getRoomMessages(id).catch(() => ({ data: { content: [] } })),
+        getRoomQueue(id).catch(() => ({ data: { content: [] } }))
+      ]);
+      setDetailRoom(roomRes.data);
+      setMembers(membersRes.data?.content || []);
+      setMessages(messagesRes.data?.content || []);
+      setQueue(queueRes.data?.content || []);
+      setShowDetailModal(true);
+    } catch (error) {
+      console.error(error);
+      alert('Lỗi lấy chi tiết phòng');
+    }
+  };
+
+  const handleKickMember = async (userId) => {
+    if (window.confirm("Bạn có chắc muốn KICK và BAN người dùng này khỏi phòng?")) {
+      try {
+        await removeRoomMember(selectedRoomId, userId);
+        const res = await getRoomMembers(selectedRoomId);
+        setMembers(res.data?.content || []);
+      } catch (e) {
+        console.error(e);
+        alert('Lỗi kick người dùng');
+      }
+    }
+  };
+
+  const handleDeleteMessage = async (msgId) => {
+    if (window.confirm("Bạn có chắc muốn XÓA tin nhắn này?")) {
+      try {
+        await deleteRoomMessage(msgId);
+        const res = await getRoomMessages(selectedRoomId);
+        setMessages(res.data?.content || []);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
+  const handleRemoveQueueItem = async (queueId) => {
+    if (window.confirm("Bạn có chắc muốn XÓA bài hát này khỏi hàng đợi?")) {
+      try {
+        await removeRoomQueueItem(queueId);
+        const res = await getRoomQueue(selectedRoomId);
+        setQueue(res.data?.content || []);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   return (
-    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden animate-in fade-in duration-300">
+    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden animate-in fade-in duration-300 relative">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="font-bold text-lg">{t('admin.title.rooms')}</h3>
+        <h3 className="font-bold text-lg">{t('admin.title.rooms') || 'Quản lý Phòng'}</h3>
         <div className="relative w-full sm:w-64">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input 
             type="text" 
-            placeholder={t('admin.search_users')} 
+            placeholder="Tìm kiếm theo host hoặc tên phòng..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary-500/50"
@@ -36,25 +138,33 @@ const AdminRooms = ({ t }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-            {getLiveRooms(t).filter(room => 
-              room.host.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              room.title.toLowerCase().includes(searchQuery.toLowerCase())
+            {loading ? <tr><td colSpan="5" className="text-center py-4 text-gray-500">Loading...</td></tr> : rooms.length === 0 ? <tr><td colSpan="5" className="text-center py-4 text-gray-500">No rooms found</td></tr> : rooms.filter(room => 
+              room.id?.toString() === searchQuery ||
+              (room.hostName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+              (room.name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
             ).map(room => (
               <tr key={room.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                <td className="px-6 py-4 font-medium text-sm">{room.host}</td>
-                <td className="px-6 py-4 text-sm">{room.title}</td>
-                <td className="px-6 py-4 text-sm text-text-muted">{room.listeners}</td>
+                <td className="px-6 py-4 font-medium text-sm flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary-500 overflow-hidden flex items-center justify-center shrink-0">
+                    <span className="text-white text-[10px] font-bold">{room.hostName?.[0] || 'H'}</span>
+                  </div>
+                  {room.hostName || 'Unknown'}
+                </td>
+                <td className="px-6 py-4 text-sm">{room.name}</td>
+                <td className="px-6 py-4 text-sm text-text-muted">{room.memberCount || 0}</td>
                 <td className="px-6 py-4">
                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    room.status === 'Đang Live' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    room.status === 'LIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                   }`}>
-                    {room.status}
+                    {room.status || 'LIVE'}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2 text-text-muted">
-                    <button className="p-1 hover:text-blue-500"><Eye size={16} /></button>
-                    <button className="p-1 hover:text-red-500"><Ban size={16} /></button>
+                    <button onClick={() => handleViewDetail(room.id)} className="p-1 hover:text-blue-500" title="View Detail"><Eye size={16} /></button>
+                    {room.status === 'LIVE' && (
+                      <button onClick={() => handleEndRoom(room.id)} className="p-1 hover:text-red-500" title="End Room"><Ban size={16} /></button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -62,6 +172,149 @@ const AdminRooms = ({ t }) => {
           </tbody>
         </table>
       </div>
+
+      {/* DETAIL MODAL */}
+      {showDetailModal && detailRoom && detailRoom.info && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-surface-color w-full max-w-3xl rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+              <h3 className="text-lg font-bold">Chi tiết Phòng: {detailRoom.info.name}</h3>
+              <button onClick={() => setShowDetailModal(false)} className="text-text-muted hover:text-text-color"><X size={20} /></button>
+            </div>
+            
+            <div className="flex border-b border-gray-200 dark:border-gray-800 shrink-0">
+              <button onClick={() => setActiveTab('info')} className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors ${activeTab === 'info' ? 'border-primary-500 text-primary-500' : 'border-transparent text-text-muted hover:text-text-color hover:bg-gray-50 dark:hover:bg-gray-800'}`}>Thông tin</button>
+              <button onClick={() => setActiveTab('members')} className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === 'members' ? 'border-primary-500 text-primary-500' : 'border-transparent text-text-muted hover:text-text-color hover:bg-gray-50 dark:hover:bg-gray-800'}`}><Users size={16} /> Thành viên ({members.length})</button>
+              <button onClick={() => setActiveTab('messages')} className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === 'messages' ? 'border-primary-500 text-primary-500' : 'border-transparent text-text-muted hover:text-text-color hover:bg-gray-50 dark:hover:bg-gray-800'}`}><MessageSquare size={16} /> Chat ({messages.length})</button>
+              <button onClick={() => setActiveTab('queue')} className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === 'queue' ? 'border-primary-500 text-primary-500' : 'border-transparent text-text-muted hover:text-text-color hover:bg-gray-50 dark:hover:bg-gray-800'}`}><ListMusic size={16} /> Hàng đợi ({queue.length})</button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+              {activeTab === 'info' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                      <p className="text-sm font-semibold mb-1 text-text-muted">Host</p>
+                      <p className="font-bold text-lg text-primary-500">{detailRoom.info.hostName}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                      <p className="text-sm font-semibold mb-1 text-text-muted">Chủ đề</p>
+                      <p className="font-bold text-lg">{detailRoom.info.topic || 'Không có'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
+                      <p className="text-xs font-semibold text-text-muted mb-1">Trạng thái</p>
+                      <p className={`font-bold ${detailRoom.info.status === 'LIVE' ? 'text-green-500' : ''}`}>{detailRoom.info.status}</p>
+                    </div>
+                    <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
+                      <p className="text-xs font-semibold text-text-muted mb-1">Quyền truy cập</p>
+                      <p className="font-bold">{detailRoom.info.isPublic ? 'Công khai' : 'Riêng tư'}</p>
+                    </div>
+                    <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
+                      <p className="text-xs font-semibold text-text-muted mb-1">Thành viên</p>
+                      <p className="font-bold">{detailRoom.info.memberCount} người</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
+                    <h4 className="font-bold mb-3 border-b border-gray-100 pb-2">Trạng thái phát nhạc</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-text-muted">Đang phát: </span>
+                        <span className="font-bold">{detailRoom.isPlaying ? 'Có' : 'Không'}</span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted">Track ID: </span>
+                        <span className="font-mono text-xs bg-gray-100 px-1 rounded">{detailRoom.currentTrackId || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted">Vị trí (ms): </span>
+                        <span>{detailRoom.positionMs} ms</span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted">Cập nhật lúc: </span>
+                        <span>{detailRoom.lastUpdatedAt || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'members' && (
+                <div className="space-y-2">
+                  {members.length === 0 ? <p className="text-center text-gray-500 py-4">Không có dữ liệu</p> : members.map(m => (
+                    <div key={m.userId} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-800 rounded-xl">
+                      <div>
+                        <p className="font-bold text-sm">{m.displayName}</p>
+                        <p className="text-xs text-text-muted">Vai trò: <span className={m.role === 'HOST' ? 'text-primary-500 font-bold' : ''}>{m.role}</span> {m.isBanned && <span className="text-red-500 font-bold">(BANNED)</span>}</p>
+                      </div>
+                      {m.role !== 'HOST' && !m.isBanned && (
+                        <button onClick={() => handleKickMember(m.userId)} className="p-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors" title="Kick & Ban"><Ban size={16} /></button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'messages' && (
+                <div className="space-y-2">
+                  {messages.length === 0 ? <p className="text-center text-gray-500 py-4">Không có tin nhắn</p> : messages.map(m => (
+                    <div key={m.id} className="flex flex-col p-3 border border-gray-200 dark:border-gray-800 rounded-xl">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-bold text-sm text-primary-500">{m.senderName}</p>
+                        <span className="text-xs text-text-muted">{new Date(m.createdAt).toLocaleTimeString()}</span>
+                      </div>
+                      <div className="flex items-end justify-between">
+                        <p className="text-sm">{m.contentText}</p>
+                        <button onClick={() => handleDeleteMessage(m.id)} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'queue' && (
+                <div className="space-y-2">
+                  {queue.length === 0 ? <p className="text-center text-gray-500 py-4">Hàng đợi trống</p> : queue.map((q, idx) => {
+                    let trackName = q.trackId;
+                    try {
+                      if (q.trackPayloadJson) {
+                        const payload = JSON.parse(q.trackPayloadJson);
+                        trackName = payload.name || q.trackId;
+                      }
+                    } catch(e) {}
+                    return (
+                      <div key={q.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-800 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-gray-400 w-4 text-center">{idx + 1}</span>
+                          <div>
+                            <p className="font-bold text-sm">{trackName}</p>
+                            <p className="text-xs text-text-muted">Thêm bởi: {q.addedByName}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => handleRemoveQueueItem(q.id)} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 dark:border-gray-800 shrink-0 flex gap-3 justify-end bg-gray-50 dark:bg-gray-900 rounded-b-2xl">
+              {detailRoom.info.status === 'LIVE' && (
+                <button onClick={() => handleEndRoom(detailRoom.info.id)} className="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg font-semibold text-sm transition-colors">
+                  Đóng phòng (End Room)
+                </button>
+              )}
+              <button onClick={() => setShowDetailModal(false)} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm transition-colors">
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
