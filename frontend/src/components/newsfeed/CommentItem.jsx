@@ -49,7 +49,11 @@ const CommentItem = ({ comment }) => {
 
   return (
     <div className="flex items-start gap-2.5 group/comment">
-      <div className={`w-7 h-7 rounded-full flex-shrink-0 ${comment.user.avatar}`}></div>
+      {comment.user.avatarUrl ? (
+        <img src={comment.user.avatarUrl} alt={comment.user.name} className="h-7 w-7 rounded-full object-cover flex-shrink-0" />
+      ) : (
+        <div className={`w-7 h-7 rounded-full flex-shrink-0 ${comment.user.avatar} flex items-center justify-center text-[10px] font-bold text-white`}>{(comment.user.name || 'U').charAt(0).toUpperCase()}</div>
+      )}
       <div className="flex-1 min-w-0">
 
         <div className="flex items-center gap-2">

@@ -3,19 +3,21 @@ import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { RoomSessionProvider } from './context/RoomSessionContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { GOOGLE_CLIENT_ID } from './config/env';
 
 import Layout from './components/layout/Layout';
 import Onboarding from './pages/Onboarding';
+import TasteSettings from './pages/TasteSettings';
 import Newsfeed from './pages/Newsfeed';
 import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
+import Discovery from './pages/Discovery';
 import LiveSyncRoom from './pages/LiveSyncRoom';
 import Chat from './pages/Chat';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import { getCurrentUser, isAdminRole, isLoggedIn, resolveHomePath } from './services/auth';
 
-const Discovery = () => <div>Discovery Page</div>;
 const NotFound = () => <div className="min-h-screen grid flex-col items-center justify-center">404 Not Found</div>;
 
 const PublicOnlyRoute = () => {
@@ -42,10 +44,8 @@ const RequireAdmin = () => {
 };
 
 function App() {
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-
   return (
-    <GoogleOAuthProvider clientId={googleClientId}>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ThemeProvider>
         <LanguageProvider>
           {/* RoomSessionProvider at root: one STOMP connection, survives navigation */}
@@ -67,6 +67,7 @@ function App() {
                     <Route path="/" element={<Navigate to="/feed" replace />} />
                     <Route path="/feed" element={<Newsfeed />} />
                     <Route path="/discovery" element={<Discovery />} />
+                    <Route path="/taste-settings" element={<TasteSettings />} />
                     <Route path="/profile/:id" element={<Profile />} />
                     <Route path="/profile/:id/friends" element={<FriendsPage />} />
                     <Route path="/room/:id" element={<LiveSyncRoom />} />

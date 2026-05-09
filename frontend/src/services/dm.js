@@ -58,3 +58,11 @@ export const sendDmMessage = async (threadId, payload) => {
     body: JSON.stringify(payload),
   });
 };
+
+export const upsertDmThread = async (userId, peerUserId) => {
+  return request('/dm/threads', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify({ userId, peerUserId }),
+  });
+};

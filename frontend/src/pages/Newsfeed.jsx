@@ -1,91 +1,100 @@
-import React, { useState } from 'react';
-import { Play, Pause, Heart, MessageCircle, Share2, Plus, Flame, MoreHorizontal, Music, Disc3, Book, Image, Video, Send, Smile } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 import LiveRadar from '../components/newsfeed/LiveRadar';
 import CreatePost from '../components/newsfeed/CreatePost';
 import FeedPost from '../components/newsfeed/FeedPost';
 import NewsfeedSidebar from '../components/newsfeed/NewsfeedSidebar';
-
-// Mock Data
-const LIVE_RADAR = [
-  { id: 1, name: 'Hải Đăng', avatar: 'bg-blue-500', isLive: true },
-  { id: 2, name: 'Mai Linh', avatar: 'bg-pink-500', isLive: true },
-  { id: 3, name: 'Minh Tuấn', avatar: 'bg-green-500', isLive: false },
-  { id: 4, name: 'Bảo Trâm', avatar: 'bg-purple-500', isLive: false },
-  { id: 5, name: 'Phòng thư giãn', avatar: 'bg-yellow-500', isRoom: true },
-];
-
-const getFeedPosts = (t) => [
-  {
-    id: 1,
-    user: { name: 'Đạt Nguyễn', avatar: 'bg-orange-500', time: t('time.2h_ago') },
-    type: 'audio',
-    content: "Không thể ngừng nghe !",
-    media: { title: 'Đừng Làm Trái Tim Anh Đau', artist: 'Sơn Tùng M-TP', cover: 'bg-gradient-to-br from-purple-500 to-indigo-600' },
-    reactions: { flame: 124, sad: 2, comments: 18, shares: 5 },
-    comments: [
-      {
-        id: 1, user: { name: 'Hải Đăng', avatar: 'bg-blue-500' }, text: 'Bài này đỉnh thật sự, nghe mãi không chán !!!', time: t('time.1h_ago'), reacts: 12,
-        reactors: [
-          { name: 'Mai Linh', react: 'fire' }, { name: 'Minh Tuấn', react: 'like' },
-          { name: 'Bảo Trâm', react: 'heart' }, { name: 'Thanh Sơn', react: 'like' },
-        ]
-      },
-      {
-        id: 2, user: { name: 'Bảo Trâm', avatar: 'bg-purple-500' }, text: 'Sếp luôn là một level khác!', time: t('time.2h_ago'), reacts: 7,
-        reactors: [
-          { name: 'Đạt Nguyễn', react: 'fire' }, { name: 'Hải Đăng', react: 'like' },
-          { name: 'Hương Giang', react: 'heart' },
-        ]
-      },
-    ]
-  },
-  {
-    id: 2,
-    user: { name: 'Trần Quỳnh', avatar: 'bg-pink-500', time: t('time.5h_ago') },
-    type: 'book_review',
-    content: "Vừa đọc xong 'CTDL&GT'. Tôi đã khóc.",
-    media: { title: 'Cấu Trúc Dữ Liệu & Giải Thuật', author: 'PTIT', cover: 'bg-gradient-to-br from-orange-400 to-red-600', rating: 5 },
-    reactions: { flame: 89, sad: 0, comments: 32, shares: 12 },
-    comments: [
-      { id: 1, user: { name: 'Minh Tuấn', avatar: 'bg-green-500' }, text: 'CTDL&GT là cuốn sách tôi đọc nhiều lần nhất sau cuốn Hệ điều hành. Rất hay!', time: t('time.3h_ago') },
-      { id: 2, user: { name: 'Thanh Sơn', avatar: 'bg-teal-500' }, text: 'Quá đẳng cấp.', time: t('time.5h_ago') },
-      { id: 3, user: { name: 'Hương Giang', avatar: 'bg-rose-500' }, text: 'Tôi cũng vừa đọc xong, phần 2 "Messiah of Dune" còn hay hơn nữa!', time: t('time.1d_ago') },
-    ]
-  }
-];
-
-const TRENDING = [
-  { id: 1, title: 'Na na na', subtitle: 'Daux Mysie', type: 'music', count: '1.2k lượt nghe' },
-  { id: 2, title: 'Hệ điều hành', subtitle: 'PTIT', type: 'book', count: '856 lượt đọc' },
-  { id: 3, title: 'Die With A Smile', subtitle: 'Lady Gaga, Bruno Mars', type: 'music', count: '645 lượt nghe' },
-];
-
-const SUGGESTIONS = [
-  { id: 1, name: 'Nguyễn Văn Nam', match: 92, avatar: 'bg-teal-500' },
-  { id: 2, name: 'Lê Kiều', match: 88, avatar: 'bg-rose-500' },
-  { id: 3, name: 'Trần Bách', match: 81, avatar: 'bg-indigo-500' },
-];
+import { feedApi } from '../services/feed';
+import { normalizePost, normalizeSuggestion, normalizeTrending } from '../utils/feedNormalizers';
 
 const Newsfeed = () => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('following');
   const [playingId, setPlayingId] = useState(null);
+  const [payload, setPayload] = useState({ posts: [], friendSuggestions: [], trending: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadFeed = async (tab = activeTab) => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await feedApi.getFeed({ tab: tab === 'foryou' ? 'discover' : 'following', limit: 20 });
+      setPayload({
+        posts: data?.posts || [],
+        friendSuggestions: data?.friendSuggestions || [],
+        trending: data?.trending || [],
+      });
+    } catch (err) {
+      setError(err?.message || 'Không thể tải bảng tin.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await feedApi.getFeed({ tab: activeTab === 'foryou' ? 'discover' : 'following', limit: 20 });
+        if (mounted) {
+          setPayload({
+            posts: data?.posts || [],
+            friendSuggestions: data?.friendSuggestions || [],
+            trending: data?.trending || [],
+          });
+        }
+      } catch (err) {
+        if (mounted) setError(err?.message || 'Không thể tải bảng tin.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    run();
+    return () => { mounted = false; };
+  }, [activeTab]);
+
+  const posts = useMemo(() => payload.posts.map(normalizePost), [payload.posts]);
+  const suggestions = useMemo(() => payload.friendSuggestions.map(normalizeSuggestion), [payload.friendSuggestions]);
+  const trending = useMemo(() => payload.trending.map(normalizeTrending), [payload.trending]);
+  const radarData = useMemo(() => suggestions.slice(0, 5).map((user, index) => ({
+    id: user.id,
+    name: user.name,
+    avatar: user.avatar,
+    avatarUrl: user.avatarUrl,
+    isLive: index < 2,
+  })), [suggestions]);
 
   const togglePlay = (id) => {
     setPlayingId(playingId === id ? null : id);
   };
 
+  const prependPost = (rawPost) => {
+    if (!rawPost?.id) return;
+    setPayload(prev => ({
+      ...prev,
+      posts: [rawPost, ...(prev.posts || []).filter(item => item.id !== rawPost.id)],
+    }));
+  };
+
+  const removePost = (postId) => {
+    setPayload(prev => ({
+      ...prev,
+      posts: (prev.posts || []).filter(item => item.id !== postId),
+    }));
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-
-      {/* Left: Main */}
       <div className="flex-1 lg:w-[70%] space-y-6 overflow-hidden">
+        {radarData.length ? <LiveRadar radarData={radarData} /> : null}
 
-        <LiveRadar radarData={LIVE_RADAR} />
+        <CreatePost onCreated={prependPost} />
 
-        <CreatePost />
 
         <div className="flex gap-6 border-b border-gray-200 dark:border-gray-800 px-2">
           <button
@@ -104,22 +113,41 @@ const Newsfeed = () => {
           </button>
         </div>
 
-        {/* Posts */}
-        <div className="space-y-6 pb-20">
-          {getFeedPosts(t).map((post) => (
-            <FeedPost
-              key={post.id}
-              post={post}
-              isPlaying={playingId === post.id}
-              onTogglePlay={() => togglePlay(post.id)}
-            />
-          ))}
-        </div>
+        {error ? (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+            <div className="flex items-center gap-2"><AlertCircle size={18} /> {error}</div>
+            <button onClick={() => loadFeed()} className="rounded-lg bg-red-100 px-3 py-1.5 font-semibold hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900">
+              Tải lại
+            </button>
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="rounded-2xl border border-gray-200 bg-surface-color p-8 text-center shadow-sm dark:border-gray-800">
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-primary-500/20 border-t-primary-500" />
+            <p className="font-semibold">Đang tải bảng tin...</p>
+          </div>
+        ) : (
+          <div className="space-y-6 pb-20">
+            {posts.length ? posts.map((post) => (
+              <FeedPost
+                key={post.id}
+                post={post}
+                isPlaying={playingId === post.id}
+                onTogglePlay={() => togglePlay(post.id)}
+                onDeleted={removePost}
+                onShared={prependPost}
+              />
+            )) : (
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-surface-color p-8 text-center text-sm text-text-muted dark:border-gray-700">
+                Chưa có bài viết phù hợp. Hãy theo dõi thêm bạn bè hoặc tạo bài viết mới.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Right: Sidebar */}
-      <NewsfeedSidebar suggestions={SUGGESTIONS} trending={TRENDING} />
-
+      <NewsfeedSidebar suggestions={suggestions} trending={trending} />
     </div>
   );
 };

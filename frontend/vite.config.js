@@ -10,6 +10,10 @@ export default defineConfig({
     react(),
   ],
   server: {
-    allowedHosts: true, 
+    allowedHosts: true,
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      'Cross-Origin-Embedder-Policy': 'unsafe-none',
+    },
   }
 })

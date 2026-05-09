@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
@@ -50,6 +51,8 @@ const summarizeCardPayload = (payload) => {
 const Chat = () => {
   const { t } = useLanguage();
   const currentUser = getCurrentUser();
+  const location = useLocation();
+  const requestedThreadId = new URLSearchParams(location.search).get('threadId');
   const [chats, setChats] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -87,12 +90,15 @@ const Chat = () => {
           lastMsg: thread.lastMessagePreview || 'Chưa có tin nhắn',
           time: formatTimeLabel(thread.updatedAt),
           isLive: false,
+          avatarUrl: thread.peerAvatarUrl,
         }));
 
         if (cancelled) return;
 
         setChats(mapped);
-        setActiveChat((current) => current ?? mapped[0]?.id ?? null);
+        const requestedId = requestedThreadId ? Number(requestedThreadId) : null;
+        const requestedExists = requestedId && mapped.some((thread) => thread.id === requestedId);
+        setActiveChat((current) => requestedExists ? requestedId : (current ?? mapped[0]?.id ?? null));
       } catch {
         if (!cancelled) {
           setChats([]);
@@ -111,7 +117,7 @@ const Chat = () => {
       cancelled = true;
       disconnectRealtime();
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, requestedThreadId]);
 
   useEffect(() => {
     let cancelled = false;
