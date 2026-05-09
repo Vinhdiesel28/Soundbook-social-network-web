@@ -1,3 +1,5 @@
+create database soundbook_db;
+use soundbook_db;
 -- Notes:
 -- 1) dm_threads: app MUST store ordered pair user1_id < user2_id to make UNIQUE work.
 -- 2) reactions.target_id is polymorphic (POST/COMMENT) so no FK for target_id.
