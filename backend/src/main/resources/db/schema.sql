@@ -1,4 +1,3 @@
--- MySQL 8+ | MVP schema (24 tables) | utf8mb4
 -- Notes:
 -- 1) dm_threads: app MUST store ordered pair user1_id < user2_id to make UNIQUE work.
 -- 2) reactions.target_id is polymorphic (POST/COMMENT) so no FK for target_id.
@@ -206,7 +205,7 @@ CREATE TABLE IF NOT EXISTS user_music_collection (
   subtitle    VARCHAR(300) NULL,
   cover_url   VARCHAR(500) NULL,
   preview_url VARCHAR(500) NULL,
-  visibility  ENUM('PUBLIC','FRIENDS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
+  visibility  ENUM('PUBLIC','FRIENDS','FOLLOWERS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
   sort_order  INT NOT NULL DEFAULT 0,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_music_collection_user (user_id, sort_order),
@@ -230,6 +229,7 @@ CREATE TABLE IF NOT EXISTS user_bookshelf_items (
   progress_page     INT NULL,
   progress_percent  DECIMAL(5,2) NULL,
   rating            TINYINT NULL,
+  visibility        ENUM('PUBLIC','FRIENDS','FOLLOWERS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
   updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT uq_user_shelf_book UNIQUE (user_id, shelf_id, book_key),
   INDEX idx_bookshelf_user_shelf_updated (user_id, shelf_id, updated_at),
@@ -482,11 +482,3 @@ CREATE TABLE IF NOT EXISTS reports (
     FOREIGN KEY (reviewed_by) REFERENCES users(id)
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ===================== SEED =====================
-INSERT INTO bookshelves (id, code, name) VALUES
-  (1, 'WILL_READ', 'Will Read'),
-  (2, 'READING',   'Reading'),
-  (3, 'FINISHED',  'Finished'),
-  (4, 'DROPPED',   'Dropped')
-ON DUPLICATE KEY UPDATE name = VALUES(name);
