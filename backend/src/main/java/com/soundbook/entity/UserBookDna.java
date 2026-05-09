@@ -1,11 +1,10 @@
 package com.soundbook.entity;
 
-import com.soundbook.common.converter.DoubleListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "user_book_dna")
@@ -25,13 +24,15 @@ public class UserBookDna {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Convert(converter = DoubleListConverter.class)
     @Column(name = "prefs_json", nullable = false, columnDefinition = "JSON")
-    private List<Double> musicVector; // Đã đổi thành List<Double> thay vì String
+    private String prefsJson;
 
-    @Convert(converter = DoubleListConverter.class)
     @Column(name = "vector_json", nullable = false, columnDefinition = "JSON")
-    private List<Double> bookVector; // Đã đổi thành List<Double> thay vì String
+    private String vectorJson;
+
+    @Column(name = "confidence", nullable = false, precision = 3, scale = 2)
+    @Builder.Default
+    private BigDecimal confidence = new BigDecimal("0.55");
 
     @Column(nullable = false)
     @Builder.Default

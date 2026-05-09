@@ -68,8 +68,7 @@ public class RoomSocketController {
     public RoomQueueItemResponse voteQueueItem(
             @DestinationVariable Long roomId,
             @DestinationVariable Long queueItemId) {
-        roomService.voteQueueItem(queueItemId);
-        return getRoomQueueItemOrNull(queueItemId);
+        return roomService.voteQueueItem(queueItemId);
     }
 
     /**
@@ -84,8 +83,4 @@ public class RoomSocketController {
         return queueItemId;
     }
 
-    private RoomQueueItemResponse getRoomQueueItemOrNull(Long queueItemId) {
-        // This is a simplified version - you may want to fetch the actual item
-        return null;
-    }
 }

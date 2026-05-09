@@ -28,7 +28,7 @@ public interface RoomService {
 
     List<RoomQueueItemResponse> getRoomQueue(Long roomId);
 
-    void voteQueueItem(Long queueItemId);
+    RoomQueueItemResponse voteQueueItem(Long queueItemId);
 
     void removeQueueItem(Long roomId, Long queueItemId);
 }

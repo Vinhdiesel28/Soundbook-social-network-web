@@ -64,8 +64,7 @@ public class RoomController {
     }
 
     @PostMapping("/{roomId}/queue/{queueItemId}/vote")
-    public ApiResponse<Void> voteQueueItem(@PathVariable Long queueItemId) {
-        roomService.voteQueueItem(queueItemId);
-        return ApiResponse.success(null);
+    public ApiResponse<RoomQueueItemResponse> voteQueueItem(@PathVariable Long queueItemId) {
+        return ApiResponse.success(roomService.voteQueueItem(queueItemId));
     }
 }

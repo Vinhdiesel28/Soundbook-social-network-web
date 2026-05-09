@@ -3,10 +3,11 @@ USE soundbook_db;
 -- SAMPLE DATA 
 
 -- USERS
+-- Sample password for all seeded users: 123456
 INSERT INTO users (id, email, password_hash, display_name, role) VALUES
-(1, 'a@gmail.com', 'hash1', 'User A', 'USER'),
-(2, 'b@gmail.com', 'hash2', 'User B', 'USER'),
-(3, 'mod@gmail.com', 'hash3', 'Moderator', 'MODERATOR');
+(1, 'a@gmail.com', '$2a$10$iVgcZu6nM0VNIiC4LAfRt.ucNQwaelD7wg/ImFXivPlv8kllwiVqK', 'User A', 'USER'),
+(2, 'b@gmail.com', '$2a$10$i5sehoEJZD/uGCJuLqr8huXCwXkXLN3pvlMHfHT86GJPTnU6Z7.pe', 'User B', 'USER'),
+(3, 'mod@gmail.com', '$2a$10$t5EqmBPkJ.0lQ1bKgdWELefi3Diw0dtA8cdAMBMIjcT5AOzAWJLmK', 'Moderator', 'MODERATOR');
 
 -- USER PROFILES
 INSERT INTO user_profiles (user_id, username, bio) VALUES
@@ -15,28 +16,23 @@ INSERT INTO user_profiles (user_id, username, bio) VALUES
 (3, 'mod', 'I moderate stuff');
 
 -- ONBOARDING
-INSERT INTO user_onboarding (user_id, music_connected, taste_dna_ready) VALUES
-(1, 1, 1),
-(2, 0, 1),
-(3, 0, 0);
+INSERT INTO user_onboarding (user_id, music_connected, music_dna_ready, book_dna_ready, taste_dna_ready, completed_at) VALUES
+(1, 0, 1, 1, 1, NOW()),
+(2, 0, 1, 1, 1, NOW()),
+(3, 0, 0, 0, 0, NULL);
 
--- OAUTH
-INSERT INTO oauth_accounts (id, user_id, provider, provider_user_id) VALUES
-(1, 1, 'SPOTIFY', 'spotify_user_1');
+-- DNA: manual Taste DNA seed data. Vectors are normalized feature maps used by cosine similarity.
+INSERT INTO user_music_dna (user_id, built_from, prefs_json, vector_json, confidence) VALUES
+(1, 'MANUAL', '{"genres":["Ballad","Indie","Pop"],"moods":["Chill","Buồn"],"artists":["Đen Vâu"],"songs":[],"dislikedGenres":["EDM"]}', '{"genre:ballad":0.1667,"genre:indie":0.1667,"genre:pop":0.1667,"mood:chill":0.1,"mood:buon":0.1,"artist:den_vau":0.2}', 0.73),
+(2, 'MANUAL', '{"genres":["Ballad","Lo-fi","Acoustic"],"moods":["Chill","Lãng mạn"],"artists":["Taylor Swift"],"songs":[],"dislikedGenres":["Metal"]}', '{"genre:ballad":0.1667,"genre:lo_fi":0.1667,"genre:acoustic":0.1667,"mood:chill":0.1,"mood:lang_man":0.1,"artist:taylor_swift":0.2}', 0.73);
 
-INSERT INTO oauth_tokens (oauth_account_id, access_token, expires_at) VALUES
-(1, 'token123', NOW() + INTERVAL 1 DAY);
+INSERT INTO user_book_dna (user_id, prefs_json, vector_json, confidence) VALUES
+(1, '{"genres":["Trinh thám","Fantasy","Tâm lý"],"themes":["Tội phạm","Trưởng thành"],"authors":["Higashino Keigo"],"books":["Conan"],"dislikedGenres":["Self-help"]}', '{"genre:trinh_tham":0.1667,"genre:fantasy":0.1667,"genre:tam_ly":0.1667,"theme:toi_pham":0.1,"theme:truong_thanh":0.1,"author:higashino_keigo":0.15,"book:conan":0.15}', 0.88),
+(2, '{"genres":["Trinh thám","Lãng mạn","Fantasy"],"themes":["Tội phạm","Chữa lành"],"authors":["Nguyễn Nhật Ánh"],"books":["Harry Potter"],"dislikedGenres":["Kinh dị"]}', '{"genre:trinh_tham":0.1667,"genre:lang_man":0.1667,"genre:fantasy":0.1667,"theme:toi_pham":0.1,"theme:chua_lanh":0.1,"author:nguyen_nhat_anh":0.15,"book:harry_potter":0.15}', 0.88);
 
--- DNA
-INSERT INTO user_music_dna (user_id, built_from, prefs_json, vector_json) VALUES
-(1, 'SPOTIFY', '{"genres":["pop","rock"]}', '{"v":[0.8,0.2]}');
-
-INSERT INTO user_book_dna (user_id, prefs_json, vector_json) VALUES
-(2, '{"genres":["fiction"]}', '{"v":[0.6]}');
-
-INSERT INTO user_taste_dna (user_id, music_vector_json, book_vector_json) VALUES
-(1, '{"v":[0.8]}', '{"v":[0.2]}'),
-(2, '{"v":[0.3]}', '{"v":[0.7]}');
+INSERT INTO user_taste_dna (user_id, music_vector_json, book_vector_json, music_confidence, book_confidence, w_music, w_book) VALUES
+(1, '{"genre:ballad":0.1667,"genre:indie":0.1667,"genre:pop":0.1667,"mood:chill":0.1,"mood:buon":0.1,"artist:den_vau":0.2}', '{"genre:trinh_tham":0.1667,"genre:fantasy":0.1667,"genre:tam_ly":0.1667,"theme:toi_pham":0.1,"theme:truong_thanh":0.1,"author:higashino_keigo":0.15,"book:conan":0.15}', 0.73, 0.88, 0.50, 0.50),
+(2, '{"genre:ballad":0.1667,"genre:lo_fi":0.1667,"genre:acoustic":0.1667,"mood:chill":0.1,"mood:lang_man":0.1,"artist:taylor_swift":0.2}', '{"genre:trinh_tham":0.1667,"genre:lang_man":0.1667,"genre:fantasy":0.1667,"theme:toi_pham":0.1,"theme:chua_lanh":0.1,"author:nguyen_nhat_anh":0.15,"book:harry_potter":0.15}', 0.73, 0.88, 0.50, 0.50);
 
 -- POSTS
 INSERT INTO posts (id, user_id, type, caption) VALUES
@@ -68,7 +64,8 @@ INSERT INTO bookshelves (id, code, name) VALUES
 (1, 'WILL_READ', 'Want to Read'),
 (2, 'READING', 'Reading'),
 (3, 'FINISHED', 'Finished'),
-(4, 'DROPPED', 'Dropped');
+(4, 'DROPPED', 'Dropped')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- BOOKSHELF (assumes seed exists)
 INSERT INTO user_bookshelf_items (user_id, shelf_id, book_key, book_payload_json) VALUES
