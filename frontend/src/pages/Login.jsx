@@ -3,6 +3,7 @@ import { Mail, Lock, User, ArrowRight, Disc3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { GoogleLogin } from '@react-oauth/google';
+import { isGoogleAuthConfigured } from '../config/env';
 import {
   canSwitchAccount,
   getCurrentUser,
@@ -45,7 +46,7 @@ const Login = () => {
 
     try {
       const result = await loginWithGoogle(idToken);
-      navigate(resolveHomePath(result?.data?.role), { replace: true });
+      navigate(result?.data?.onboardingCompleted ? resolveHomePath(result?.data?.role) : '/onboarding', { replace: true });
     } catch (error) {
       console.error('Lỗi đăng nhập Google:', error);
       alert(error.message || 'Đăng nhập Google thất bại.');
@@ -86,14 +87,15 @@ const Login = () => {
             displayName: formData.displayName || formData.username,
           });
 
-      if (isLogin) {
-        navigate(resolveHomePath(result?.data?.role), { replace: true });
-      } else {
-        navigate('/onboarding', { replace: true });
-      }
+      navigate(result?.data?.onboardingCompleted ? resolveHomePath(result?.data?.role) : '/onboarding', { replace: true });
     } catch (error) {
-      console.error('Lỗi kết nối:', error);
-      alert(error.message || 'Thao tác thất bại. Vui lòng kiểm tra lại.');
+      if (!isLogin && error?.status === 400 && String(error.message || '').toLowerCase().includes('email')) {
+        setIsLogin(true);
+        alert('Email này đã tồn tại. Mình đã chuyển sang chế độ đăng nhập, bạn hãy nhập mật khẩu để đăng nhập.');
+      } else {
+        console.error('Lỗi kết nối:', error);
+        alert(error.message || 'Thao tác thất bại. Vui lòng kiểm tra lại.');
+      }
     } finally {
       setLoading(false);
     }
@@ -208,19 +210,28 @@ const Login = () => {
             </div>
 
             <div className="flex justify-center w-full">
-              <div className={sessionLocked ? 'pointer-events-none opacity-60' : ''}>
-                <GoogleLogin
-                    onSuccess={(credentialResponse) => {
-                      handleGoogleLogin(credentialResponse?.credential);
-                    }}
-                    onError={() => {
-                      alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
-                    }}
-                    useOneTap
-                    shape="pill"
-                    theme="filled_blue"
-                />
-              </div>
+              {isGoogleAuthConfigured ? (
+                <div className={sessionLocked ? 'pointer-events-none opacity-60' : ''}>
+                  <GoogleLogin
+                      onSuccess={(credentialResponse) => {
+                        handleGoogleLogin(credentialResponse?.credential);
+                      }}
+                      onError={() => {
+                        alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
+                      }}
+                      type="standard"
+                      shape="pill"
+                      theme="filled_blue"
+                      text="continue_with"
+                      size="large"
+                      logo_alignment="left"
+                  />
+                </div>
+              ) : (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/60 dark:bg-amber-900/20 dark:text-amber-300">
+                  Chưa cấu hình Google Client ID cho frontend.
+                </div>
+              )}
             </div>
 
             <p className="mt-8 text-center text-sm text-text-muted">

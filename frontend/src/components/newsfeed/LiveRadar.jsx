@@ -284,9 +284,13 @@ const LiveRadar = ({ radarData }) => {
                     ? 'bg-gradient-to-tr from-primary-500 to-purple-500'
                     : 'bg-gray-300 dark:bg-gray-700'
                 }`}>
-                <div className={`w-full h-full rounded-full border-2 border-surface-color ${item.avatar} flex items-center justify-center`}>
-                  {item.isRoom && <Music size={20} className="text-white" />}
-                </div>
+                {item.avatarUrl ? (
+                  <img src={item.avatarUrl} alt={item.name} className="h-full w-full rounded-full border-2 border-surface-color object-cover" />
+                ) : (
+                  <div className={`w-full h-full rounded-full border-2 border-surface-color ${item.avatar} flex items-center justify-center text-xs font-bold text-white`}>
+                    {item.isRoom ? <Music size={20} className="text-white" /> : (item.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
                 {item.isLive && (
                   <div className="absolute -bottom-1 -right-1 bg-surface-color rounded-full p-0.5">
                     <div className="bg-red-500 text-white rounded-full p-1 animate-pulse">

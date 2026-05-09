@@ -15,8 +15,7 @@ export async function searchYouTubeVideos(query, maxResults = 10) {
     });
     
     return Array.isArray(response) ? response : [];
-  } catch (error) {
-    console.error('Error searching YouTube via backend:', error);
+  } catch {
     return [];
   }
 }
@@ -28,8 +27,7 @@ export async function getYouTubeVideoDetails(videoId) {
       auth: true
     });
     return response;
-  } catch (error) {
-    console.error('Error fetching video details via backend:', error);
+  } catch {
     return null;
   }
 }

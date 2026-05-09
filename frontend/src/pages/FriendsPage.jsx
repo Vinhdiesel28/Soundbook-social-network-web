@@ -1,103 +1,151 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Search, MessageCircle } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Check, Clock, MessageCircle, Search, UserPlus, X } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { friendsApi } from '../services/friends';
 
-const ALL_FRIENDS = [
-  { id: 1, name: 'Hải Đăng', avatar: 'bg-blue-500', isOnline: true, match: 91 },
-  { id: 2, name: 'Mai Linh', avatar: 'bg-pink-500', isOnline: true, match: 88 },
-  { id: 3, name: 'Minh Tuấn', avatar: 'bg-green-500', isOnline: false, match: 76 },
-  { id: 4, name: 'Bảo Trâm', avatar: 'bg-purple-500', isOnline: true, match: 82 },
-  { id: 5, name: 'Thanh Sơn', avatar: 'bg-teal-500', isOnline: false, match: 65 },
-  { id: 6, name: 'Hương Giang', avatar: 'bg-rose-500', isOnline: true, match: 79 },
-  { id: 7, name: 'Tuấn Kiệt', avatar: 'bg-indigo-500', isOnline: false, match: 71 },
-  { id: 8, name: 'Phương Ly', avatar: 'bg-yellow-500', isOnline: true, match: 94 },
-  { id: 9, name: 'Quốc Anh', avatar: 'bg-orange-500', isOnline: false, match: 60 },
-];
+const AVATAR_CLASSES = ['bg-blue-500', 'bg-pink-500', 'bg-green-500', 'bg-purple-500', 'bg-yellow-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500', 'bg-orange-500'];
+const fallbackAvatar = (id) => AVATAR_CLASSES[Number(id || 0) % AVATAR_CLASSES.length];
+
+const Avatar = ({ friend }) => {
+  if (friend.avatarUrl) {
+    return <img src={friend.avatarUrl} alt={friend.displayName} className="w-12 h-12 rounded-full border-2 border-surface-color shadow-sm object-cover" />;
+  }
+  return <div className={`w-12 h-12 rounded-full ${fallbackAvatar(friend.userId)} border-2 border-surface-color shadow-sm flex items-center justify-center text-white font-bold`}>{(friend.displayName || 'U').charAt(0).toUpperCase()}</div>;
+};
 
 const FriendsPage = () => {
   const { id } = useParams();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('friends');
+  const [data, setData] = useState({ friends: [], incomingRequests: [], outgoingRequests: [], suggestions: [] });
+  const [loading, setLoading] = useState(true);
+  const [busyKey, setBusyKey] = useState('');
+  const [error, setError] = useState('');
 
-  const filtered = ALL_FRIENDS.filter(f =>
-    f.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const hub = await friendsApi.getFriendHub();
+      setData({
+        friends: hub?.friends || [],
+        incomingRequests: hub?.incomingRequests || [],
+        outgoingRequests: hub?.outgoingRequests || [],
+        suggestions: hub?.suggestions || [],
+      });
+    } catch (err) {
+      setError(err?.message || 'Không thể tải danh sách bạn bè.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const filtered = useMemo(() => {
+    const lists = {
+      friends: data.friends,
+      incoming: data.incomingRequests,
+      outgoing: data.outgoingRequests,
+      suggestions: data.suggestions,
+    };
+    const keyword = search.trim().toLowerCase();
+    return (lists[tab] || []).filter(friend => !keyword || String(friend.displayName || '').toLowerCase().includes(keyword) || String(friend.username || '').toLowerCase().includes(keyword));
+  }, [data.friends, data.incomingRequests, data.outgoingRequests, data.suggestions, tab, search]);
+
+  const runAction = async (key, action) => {
+    try {
+      setBusyKey(key);
+      await action();
+      await load();
+    } finally {
+      setBusyKey('');
+    }
+  };
+
+  const handleMessage = async (friend) => {
+    await runAction(`msg-${friend.userId}`, async () => {
+      const result = await friendsApi.startChat(friend.userId);
+      if (result?.dmThreadId) navigate(`/chat?threadId=${result.dmThreadId}`);
+    });
+  };
+
+  const renderActions = (friend) => {
+    if (tab === 'friends') {
+      return (
+        <button onClick={() => handleMessage(friend)} disabled={busyKey === `msg-${friend.userId}`} className="p-2 rounded-full text-text-muted hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors disabled:opacity-60" title="Nhắn tin">
+          <MessageCircle size={18} />
+        </button>
+      );
+    }
+    if (tab === 'incoming') {
+      return (
+        <div className="flex gap-2">
+          <button onClick={() => runAction(`accept-${friend.requestId}`, () => friendsApi.acceptRequest(friend.requestId))} disabled={busyKey === `accept-${friend.requestId}`} className="p-2 rounded-full text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"><Check size={18} /></button>
+          <button onClick={() => runAction(`decline-${friend.requestId}`, () => friendsApi.declineRequest(friend.requestId))} disabled={busyKey === `decline-${friend.requestId}`} className="p-2 rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"><X size={18} /></button>
+        </div>
+      );
+    }
+    if (tab === 'outgoing') {
+      return <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"><Clock size={13} /> Đang chờ</span>;
+    }
+    return (
+      <button onClick={() => runAction(`add-${friend.userId}`, () => friendsApi.sendRequest(friend.userId))} disabled={busyKey === `add-${friend.userId}`} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-600 disabled:opacity-60"><UserPlus size={15} /> Kết bạn</button>
+    );
+  };
+
+  const tabs = [
+    ['friends', `Bạn bè (${data.friends.length})`],
+    ['incoming', `Lời mời đến (${data.incomingRequests.length})`],
+    ['outgoing', `Đã gửi (${data.outgoingRequests.length})`],
+    ['suggestions', `Gợi ý (${data.suggestions.length})`],
+  ];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 py-2">
-
-      {/* Header */}
+    <div className="max-w-3xl mx-auto space-y-6 py-2">
       <div className="flex items-center gap-3">
-        <Link
-          to={`/profile/${id}`}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-text-muted transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </Link>
+        <Link to={`/profile/${id}`} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-text-muted transition-colors"><ArrowLeft size={20} /></Link>
         <div>
           <h1 className="text-xl font-bold">{t('profile.friends', { defaultValue: 'Friends' })}</h1>
-          <p className="text-xs text-text-muted">{ALL_FRIENDS.length} {t('profile.friends', { defaultValue: 'friends' }).toLowerCase()}</p>
+          <p className="text-xs text-text-muted">Quản lý bạn bè, lời mời và gợi ý kết nối.</p>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={t('common.search_friends', { defaultValue: 'Search friends...' })}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 border border-transparent focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none text-sm transition-all"
-        />
+      <div className="flex flex-wrap gap-2">
+        {tabs.map(([value, label]) => (
+          <button key={value} onClick={() => setTab(value)} className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${tab === value ? 'bg-primary-500 text-white' : 'bg-gray-100 text-text-muted hover:text-text-color dark:bg-gray-800'}`}>{label}</button>
+        ))}
       </div>
 
-      {/* Friends */}
+      <div className="relative">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('common.search_friends', { defaultValue: 'Search friends...' })} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 border border-transparent focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none text-sm transition-all" />
+      </div>
+
+      {error ? <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">{error}</div> : null}
+
       <div className="bg-surface-color rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
-        {filtered.length === 0 ? (
-          <p className="text-center text-text-muted text-sm py-12">{t('common.no_results', { defaultValue: 'No friends found.' })}</p>
-        ) : (
-          filtered.map(friend => (
-            <div key={friend.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-              {/* Avatar */}
-              <div className="relative shrink-0">
-                <div className={`w-12 h-12 rounded-full ${friend.avatar} border-2 border-surface-color shadow-sm`} />
-                {friend.isOnline && (
-                  <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-color rounded-full" />
-                )}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{friend.name}</p>
-                <p className="text-xs text-primary-500 font-medium">{friend.match}% Match</p>
-                <p className={`text-xs mt-0.5 ${friend.isOnline ? 'text-green-500' : 'text-text-muted'}`}>
-                  {friend.isOnline
-                    ? t('common.online', { defaultValue: 'Online' })
-                    : t('common.offline', { defaultValue: 'Offline' })}
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 shrink-0">
-                <Link
-                  to="/chat"
-                  className="p-2 rounded-full text-text-muted hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
-                  title={t('header.messages', { defaultValue: 'Message' })}
-                >
-                  <MessageCircle size={18} />
-                </Link>
-                <Link
-                  to={`/profile/${friend.id}`}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-500 text-text-muted transition-colors"
-                >
-                  {t('profile.view', { defaultValue: 'View' })}
-                </Link>
-              </div>
+        {loading ? (
+          <p className="text-center text-text-muted text-sm py-12">Đang tải dữ liệu...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-text-muted text-sm py-12">Không có dữ liệu phù hợp.</p>
+        ) : filtered.map(friend => (
+          <div key={`${tab}-${friend.userId}`} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+            <Avatar friend={friend} />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{friend.displayName}</p>
+              <p className="text-xs text-primary-500 font-medium">{Math.round(friend.matchScore || 0)}% Match</p>
+              <p className="text-xs mt-0.5 text-text-muted truncate">{friend.sharedFeatures?.slice(0, 3).join(', ') || friend.username || friend.bio || 'Soundbook user'}</p>
             </div>
-          ))
-        )}
+            <div className="flex gap-2 shrink-0 items-center">
+              {renderActions(friend)}
+              <Link to={`/profile/${friend.userId}`} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-500 text-text-muted transition-colors">{t('profile.view', { defaultValue: 'View' })}</Link>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

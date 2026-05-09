@@ -7,10 +7,31 @@ export const spotifyIntegrationApi = {
                 method: 'GET',
                 auth: true,
             });
-            return payload?.data || { connected: false };
+            return payload?.data || { connected: false, status: 'DISCONNECTED' };
         } catch {
-            return { connected: false };
+            return { connected: false, status: 'DISCONNECTED' };
         }
+    },
+
+    async disconnect() {
+        const payload = await request('/integrations/spotify/disconnect', {
+            method: 'POST',
+            auth: true,
+        });
+        return payload?.data || { connected: false, status: 'DISCONNECTED' };
+    },
+
+    async sync() {
+        const payload = await request('/integrations/spotify/sync', {
+            method: 'POST',
+            auth: true,
+        });
+        return payload?.data || {
+            savedRecentTracksCount: 0,
+            topArtists: [],
+            topGenres: [],
+            recentlyPlayed: [],
+        };
     },
 };
 

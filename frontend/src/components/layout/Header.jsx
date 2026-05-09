@@ -9,17 +9,30 @@ import {
   MessageCircle,
   User,
   LogOut,
+  Music,
+  BookOpen,
+  FileText,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, resolveHomePath } from '../../services/auth';
+import { searchApi } from '../../services/search';
 
-const Header = ({ unreadMessages = 3 }) => {
+const ResultAvatar = ({ user }) => {
+  if (user?.avatarUrl) {
+    return <img src={user.avatarUrl} alt={user.displayName || 'avatar'} className="h-8 w-8 rounded-full object-cover" />;
+  }
+  return <div className="h-8 w-8 rounded-full bg-primary-500 text-white flex items-center justify-center text-xs font-bold">{(user?.displayName || 'U').charAt(0).toUpperCase()}</div>;
+};
+
+const Header = ({ unreadMessages = 0 }) => {
   const { theme, toggleTheme } = useTheme();
   const { t, language, toggleLanguage } = useLanguage();
   const navigate = useNavigate();
 
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResult, setSearchResult] = useState({ users: [], posts: [], music: [], books: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentUser] = useState(() => getCurrentUser());
@@ -63,6 +76,42 @@ const Header = ({ unreadMessages = 3 }) => {
     };
   }, []);
 
+  useEffect(() => {
+    const keyword = searchQuery.trim();
+    if (!keyword) {
+      setSearchResult({ users: [], posts: [], music: [], books: [] });
+      setSearchLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        const data = await searchApi.search(keyword, 5);
+        if (!cancelled) {
+          setSearchResult({
+            users: data?.users || [],
+            posts: data?.posts || [],
+            music: data?.music || [],
+            books: data?.books || [],
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setSearchResult({ users: [], posts: [], music: [], books: [] });
+        }
+      } finally {
+        if (!cancelled) setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
   const handleToggleNotifications = () => {
     setShowNotifications((prev) => !prev);
     setShowProfileMenu(false);
@@ -83,9 +132,14 @@ const Header = ({ unreadMessages = 3 }) => {
     }
   };
 
+  const closeSearch = () => {
+    setIsSearchFocused(false);
+  };
+
   const homePath = resolveHomePath(currentUser?.role);
   const profilePath = currentUser?.id ? `/profile/${currentUser.id}` : '/profile/me';
   const showSearchDropdown = isSearchFocused && searchQuery.trim().length > 0;
+  const hasSearchResults = searchResult.users.length || searchResult.posts.length || searchResult.music.length || searchResult.books.length;
 
   return (
       <header className="sticky top-0 z-50 w-full bg-surface-color border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300">
@@ -119,7 +173,7 @@ const Header = ({ unreadMessages = 3 }) => {
                 <input
                     type="text"
                     className="w-full h-full bg-transparent border-none outline-none text-sm px-2 text-text-color placeholder-gray-400"
-                    placeholder={t('common.search')}
+                    placeholder="Tìm người dùng, bài viết, nhạc, sách..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
@@ -133,80 +187,103 @@ const Header = ({ unreadMessages = 3 }) => {
                   <div
                       id="header-search-dropdown"
                       role="listbox"
-                      className="absolute top-12 left-2 right-2 sm:left-4 sm:right-4 bg-surface-color rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden transform opacity-100 scale-100 transition-all duration-200 origin-top"
+                      className="absolute top-12 left-2 right-2 sm:left-4 sm:right-4 bg-surface-color rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden transform opacity-100 scale-100 transition-all duration-200 origin-top max-h-[70vh] overflow-y-auto"
                   >
                     <div className="p-2">
-                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider">
-                        {t('header.search_users')}
-                      </div>
-                      <button type="button" className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg w-full text-left">
-                        <div className="w-8 h-8 rounded-full bg-blue-500" />
-                        <div className="text-sm font-medium">Hải Đăng <span className="text-xs text-gray-500">85% Match</span></div>
-                      </button>
+                      {searchLoading ? (
+                        <div className="p-4 text-center text-sm text-text-muted">Đang tìm kiếm...</div>
+                      ) : null}
 
-                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider mt-2">
-                        {t('header.search_music')}
-                      </div>
-                      <button type="button" className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg w-full text-left">
-                        <div className="w-8 h-8 rounded-md bg-purple-500 flex items-center justify-center text-white text-xs">🎵</div>
-                        <div className="text-sm font-medium">Sau Lời Từ Khước <span className="text-xs text-gray-500">Phan Mạnh Quỳnh</span></div>
-                      </button>
+                      {!searchLoading && !hasSearchResults ? (
+                        <div className="p-4 text-center text-sm text-text-muted">Không tìm thấy kết quả phù hợp.</div>
+                      ) : null}
 
-                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider mt-2">
-                        {t('header.search_books')}
-                      </div>
-                      <button type="button" className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg w-full text-left">
-                        <div className="w-6 h-8 rounded-sm bg-orange-500 flex items-center justify-center text-white text-xs">📚</div>
-                        <div className="text-sm font-medium">Đắc Nhân Tâm <span className="text-xs text-gray-500">Dale Carnegie</span></div>
-                      </button>
+                      {searchResult.users.length ? (
+                        <>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider">Người dùng</div>
+                          {searchResult.users.map((user) => (
+                            <Link key={user.userId} to={`/profile/${user.userId}`} onClick={closeSearch} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg w-full text-left">
+                              <ResultAvatar user={user} />
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium truncate">{user.displayName} <span className="text-xs text-primary-500">{Math.round(user.matchScore || 0)}% Match</span></div>
+                                <div className="text-xs text-text-muted truncate">{user.username || user.bio || 'Soundbook user'}</div>
+                              </div>
+                            </Link>
+                          ))}
+                        </>
+                      ) : null}
+
+                      {searchResult.posts.length ? (
+                        <>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider mt-2">Bài viết</div>
+                          {searchResult.posts.map((post) => (
+                            <Link key={post.id} to={`/profile/${post.user?.userId || currentUser?.id}`} onClick={closeSearch} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg w-full text-left">
+                              <div className="w-8 h-8 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-primary-500"><FileText size={15} /></div>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium truncate">{post.media?.title || post.caption || 'Bài viết Soundbook'}</div>
+                                <div className="text-xs text-text-muted truncate">{post.user?.displayName} · {post.reason || post.caption}</div>
+                              </div>
+                            </Link>
+                          ))}
+                        </>
+                      ) : null}
+
+                      {searchResult.music.length ? (
+                        <>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider mt-2">Âm nhạc</div>
+                          {searchResult.music.map((item) => (
+                            <Link key={`music-${item.id}`} to={`/profile/${item.ownerUserId}`} onClick={closeSearch} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg w-full text-left">
+                              {item.coverUrl ? <img src={item.coverUrl} alt={item.title} className="w-8 h-8 rounded-md object-cover" /> : <div className="w-8 h-8 rounded-md bg-purple-500 flex items-center justify-center text-white"><Music size={14} /></div>}
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium truncate">{item.title}</div>
+                                <div className="text-xs text-text-muted truncate">{item.subtitle || item.ownerDisplayName}</div>
+                              </div>
+                            </Link>
+                          ))}
+                        </>
+                      ) : null}
+
+                      {searchResult.books.length ? (
+                        <>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider mt-2">Sách / truyện</div>
+                          {searchResult.books.map((item) => (
+                            <Link key={`book-${item.id}`} to={`/profile/${item.ownerUserId}`} onClick={closeSearch} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg w-full text-left">
+                              {item.coverUrl ? <img src={item.coverUrl} alt={item.title} className="w-7 h-9 rounded-sm object-cover" /> : <div className="w-7 h-9 rounded-sm bg-orange-500 flex items-center justify-center text-white"><BookOpen size={13} /></div>}
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium truncate">{item.title}</div>
+                                <div className="text-xs text-text-muted truncate">{item.subtitle || item.ownerDisplayName}</div>
+                              </div>
+                            </Link>
+                          ))}
+                        </>
+                      ) : null}
                     </div>
 
-                    <button type="button" className="bg-gray-50 dark:bg-gray-900/50 p-3 text-center text-sm text-primary-500 hover:text-primary-600 cursor-pointer font-medium border-t border-gray-200 dark:border-gray-800 w-full">
-                      {t('header.see_all_results')} "{searchQuery}"
-                    </button>
+                    <div className="bg-gray-50 dark:bg-gray-900/50 p-3 text-center text-sm text-primary-500 font-medium border-t border-gray-200 dark:border-gray-800">
+                      Kết quả cho "{searchQuery}"
+                    </div>
                   </div>
               )}
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500"
-                  title={t('header.toggle_theme')}
-                  aria-label={t('header.toggle_theme')}
-              >
+              <button type="button" onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500" title={t('header.toggle_theme')} aria-label={t('header.toggle_theme')}>
                 {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
               </button>
 
-              <button
-                  type="button"
-                  onClick={toggleLanguage}
-                  className="px-2 py-1 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 font-semibold text-xs tracking-wider transition-colors border border-gray-200 dark:border-gray-700 uppercase focus-visible:ring-2 focus-visible:ring-primary-500"
-                  title="Toggle Language"
-                  aria-label="Toggle language"
-              >
+              <button type="button" onClick={toggleLanguage} className="px-2 py-1 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 font-semibold text-xs tracking-wider transition-colors border border-gray-200 dark:border-gray-700 uppercase focus-visible:ring-2 focus-visible:ring-primary-500" title="Toggle Language" aria-label="Toggle language">
                 {language}
               </button>
 
               <Link to="/chat" className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500" title={t('header.messages')} aria-label={t('header.messages')}>
                 <MessageCircle size={20} />
                 {unreadMessages > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none border border-white dark:border-gray-900">
-                  {unreadMessages}
-                </span>
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none border border-white dark:border-gray-900">{unreadMessages}</span>
                 )}
               </Link>
 
               <div ref={notificationsRef} className="relative">
-                <button
-                    type="button"
-                    onClick={handleToggleNotifications}
-                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 relative transition-colors focus-visible:ring-2 focus-visible:ring-primary-500"
-                    aria-label={t('header.notifications')}
-                    aria-haspopup="menu"
-                    aria-expanded={showNotifications}
-                >
+                <button type="button" onClick={handleToggleNotifications} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 relative transition-colors focus-visible:ring-2 focus-visible:ring-primary-500" aria-label={t('header.notifications')} aria-haspopup="menu" aria-expanded={showNotifications}>
                   <Bell size={20} />
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border border-white dark:border-gray-900" />
                 </button>
@@ -222,19 +299,9 @@ const Header = ({ unreadMessages = 3 }) => {
               </div>
 
               <div ref={profileMenuRef} className="relative">
-                <button
-                    type="button"
-                    onClick={handleToggleProfileMenu}
-                    className="flex items-center gap-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500"
-                    aria-haspopup="menu"
-                    aria-expanded={showProfileMenu}
-                >
+                <button type="button" onClick={handleToggleProfileMenu} className="flex items-center gap-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500" aria-haspopup="menu" aria-expanded={showProfileMenu}>
                   <div className="w-9 h-9 rounded-full bg-primary-500 text-white flex items-center justify-center font-semibold overflow-hidden">
-                    {currentUser?.avatarUrl ? (
-                        <img src={currentUser.avatarUrl} alt={userName} className="w-full h-full object-cover" />
-                    ) : (
-                        <span>{userName.charAt(0).toUpperCase()}</span>
-                    )}
+                    {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt={userName} className="w-full h-full object-cover" /> : <span>{userName.charAt(0).toUpperCase()}</span>}
                   </div>
                 </button>
 

@@ -18,7 +18,7 @@ const FriendsList = ({ t, friends }) => {
         {displayed.map(friend => (
           <div key={friend.id} className="flex flex-col items-center gap-1 group cursor-pointer" title={friend.name}>
             <div className="relative">
-              <div className={`w-12 h-12 rounded-full ${friend.avatar} border-2 border-surface-color shadow-sm transition-transform group-hover:scale-105`} />
+              {friend.avatarUrl ? <img src={friend.avatarUrl} alt={friend.name} className="w-12 h-12 rounded-full border-2 border-surface-color shadow-sm transition-transform group-hover:scale-105 object-cover" /> : <div className={`w-12 h-12 rounded-full ${friend.avatar} border-2 border-surface-color shadow-sm transition-transform group-hover:scale-105`} />}
               {friend.isOnline && (
                 <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-color rounded-full" />
               )}
