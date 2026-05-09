@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -7,6 +7,7 @@ import CreatePost from '../components/newsfeed/CreatePost';
 import FeedPost from '../components/newsfeed/FeedPost';
 import NewsfeedSidebar from '../components/newsfeed/NewsfeedSidebar';
 import { feedApi } from '../services/feed';
+import { getActiveRooms } from '../services/room';
 import { normalizePost, normalizeSuggestion, normalizeTrending } from '../utils/feedNormalizers';
 
 const Newsfeed = () => {
@@ -14,10 +15,27 @@ const Newsfeed = () => {
   const [activeTab, setActiveTab] = useState('following');
   const [playingId, setPlayingId] = useState(null);
   const [payload, setPayload] = useState({ posts: [], friendSuggestions: [], trending: [] });
+  const [activeRooms, setActiveRooms] = useState([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [roomsError, setRoomsError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const loadFeed = async (tab = activeTab) => {
+  const loadActiveRooms = useCallback(async () => {
+    setRoomsLoading(true);
+    setRoomsError('');
+    try {
+      const response = await getActiveRooms(12);
+      setActiveRooms(Array.isArray(response?.data) ? response.data : []);
+    } catch (err) {
+      setRoomsError(err?.message || 'Không thể tải phòng live.');
+      setActiveRooms([]);
+    } finally {
+      setRoomsLoading(false);
+    }
+  }, []);
+
+  const loadFeed = useCallback(async (tab = activeTab) => {
     setLoading(true);
     setError('');
     try {
@@ -32,7 +50,7 @@ const Newsfeed = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
     let mounted = true;
@@ -58,16 +76,13 @@ const Newsfeed = () => {
     return () => { mounted = false; };
   }, [activeTab]);
 
+  useEffect(() => {
+    loadActiveRooms();
+  }, [loadActiveRooms]);
+
   const posts = useMemo(() => payload.posts.map(normalizePost), [payload.posts]);
   const suggestions = useMemo(() => payload.friendSuggestions.map(normalizeSuggestion), [payload.friendSuggestions]);
   const trending = useMemo(() => payload.trending.map(normalizeTrending), [payload.trending]);
-  const radarData = useMemo(() => suggestions.slice(0, 5).map((user, index) => ({
-    id: user.id,
-    name: user.name,
-    avatar: user.avatar,
-    avatarUrl: user.avatarUrl,
-    isLive: index < 2,
-  })), [suggestions]);
 
   const togglePlay = (id) => {
     setPlayingId(playingId === id ? null : id);
@@ -91,10 +106,14 @@ const Newsfeed = () => {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 lg:w-[70%] space-y-6 overflow-hidden">
-        {radarData.length ? <LiveRadar radarData={radarData} /> : null}
+        <LiveRadar
+          rooms={activeRooms}
+          loading={roomsLoading}
+          error={roomsError}
+          onRefresh={loadActiveRooms}
+        />
 
         <CreatePost onCreated={prependPost} />
-
 
         <div className="flex gap-6 border-b border-gray-200 dark:border-gray-800 px-2">
           <button
