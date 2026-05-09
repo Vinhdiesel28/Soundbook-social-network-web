@@ -1,5 +1,6 @@
 package com.soundbook.entity;
 
+import com.soundbook.entity.enums.Visibility;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -41,6 +42,11 @@ public class UserBookshelfItem {
     private BigDecimal progressPercent;
 
     private Byte rating;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Visibility visibility = Visibility.PUBLIC;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)

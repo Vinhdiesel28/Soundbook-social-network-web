@@ -12,4 +12,5 @@ public class UserMeResponse {
     private String role;
     private String avatarUrl;
     private String username;
+    private Boolean onboardingCompleted;
 }

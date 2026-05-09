@@ -36,6 +36,7 @@ public class DmServiceImpl implements DmService {
     private final DmMessageRepository dmMessageRepository;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final FriendshipRepository friendshipRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
@@ -47,6 +48,10 @@ public class DmServiceImpl implements DmService {
 
         User user = getUser(request.getUserId());
         User peer = getUser(request.getPeerUserId());
+
+        if (!friendshipRepository.existsByIdUserIdAndIdFriendId(user.getId(), peer.getId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
 
         long user1Id = Math.min(user.getId(), peer.getId());
         long user2Id = Math.max(user.getId(), peer.getId());

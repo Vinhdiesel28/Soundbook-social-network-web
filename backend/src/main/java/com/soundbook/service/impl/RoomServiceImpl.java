@@ -331,19 +331,7 @@ public class RoomServiceImpl implements RoomService {
                 .build();
         
         RoomQueueItem saved = roomQueueRepository.save(item);
-        
-        return RoomQueueItemResponse.builder()
-                .id(saved.getId())
-                .roomId(saved.getRoom().getId())
-                .trackId(saved.getTrackId())
-                .trackPayloadJson(saved.getTrackPayloadJson())
-                .addedByUserId(saved.getAddedBy().getId())
-                .addedByDisplayName(saved.getAddedBy().getDisplayName())
-                .voteCount(saved.getVoteCount())
-                .positionOrder(saved.getPositionOrder())
-                .playedAt(saved.getPlayedAt())
-                .createdAt(saved.getCreatedAt())
-                .build();
+        return toQueueItemResponse(saved);
     }
 
     @Override
@@ -351,7 +339,22 @@ public class RoomServiceImpl implements RoomService {
     public List<RoomQueueItemResponse> getRoomQueue(Long roomId) {
         List<RoomQueueItem> items = roomQueueRepository.findByRoom_IdOrderByPlayedAtDescPositionOrderAsc(roomId);
         
-        return items.stream().map(item -> RoomQueueItemResponse.builder()
+        return items.stream().map(this::toQueueItemResponse).toList();
+    }
+
+    @Override
+    public RoomQueueItemResponse voteQueueItem(Long queueItemId) {
+        RoomQueueItem item = roomQueueRepository.findById(queueItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_QUEUE_ITEM_NOT_FOUND));
+
+        item.setVoteCount(item.getVoteCount() + 1);
+        RoomQueueItem saved = roomQueueRepository.save(item);
+        return toQueueItemResponse(saved);
+    }
+
+
+    private RoomQueueItemResponse toQueueItemResponse(RoomQueueItem item) {
+        return RoomQueueItemResponse.builder()
                 .id(item.getId())
                 .roomId(item.getRoom().getId())
                 .trackId(item.getTrackId())
@@ -362,16 +365,7 @@ public class RoomServiceImpl implements RoomService {
                 .positionOrder(item.getPositionOrder())
                 .playedAt(item.getPlayedAt())
                 .createdAt(item.getCreatedAt())
-                .build()).toList();
-    }
-
-    @Override
-    public void voteQueueItem(Long queueItemId) {
-        RoomQueueItem item = roomQueueRepository.findById(queueItemId)
-                .orElseThrow(() -> new AppException(ErrorCode.ROOM_QUEUE_ITEM_NOT_FOUND));
-        
-        item.setVoteCount(item.getVoteCount() + 1);
-        roomQueueRepository.save(item);
+                .build();
     }
 
     @Override
