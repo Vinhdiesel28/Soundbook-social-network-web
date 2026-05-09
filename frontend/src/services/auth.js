@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 const STORAGE_KEY = 'soundbook_auth';
 
 const readJson = async (response) => {
@@ -84,6 +84,8 @@ export const request = async (path, options = {}) => {
         headers: {
             ...buildHeaders(Boolean(options.auth)),
             ...(options.headers || {}),
+            
+            
         },
     });
 

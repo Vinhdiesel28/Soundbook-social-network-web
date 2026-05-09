@@ -8,12 +8,18 @@ const RoomMembers = ({ members }) => {
     <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/50 dark:bg-black/10">
       <div className="space-y-3">
         {members.map(member => (
-          <div key={member.id} className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
+          <div key={member.id || member.userId} className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
             <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full ${member.avatar} relative`}>
+              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 relative overflow-hidden">
+                {member.avatarUrl ? (
+                  <img src={member.avatarUrl} alt={member.displayName || member.name} className="w-full h-full object-cover" />
+                ) : null}
                 <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-surface-color" />
               </div>
-              <span className="font-medium text-sm">{member.name} {member.isHost && <span className="text-xs text-primary-500 ml-1 font-semibold">({t('room.host')}) </span>}</span>
+              <span className="font-medium text-sm">
+                {member.displayName || member.name}
+                {(member.role === 'HOST' || member.isHost) && <span className="text-xs text-primary-500 ml-1 font-semibold">({t('room.host')}) </span>}
+              </span>
             </div>
             <button className="text-text-muted hover:text-text-color">
               <MoreHorizontal size={16} />
