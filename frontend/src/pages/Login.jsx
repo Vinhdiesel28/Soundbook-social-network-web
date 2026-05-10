@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Disc3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { GoogleLogin } from '@react-oauth/google';
+
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
-  // Thêm displayName vào formData để khớp với API Register
   const [formData, setFormData] = useState({ email: '', username: '', password: '', displayName: '' });
-  const [loading, setLoading] = useState(false); // Thêm state loading để chặn bấm nút liên tục
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
 
@@ -63,11 +61,10 @@ const Login = () => {
 
   const handleToggle = () => {
     setIsLogin(!isLogin);
-    // Reset form khi chuyển chế độ
     setFormData({ email: '', username: '', password: '', displayName: '' });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
 
@@ -140,7 +137,7 @@ const Login = () => {
   return (
       <div className="min-h-screen bg-bg-color text-text-color flex flex-col md:flex-row">
 
-        {/* Left side (Giữ nguyên giao diện đẹp của bạn) */}
+        {/* Left side */}
         <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-primary-600 via-purple-700 to-black overflow-hidden items-center justify-center p-12">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob" />
@@ -176,7 +173,6 @@ const Login = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Username/DisplayName - Chỉ hiện khi đăng ký */}
               {!isLogin && (
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_username')}</label>
@@ -228,36 +224,12 @@ const Login = () => {
 
               <button
                   type="submit"
-                  disabled={loading} // Vô hiệu hóa nút khi đang gửi request
-                  className={`w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  className="w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4"
               >
-                {loading ? '...' : (isLogin ? t('login.signin_btn') : t('login.register_btn'))}
+                {isLogin ? t('login.signin_btn') : t('login.register_btn')}
                 <ArrowRight size={18} />
               </button>
             </form>
-
-            {/* ... Các thành phần Google và Toggle giữ nguyên ... */}
-            <div className="my-6 flex items-center gap-4">
-              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-              <span className="text-xs text-text-muted uppercase font-semibold">{t('login.or_continue')}</span>
-              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-            </div>
-
-            <div className="flex justify-center w-full">
-              <GoogleLogin
-                  onSuccess={(credentialResponse) => {
-                    console.log('Token từ Google:', credentialResponse.credential);
-                    handleGoogleLogin(credentialResponse?.credential);
-                  }}
-                  onError={() => {
-                    console.log('Đăng nhập Google thất bại');
-                    alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
-                  }}
-                  useOneTap
-                  shape="pill"
-                  theme="filled_blue"
-              />
-            </div>
 
             <p className="mt-8 text-center text-sm text-text-muted">
               {isLogin ? t('login.no_account') + ' ' : t('login.have_account') + ' '}
@@ -267,7 +239,7 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Language Selection (Giữ nguyên) */}
+          {/* Language */}
           <div className="absolute bottom-6 left-0 w-full flex items-center justify-center gap-1 text-sm">
             <button onClick={() => setLanguage('vi')} className={`px-2 py-1 rounded-lg transition-colors font-medium ${language === 'vi' ? 'text-primary-500 font-semibold' : 'text-text-muted hover:text-text-color'}`}>Tiếng Việt</button>
             <span className="text-text-muted">|</span>

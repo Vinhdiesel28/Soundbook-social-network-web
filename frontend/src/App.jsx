@@ -1,8 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { LanguageProvider } from './context/LanguageContext'
-import { GoogleOAuthProvider } from '@react-oauth/google' // Import provider
-
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import Layout from './components/layout/Layout'
 import Onboarding from './pages/Onboarding'
 import Newsfeed from './pages/Newsfeed'
@@ -13,7 +12,6 @@ import Chat from './pages/Chat'
 import Login from './pages/Login'
 import AdminDashboard from './pages/AdminDashboard'
 
-// Pages placeholder
 const Discovery = () => <div>Discovery Page</div>
 const NotFound = () => <div className="min-h-screen grid flex-col items-center justify-center">404 Not Found</div>
 

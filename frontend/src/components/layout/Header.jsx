@@ -11,6 +11,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const Header = ({ currentUser, unreadMessages = 3, onLogout }) => {
   const { theme, toggleTheme } = useTheme();
@@ -20,6 +21,7 @@ const Header = ({ currentUser, unreadMessages = 3, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const navigate = useNavigate();
 
   const searchRef = useRef(null);
   const notificationsRef = useRef(null);
@@ -154,6 +156,46 @@ const Header = ({ currentUser, unreadMessages = 3, onLogout }) => {
                         </div>
                       </button>
 
+            {/* Profile Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onBlur={() => setTimeout(() => setShowProfileMenu(false), 300)}
+                className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none"
+              >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 border-2 border-white dark:border-gray-800 relative">
+                  <div className="absolute inset-0 rounded-full ring-2 ring-primary-500 opacity-50"></div>
+                </div>
+              </button>
+
+              {/* Profile Dropdown */}
+              {showProfileMenu && (
+                <div className="absolute top-12 right-0 w-56 bg-surface-color rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden transform opacity-100 scale-100 transition-all duration-200 origin-top-right">
+                  <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                    <p className="font-semibold">Dat Nguyen</p>
+                    <p className="text-xs text-gray-500">@datnguyen</p>
+                  </div>
+                  <div className="p-2 flex flex-col gap-1">
+                    {/* <Link to="/profile/me" 
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                      <User size={16} />
+                      {t('header.profile')}
+                    </Link> */}
+
+                    <div
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        navigate("/profile/me");
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+                    >
+                      <User size={16} />
+                      {t('header.profile')}
+                    </div>
+                    <button className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors">
+                      <LogOut size={16} />
+                      {t('header.logout')}
                       <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 p-2 uppercase tracking-wider mt-2">
                         {t('header.search_music')}
                       </div>
