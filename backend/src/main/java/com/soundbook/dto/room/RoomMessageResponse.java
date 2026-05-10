@@ -12,6 +12,7 @@ public class RoomMessageResponse {
     private Long roomId;
     private Long senderUserId;
     private String senderDisplayName;
+    private String senderAvatarUrl;
     private String contentText;
     private LocalDateTime createdAt;
 }

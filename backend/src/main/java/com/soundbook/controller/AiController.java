@@ -21,7 +21,7 @@ public class AiController
         String insight = aiService.getPostInsight(postId);
 
         return ResponseEntity.ok(ApiResponse.<String>builder()
-                .message("AI đã phân tích bài viết xong")
+                .message("SoundbookAI đã phân tích bài viết xong")
                 .data(insight)
                 .build());
     }
@@ -40,7 +40,7 @@ public class AiController
         String aiResponse = aiService.chatWithPost(postId, userMessage);
 
         return ResponseEntity.ok(ApiResponse.<String>builder()
-                .message("Phản hồi từ Chatbot AI")
+                .message("Phản hồi từ Soundbook AI")
                 .data(aiResponse)
                 .build());
     }

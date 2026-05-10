@@ -12,13 +12,17 @@ import com.soundbook.entity.Post;
 import com.soundbook.repository.PostRepository;
 import com.soundbook.service.AiService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiServiceImpl implements AiService
@@ -29,15 +33,6 @@ public class AiServiceImpl implements AiService
     private final PostRepository postRepository;
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
-
-    @Autowired
-    public AiServiceImpl(WebClient.Builder webClientBuilder,
-                         ObjectMapper objectMapper,
-                         PostRepository postRepository) {
-        this.webClient = webClientBuilder.baseUrl("https://generativelanguage.googleapis.com/v1beta/models").build();
-        this.objectMapper = objectMapper;
-        this.postRepository = postRepository;
-    }
 
     @Override
     public String getPostInsight(Long postId)
@@ -72,7 +67,7 @@ public class AiServiceImpl implements AiService
 
         GenerationConfig config = GenerationConfig.builder()
                 .temperature(temperature)
-                .maxOutputTokens(1000)
+                .maxOutputTokens(4096)
                 .build();
 
         GeminiRequest request = GeminiRequest.builder()
@@ -89,6 +84,7 @@ public class AiServiceImpl implements AiService
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(String.class)
+                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(2)))
                     .block();
 
             JsonNode root = objectMapper.readTree(responseJson);
@@ -101,19 +97,24 @@ public class AiServiceImpl implements AiService
                     .asText();
 
         } catch (Exception e) {
+            log.error("Lỗi khi gọi API Gemini: ", e);
             return "AI Soundbook đang bận suy nghĩ về một bản nhạc hay hơn. Thử lại sau nhé!";
         }
     }
 
     private String buildSuperPrompt(Post post)
     {
+        String refContext = (post.getRefJson() != null && !post.getRefJson().isBlank())
+                ? "Thông tin đính kèm (Sách/Nhạc): " + post.getRefJson()
+                : "Bài viết này không có đính kèm.";
+
         return String.format(
                 "Bạn là trợ lý AI của Soundbook. Bài viết thuộc loại: %s. " +
                         "Nội dung: %s. Thông tin đính kèm (Sách/Nhạc): %s. " +
                         "Hãy: 1. Tóm tắt sáng tạo (đổi phong cách mỗi lần). " +
                         "2. Gợi ý 2 link liên quan (Tiki/Spotify/Youtube/Wiki). " +
                         "3. Chào mời người dùng chat về nội dung này.",
-                post.getType(), post.getCaption(), post.getRefJson()
+                post.getType(), post.getCaption(), refContext
         );
     }
 }
