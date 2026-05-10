@@ -52,19 +52,13 @@ public class GlobalExceptionHandler {
     // 4. Capture DTO Validation Exceptions (@Valid failures)
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> handlingValidation(MethodArgumentNotValidException exception) {
-        String enumKey = exception.getFieldError() != null ? exception.getFieldError().getDefaultMessage()
-                : "INVALID_KEY";
-
-        ErrorCode errorCode = ErrorCode.INVALID_KEY;
-        try {
-            errorCode = ErrorCode.valueOf(enumKey);
-        } catch (IllegalArgumentException e) {
-            // Keep default if the message is not matching our Enum mapping
-        }
+        String message = exception.getFieldError() != null
+                ? exception.getFieldError().getDefaultMessage()
+                : ErrorCode.INVALID_REQUEST.getMessage();
 
         ApiResponse<Object> apiResponse = new ApiResponse<>();
-        apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(errorCode.getMessage());
+        apiResponse.setCode(ErrorCode.INVALID_REQUEST.getCode());
+        apiResponse.setMessage(message);
 
         return ResponseEntity.badRequest().body(apiResponse);
     }

@@ -1,13 +1,35 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Disc3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { GoogleLogin } from '@react-oauth/google';
+import { isGoogleAuthConfigured } from '../config/env';
+import {
+  canSwitchAccount,
+  getCurrentUser,
+  getStoredAuth,
+  login,
+  loginWithGoogle,
+  register,
+  resolveHomePath,
+} from '../services/auth';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', username: '', password: '', displayName: '' });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
+
+  const currentSession = useMemo(() => getStoredAuth(), []);
+  const currentUser = currentSession?.user || getCurrentUser();
+  const sessionLocked = !canSwitchAccount();
+
+  useEffect(() => {
+    if (currentSession?.token && currentSession?.user?.role) {
+      navigate(resolveHomePath(currentSession.user.role), { replace: true });
+    }
+  }, [currentSession, navigate]);
 
   const handleGoogleLogin = async (idToken) => {
     if (!idToken) {
@@ -15,6 +37,19 @@ const Login = () => {
       return;
     }
 
+    if (sessionLocked) {
+      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await loginWithGoogle(idToken);
+      navigate(result?.data?.onboardingCompleted ? resolveHomePath(result?.data?.role) : '/onboarding', { replace: true });
+    } catch (error) {
+      console.error('Lỗi đăng nhập Google:', error);
+      alert(error.message || 'Đăng nhập Google thất bại.');
     setLoading(true);
 
     try {
@@ -60,12 +95,46 @@ const Login = () => {
   };
 
   const handleToggle = () => {
+    if (sessionLocked) {
+      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      return;
+    }
+
     setIsLogin(!isLogin);
     setFormData({ email: '', username: '', password: '', displayName: '' });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (sessionLocked) {
+      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = isLogin
+          ? await login({
+            email: formData.email,
+            password: formData.password,
+          })
+          : await register({
+            email: formData.email,
+            password: formData.password,
+            displayName: formData.displayName || formData.username,
+          });
+
+      navigate(result?.data?.onboardingCompleted ? resolveHomePath(result?.data?.role) : '/onboarding', { replace: true });
+    } catch (error) {
+      if (!isLogin && error?.status === 400 && String(error.message || '').toLowerCase().includes('email')) {
+        setIsLogin(true);
+        alert('Email này đã tồn tại. Mình đã chuyển sang chế độ đăng nhập, bạn hãy nhập mật khẩu để đăng nhập.');
+      } else {
+        console.error('Lỗi kết nối:', error);
+        alert(error.message || 'Thao tác thất bại. Vui lòng kiểm tra lại.');
+      }
     setLoading(true);
 
     // URL Backend của bạn (vì vite.config.js không đổi được nên dùng URL đầy đủ)
@@ -136,8 +205,6 @@ const Login = () => {
 
   return (
       <div className="min-h-screen bg-bg-color text-text-color flex flex-col md:flex-row">
-
-        {/* Left side */}
         <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-primary-600 via-purple-700 to-black overflow-hidden items-center justify-center p-12">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob" />
@@ -156,7 +223,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Right side */}
         <div className="flex-1 flex items-center justify-center p-8 sm:p-12 lg:p-24 relative">
           <div className="w-full max-sm relative z-10">
             <div className="mb-10 text-center md:text-left">
@@ -172,6 +238,12 @@ const Login = () => {
               </p>
             </div>
 
+            {sessionLocked && (
+                <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                  Bạn đang đăng nhập bằng <strong>{currentUser?.displayName || currentUser?.email}</strong>. Hãy logout trước khi đăng nhập tài khoản khác.
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                   <div className="space-y-1">
@@ -181,8 +253,9 @@ const Login = () => {
                       <input
                           type="text"
                           required
+                          disabled={loading || sessionLocked}
                           placeholder="johndoe"
-                          className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm"
+                          className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                           value={formData.username}
                           onChange={(e) => setFormData({ ...formData, username: e.target.value, displayName: e.target.value })}
                       />
@@ -190,7 +263,6 @@ const Login = () => {
                   </div>
               )}
 
-              {/* Email */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_email')}</label>
                 <div className="relative">
@@ -198,15 +270,15 @@ const Login = () => {
                   <input
                       type="email"
                       required
+                      disabled={loading || sessionLocked}
                       placeholder="name@example.com"
-                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm"
+                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
               </div>
 
-              {/* Password */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wider ml-1">{t('login.label_password')}</label>
                 <div className="relative">
@@ -214,8 +286,9 @@ const Login = () => {
                   <input
                       type="password"
                       required
+                      disabled={loading || sessionLocked}
                       placeholder="......"
-                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm mb-1"
+                      className="w-full bg-surface-color border border-gray-200 dark:border-gray-800 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-sm mb-1 disabled:opacity-60 disabled:cursor-not-allowed"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   />
@@ -224,22 +297,57 @@ const Login = () => {
 
               <button
                   type="submit"
-                  className="w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4"
+                  disabled={loading || sessionLocked}
+                  className={`w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4 ${(loading || sessionLocked) ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isLogin ? t('login.signin_btn') : t('login.register_btn')}
                 <ArrowRight size={18} />
               </button>
             </form>
 
+            <div className="my-6 flex items-center gap-4">
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+              <span className="text-xs text-text-muted uppercase font-semibold">{t('login.or_continue')}</span>
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+            </div>
+
+            <div className="flex justify-center w-full">
+              {isGoogleAuthConfigured ? (
+                <div className={sessionLocked ? 'pointer-events-none opacity-60' : ''}>
+                  <GoogleLogin
+                      onSuccess={(credentialResponse) => {
+                        handleGoogleLogin(credentialResponse?.credential);
+                      }}
+                      onError={() => {
+                        alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
+                      }}
+                      type="standard"
+                      shape="pill"
+                      theme="filled_blue"
+                      text="continue_with"
+                      size="large"
+                      logo_alignment="left"
+                  />
+                </div>
+              ) : (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/60 dark:bg-amber-900/20 dark:text-amber-300">
+                  Chưa cấu hình Google Client ID cho frontend.
+                </div>
+              )}
+            </div>
+
             <p className="mt-8 text-center text-sm text-text-muted">
-              {isLogin ? t('login.no_account') + ' ' : t('login.have_account') + ' '}
-              <button onClick={handleToggle} className="text-primary-500 font-semibold hover:underline">
+              {isLogin ? `${t('login.no_account')} ` : `${t('login.have_account')} `}
+              <button
+                  onClick={handleToggle}
+                  disabled={sessionLocked}
+                  className="text-primary-500 font-semibold hover:underline disabled:opacity-60 disabled:no-underline"
+              >
                 {isLogin ? t('login.signup_link') : t('login.login_link')}
               </button>
             </p>
           </div>
 
-          {/* Language */}
           <div className="absolute bottom-6 left-0 w-full flex items-center justify-center gap-1 text-sm">
             <button onClick={() => setLanguage('vi')} className={`px-2 py-1 rounded-lg transition-colors font-medium ${language === 'vi' ? 'text-primary-500 font-semibold' : 'text-text-muted hover:text-text-color'}`}>Tiếng Việt</button>
             <span className="text-text-muted">|</span>

@@ -1,4 +1,5 @@
--- MySQL 8+ | MVP schema (24 tables) | utf8mb4
+create database soundbook_db;
+use soundbook_db;
 -- Notes:
 -- 1) dm_threads: app MUST store ordered pair user1_id < user2_id to make UNIQUE work.
 -- 2) reactions.target_id is polymorphic (POST/COMMENT) so no FK for target_id.
@@ -25,8 +26,12 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   avatar_url           VARCHAR(500) NULL,
   cover_url            VARCHAR(500) NULL,
   bio                  VARCHAR(500) NULL,
+  public_info          VARCHAR(1000) NULL,
+  bio_visibility       ENUM('PUBLIC','FRIENDS','FOLLOWERS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
+  public_info_visibility ENUM('PUBLIC','FRIENDS','FOLLOWERS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
   theme_mode           ENUM('LIGHT','DARK','AUTO') NOT NULL DEFAULT 'AUTO',
   pinned_track_id      VARCHAR(64) NULL,
+  pinned_track_visibility ENUM('PUBLIC','FRIENDS','FOLLOWERS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
   allow_preview_player TINYINT(1) NOT NULL DEFAULT 1,
   created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -83,9 +88,10 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
 -- ===================== DNA =====================
 CREATE TABLE IF NOT EXISTS user_music_dna (
   user_id       BIGINT PRIMARY KEY,
-  built_from    ENUM('MANUAL','SPOTIFY','MIXED') NOT NULL,
+  built_from    ENUM('MANUAL','SPOTIFY','MIXED') NOT NULL DEFAULT 'MANUAL',
   prefs_json    JSON NOT NULL,
   vector_json   JSON NOT NULL,
+  confidence    DECIMAL(3,2) NOT NULL DEFAULT 0.55,
   version       INT NOT NULL DEFAULT 1,
   calculated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_user_music_dna_user
@@ -97,6 +103,7 @@ CREATE TABLE IF NOT EXISTS user_book_dna (
   user_id       BIGINT PRIMARY KEY,
   prefs_json    JSON NOT NULL,
   vector_json   JSON NOT NULL,
+  confidence    DECIMAL(3,2) NOT NULL DEFAULT 0.55,
   version       INT NOT NULL DEFAULT 1,
   calculated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_user_book_dna_user
@@ -108,6 +115,8 @@ CREATE TABLE IF NOT EXISTS user_taste_dna (
   user_id           BIGINT PRIMARY KEY,
   music_vector_json JSON NOT NULL,
   book_vector_json  JSON NOT NULL,
+  music_confidence  DECIMAL(3,2) NOT NULL DEFAULT 0.55,
+  book_confidence   DECIMAL(3,2) NOT NULL DEFAULT 0.55,
   w_music           DECIMAL(3,2) NOT NULL DEFAULT 0.50,
   w_book            DECIMAL(3,2) NOT NULL DEFAULT 0.50,
   version           INT NOT NULL DEFAULT 1,
@@ -127,6 +136,8 @@ CREATE TABLE IF NOT EXISTS posts (
   content_rich LONGTEXT NULL,
   ref_json     JSON NULL,
   mood_tag     VARCHAR(50) NULL,
+  comments_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  share_count BIGINT NOT NULL DEFAULT 0,
   created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_posts_created (created_at),
@@ -177,7 +188,7 @@ CREATE TABLE IF NOT EXISTS reactions (
   user_id       BIGINT NOT NULL,
   target_type   ENUM('POST','COMMENT') NOT NULL,
   target_id     BIGINT NOT NULL,
-  reaction_type ENUM('LIKE','HEART','FIRE') NOT NULL,
+  reaction_type ENUM('LIKE','HEART','FIRE','LAUGH','WOW','SAD') NOT NULL,
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT uq_reaction_once UNIQUE (user_id, target_type, target_id),
   INDEX idx_reactions_target (target_type, target_id),
@@ -196,7 +207,7 @@ CREATE TABLE IF NOT EXISTS user_music_collection (
   subtitle    VARCHAR(300) NULL,
   cover_url   VARCHAR(500) NULL,
   preview_url VARCHAR(500) NULL,
-  visibility  ENUM('PUBLIC','FRIENDS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
+  visibility  ENUM('PUBLIC','FRIENDS','FOLLOWERS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
   sort_order  INT NOT NULL DEFAULT 0,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_music_collection_user (user_id, sort_order),
@@ -220,6 +231,7 @@ CREATE TABLE IF NOT EXISTS user_bookshelf_items (
   progress_page     INT NULL,
   progress_percent  DECIMAL(5,2) NULL,
   rating            TINYINT NULL,
+  visibility        ENUM('PUBLIC','FRIENDS','FOLLOWERS','PRIVATE') NOT NULL DEFAULT 'PUBLIC',
   updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT uq_user_shelf_book UNIQUE (user_id, shelf_id, book_key),
   INDEX idx_bookshelf_user_shelf_updated (user_id, shelf_id, updated_at),
@@ -472,11 +484,3 @@ CREATE TABLE IF NOT EXISTS reports (
     FOREIGN KEY (reviewed_by) REFERENCES users(id)
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ===================== SEED =====================
-INSERT INTO bookshelves (id, code, name) VALUES
-  (1, 'WILL_READ', 'Will Read'),
-  (2, 'READING',   'Reading'),
-  (3, 'FINISHED',  'Finished'),
-  (4, 'DROPPED',   'Dropped')
-ON DUPLICATE KEY UPDATE name = VALUES(name);

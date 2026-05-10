@@ -79,7 +79,7 @@ public class AuthService {
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .displayName(request.getDisplayName().trim())
+                .displayName(request.getDisplayName() == null ? null : request.getDisplayName().trim())
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build();
@@ -150,36 +150,28 @@ public class AuthService {
             });
 
             return generateAuthResponse(user);
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi đăng nhập Google: " + e.getMessage());
+        } catch (AppException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
     }
 
     public void logout(String email, String authorizationHeader) {
         try {
-            if (email == null || email.isBlank()) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                String token = authorizationHeader.substring(7).trim();
+                if (!token.isEmpty()) {
+                    String tokenEmail = jwtService.extractUsername(token);
+                    if (email == null || email.isBlank() || email.equals(tokenEmail)) {
+                        tokenBlacklistService.blacklistToken(token, jwtService.extractExpiration(token));
+                    }
+                }
             }
-
-            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
-            }
-
-            String token = authorizationHeader.substring(7).trim();
-            if (token.isEmpty()) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
-            }
-
-            if (!email.equals(jwtService.extractUsername(token))) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
-            }
-
-            tokenBlacklistService.blacklistToken(token, jwtService.extractExpiration(token));
+        } catch (Exception ignored) {
+            // Logout must be idempotent: even with an expired/invalid token, the client should be able to clear its local session.
+        } finally {
             SecurityContextHolder.clearContext();
-        } catch (AppException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
     }
 
@@ -193,6 +185,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .displayName(user.getDisplayName())
                 .role(user.getRole().name())
+                .onboardingCompleted(userOnboardingRepository.findById(user.getId())
+                        .map(onboarding -> Boolean.TRUE.equals(onboarding.getTasteDnaReady()))
+                        .orElse(false))
                 .build();
     }
 

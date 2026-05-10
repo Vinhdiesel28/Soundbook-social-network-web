@@ -39,6 +39,7 @@ public class SecurityConfig {
                                 "/index.html",
                                 "/assets/**",
                                 "/favicon.ico",
+                                "/ws/**",
                                 "/manifest.json",
                                 "/error"
                         ).permitAll()
@@ -46,6 +47,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/google",
+                                "/api/v1/auth/logout",
                                 "/api/v1/integrations/spotify/callback"
                         ).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "MODERATOR")

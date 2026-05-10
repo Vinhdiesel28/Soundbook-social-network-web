@@ -52,6 +52,14 @@ public class Post {
     @Column(name = "mood_tag", length = 50)
     private String moodTag;
 
+    @Column(name = "comments_enabled", nullable = false)
+    @Builder.Default
+    private Boolean commentsEnabled = true;
+
+    @Column(name = "share_count", nullable = false)
+    @Builder.Default
+    private Long shareCount = 0L;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

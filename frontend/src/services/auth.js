@@ -1,11 +1,25 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1';
+import { API_BASE_URL } from '../config/env';
+
 const STORAGE_KEY = 'soundbook_auth';
 
+export class ApiError extends Error {
+    constructor(message, { status, code, payload } = {}) {
+        super(message || 'Request failed');
+        this.name = 'ApiError';
+        this.status = status;
+        this.code = code;
+        this.payload = payload;
+    }
+}
+
 const readJson = async (response) => {
+    const text = await response.text();
+    if (!text) return {};
+
     try {
-        return await response.json();
+        return JSON.parse(text);
     } catch {
-        return {};
+        return { message: text };
     }
 };
 
@@ -38,12 +52,13 @@ export const saveAuth = (auth) => {
         token: auth?.token || null,
         user: auth?.user
             ? {
-                id: auth.user.id ?? null,
+                id: auth.user.id ?? auth.user.userId ?? null,
                 email: auth.user.email ?? '',
                 displayName: auth.user.displayName ?? '',
                 username: auth.user.username ?? '',
                 avatarUrl: auth.user.avatarUrl ?? '',
                 role: normalizeRole(auth.user.role),
+                onboardingCompleted: Boolean(auth.user.onboardingCompleted),
             }
             : null,
     };
@@ -91,7 +106,15 @@ export const request = async (path, options = {}) => {
     const payload = await readJson(response);
 
     if (!response.ok) {
-        throw new Error(payload?.message || payload?.error || 'Request failed');
+        if (options.auth && response.status === 401) {
+            clearAuth();
+        }
+
+        throw new ApiError(payload?.message || payload?.error || 'Request failed', {
+            status: response.status,
+            code: payload?.code,
+            payload,
+        });
     }
 
     return payload;
@@ -101,10 +124,13 @@ const persistAuthFromResponse = (payload) => {
     const auth = {
         token: payload?.data?.token || null,
         user: {
-            id: payload?.data?.userId ?? null,
+            id: payload?.data?.userId ?? payload?.data?.id ?? null,
             email: payload?.data?.email ?? '',
             displayName: payload?.data?.displayName ?? '',
+            username: payload?.data?.username ?? '',
+            avatarUrl: payload?.data?.avatarUrl ?? '',
             role: payload?.data?.role ?? '',
+            onboardingCompleted: Boolean(payload?.data?.onboardingCompleted),
         },
     };
 
@@ -175,6 +201,10 @@ export const logout = async () => {
                 method: 'POST',
                 auth: true,
             });
+        }
+    } catch (error) {
+        if (error?.status && ![401, 403].includes(error.status)) {
+            console.warn('Logout request failed:', error);
         }
     } finally {
         clearAuth();

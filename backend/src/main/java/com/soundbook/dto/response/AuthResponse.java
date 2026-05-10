@@ -19,4 +19,5 @@ public class AuthResponse {
     private String email;
     private String displayName;
     private String role;
+    private Boolean onboardingCompleted;
 }

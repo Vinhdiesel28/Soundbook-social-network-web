@@ -1,8 +1,33 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Info, MoreVertical, Disc3, Plus, Image, Smile, Send, MessageSquare } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 
-const ChatWindow = ({ t, activeData, messages, playingId, setPlayingId }) => {
+const ChatWindow = ({
+  t,
+  activeData,
+  messages,
+  playingId,
+  setPlayingId,
+  draftMessage,
+  setDraftMessage,
+  onSendMessage,
+  isSending,
+  isLoadingMessages,
+}) => {
+  const messagesContainerRef = useRef(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesContainerRef.current && messages.length > 0) {
+      const scrollElement = messagesContainerRef.current.parentElement;
+      if (scrollElement) {
+        setTimeout(() => {
+          scrollElement.scrollTop = scrollElement.scrollHeight;
+        }, 0);
+      }
+    }
+  }, [messages]);
+
   return (
     <div className="flex-1 flex flex-col h-full bg-surface-color">
       {activeData ? (
@@ -35,15 +60,20 @@ const ChatWindow = ({ t, activeData, messages, playingId, setPlayingId }) => {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-repeat bg-[length:100px] relative">
-            <div className="min-h-full bg-white/95 dark:bg-[#121212]/95 px-6 py-6 space-y-6 flex flex-col justify-end">
-              {messages.map(msg => (
-                <ChatMessage
-                  key={msg.id}
-                  msg={msg}
-                  playingId={playingId}
-                  setPlayingId={setPlayingId}
-                />
-              ))}
+            <div ref={messagesContainerRef} className="min-h-full bg-white/95 dark:bg-[#121212]/95 px-6 py-6 space-y-6 flex flex-col justify-end">
+              {isLoadingMessages ? (
+                <div className="text-sm text-text-muted">Đang tải tin nhắn...</div>
+              ) : (
+                messages.map(msg => (
+                  <ChatMessage
+                    key={msg.id}
+                    msg={msg}
+                    playingId={playingId}
+                    setPlayingId={setPlayingId}
+                    isUserOnline={!msg.isMe}
+                  />
+                ))
+              )}
             </div>
           </div>
 
@@ -58,13 +88,25 @@ const ChatWindow = ({ t, activeData, messages, playingId, setPlayingId }) => {
               </button>
               <textarea
                 rows="1"
+                value={draftMessage}
+                onChange={(e) => setDraftMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    onSendMessage();
+                  }
+                }}
                 placeholder={`${t('chat.message_placeholder')} ${activeData.name}...`}
                 className="w-full bg-transparent border-none outline-none resize-none py-2 text-sm text-text-color custom-scrollbar max-h-32"
               />
               <button className="p-2 text-gray-500 hover:text-primary-500 transition-colors shrink-0">
                 <Smile size={20} />
               </button>
-              <button className="p-2 mx-1 mb-0.5 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shrink-0 shadow-sm hover:scale-105 transition-transform">
+              <button
+                onClick={onSendMessage}
+                disabled={isSending || !draftMessage.trim()}
+                className="p-2 mx-1 mb-0.5 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shrink-0 shadow-sm hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"
+              >
                 <Send size={14} className="ml-0.5" />
               </button>
             </div>
