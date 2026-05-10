@@ -1,131 +1,456 @@
-import React, { useState } from 'react';
-import { Grid3X3, List } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertCircle, Grid3X3, List, Save } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import ProfileHeader from '../components/profile/ProfileHeader';
 import PersonalInfo from '../components/profile/PersonalInfo';
 import AccountInfo from '../components/profile/AccountInfo';
 import FriendsList from '../components/profile/FriendsList';
-import ConnectedAccounts from '../components/profile/ConnectedAccounts';
+import TasteSummaryCard from '../components/taste/TasteSummaryCard';
 import ProfileShelves from '../components/profile/ProfileShelves';
 import ProfilePosts from '../components/profile/ProfilePosts';
+import ModalShell from '../components/common/ModalShell';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import ToastMessage from '../components/common/ToastMessage';
+import { getCurrentUser } from '../services/auth';
+import { profileApi } from '../services/profile';
+import { searchYouTubeVideos, getYouTubeVideoDetails } from '../services/youtube';
+import { friendsApi } from '../services/friends';
+import { fallbackAvatar, normalizePost, normalizeShelfItem } from '../utils/feedNormalizers';
 
-const PROFILE_DATA = {
-  name: 'Đạt Nguyễn',
-  username: '@datnguyen',
-  bio: 'Đam mê kết nối mọi người qua âm nhạc và những trang sách. Luôn tìm kiếm góc nhìn mới và sẵn sàng chia sẻ câu chuyện của chính mình.',
-  description: 'Đam mê kết nối mọi người qua âm nhạc và những trang sách. Luôn tìm kiếm góc nhìn mới và sẵn sàng chia sẻ câu chuyện của chính mình.',
-  avatar: 'bg-orange-500',
-  themeColor: 'from-orange-500/20 to-purple-900/40',
-  matchScore: null,
-  pinnedSong: { title: 'In love', artist: 'Low G (ft. JustaTee)', cover: 'bg-gradient-to-br from-indigo-500 to-purple-600' }
+const emptyMediaForm = { url: '' };
+const emptyMusicForm = { title: '', subtitle: '', coverUrl: '', itemId: '', itemType: 'PLAYLIST', visibility: 'PUBLIC' };
+const emptyBookForm = { title: '', author: '', coverUrl: '', rating: 5, progressPercent: 0, shelfCode: 'WILL_READ', visibility: 'PUBLIC' };
+
+const extractYouTubeId = (value = '') => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const watchMatch = raw.match(/[?&]v=([^&]+)/);
+  if (watchMatch?.[1]) return watchMatch[1];
+  const shortMatch = raw.match(/youtu\.be\/([^?&/]+)/);
+  if (shortMatch?.[1]) return shortMatch[1];
+  const embedMatch = raw.match(/youtube\.com\/embed\/([^?&/]+)/);
+  if (embedMatch?.[1]) return embedMatch[1];
+  return raw;
 };
 
-const getShelves = (t) => [
-  {
-    id: 'playlists',
-    title: t('profile.shelf.playlists', { defaultValue: 'Playlists' }),
-    items: [
-      { id: 1, type: 'music', title: 'In love', author: 'Low G (ft. JustaTee)', image: '/in-love.png', style: 'rounded-md shrink-0 aspect-square w-24 sm:w-32' },
-      { id: 2, type: 'music', title: 'Dừng làm trái tim anh đau', author: 'Sơn Tùng M-TP', image: '/dung-lam-trai-tim-anh-dau.png', style: 'rounded-md shrink-0 aspect-square w-24 sm:w-32' },
-      { id: 3, type: 'music', title: 'Nếu cả đời này không rực rỡ', author: 'Unknown', image: '/neu-ca-doi-khong-ruc-ro.png', style: 'rounded-md shrink-0 aspect-square w-24 sm:w-32' },
-    ]
-  },
-  {
-    id: 'library',
-    title: t('profile.shelf.library', { defaultValue: 'Library' }),
-    items: [
-      { id: 4, type: 'book', title: 'Thép đã tôi thế đấy', author: 'Nikolai Ostrovsky', image: '/thep-da-toi-the-day.png', style: 'rounded-sm shrink-0 w-16 sm:w-20 h-28 sm:h-36', rating: 5 },
-      { id: 5, type: 'book', title: 'Những người khốn khổ', author: 'Victor Hugo', image: '/nhung-nguoi-khon-kho.png', style: 'rounded-sm shrink-0 w-16 sm:w-20 h-28 sm:h-36', progress: 65 },
-      { id: 6, type: 'book', title: 'Ai bảo hắn tu tiên', author: 'Đạt Nguyễn', image: '/ai-bao-han-tu-tien.png', style: 'rounded-sm shrink-0 w-16 sm:w-20 h-28 sm:h-36' },
-    ]
-  }
-];
-
-const MOCK_FRIENDS = [
-  { id: 1, name: 'Hải Đăng', avatar: 'bg-blue-500', isOnline: true },
-  { id: 2, name: 'Mai Linh', avatar: 'bg-pink-500', isOnline: true },
-  { id: 3, name: 'Minh Tuấn', avatar: 'bg-green-500', isOnline: false },
-  { id: 4, name: 'Bảo Trâm', avatar: 'bg-purple-500', isOnline: true },
-  { id: 5, name: 'Thanh Sơn', avatar: 'bg-teal-500', isOnline: false },
-  { id: 6, name: 'Hương Giang', avatar: 'bg-rose-500', isOnline: true },
-];
-
-const getProfilePosts = (t) => [
-  {
-    id: 1,
-    user: { name: 'Đạt Nguyễn', avatar: 'bg-orange-500', time: t('time.2h_ago', { defaultValue: '2h ago' }) },
-    type: 'audio',
-    content: "Không thể ngừng nghe siêu phẩm này.",
-    media: { title: 'Đừng về trễ', artist: 'Sơn Tùng M-TP', cover: 'bg-gradient-to-br from-purple-500 to-indigo-600' },
-    reactions: { flame: 124, sad: 2, comments: 18, shares: 5 },
-    comments: []
-  },
-  {
-    id: 2,
-    user: { name: 'Đạt Nguyễn', avatar: 'bg-orange-500', time: t('time.1d_ago', { defaultValue: '1d ago' }) },
-    type: 'book_review',
-    content: "Vừa đọc xong 'CTDL&GT'. Tôi đã khóc.",
-    media: { title: 'Cấu trúc Dữ liệu & Giải Thuật', author: 'PTIT', cover: 'bg-gradient-to-br from-orange-400 to-red-600', rating: 5 },
-    reactions: { flame: 89, sad: 0, comments: 32, shares: 12 },
-    comments: []
-  }
-];
-
-const Profile = ({ isGuest = false }) => {
+const Profile = () => {
   const { t } = useLanguage();
+  const { id } = useParams();
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [viewMode, setViewMode] = useState('shelf');
   const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [isEditingAccount, setIsEditingAccount] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [socialBusy, setSocialBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [mediaModal, setMediaModal] = useState({ open: false, kind: 'avatar', form: emptyMediaForm });
+  const [copyModal, setCopyModal] = useState({ open: false, url: '' });
+  const [shelfModal, setShelfModal] = useState({ open: false, mode: 'add', shelfId: 'playlists', item: null, form: emptyMusicForm });
+  const [deleteShelf, setDeleteShelf] = useState(null);
+  const [pinnedVideoDetails, setPinnedVideoDetails] = useState(null);
+  const [pinnedModal, setPinnedModal] = useState({ open: false, query: '', loading: false, results: [], error: '' });
 
-  const [formData, setFormData] = useState({
-    username: PROFILE_DATA.username,
-    bio: PROFILE_DATA.bio,
-    pinnedTrack: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
-    allowPreview: true,
-  });
+  const targetId = id || 'me';
+  const isGuest = Boolean(profile && currentUser?.id && String(profile.userId) !== String(currentUser.id));
 
-  const lastUpdate = '10/03/2026 14:30';
+  const showNotice = useCallback((type, message, title) => setNotice({ type, message, title }), []);
+
+  const loadProfile = useCallback(async () => {
+    const data = await profileApi.getProfile(targetId);
+    setProfile(data);
+    return data;
+  }, [targetId]);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const data = await profileApi.getProfile(targetId);
+        if (mounted) setProfile(data);
+      } catch (err) {
+        if (mounted) setError(err?.message || 'Không thể tải trang cá nhân.');
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+    run();
+    return () => { mounted = false; };
+  }, [targetId]);
+
+  const [formData, setFormData] = useState({ username: '', bio: '', publicInfo: '', bioVisibility: 'PUBLIC', publicInfoVisibility: 'PUBLIC', pinnedTrack: '', pinnedTrackVisibility: 'PUBLIC', allowPreview: true });
+  const [accountData, setAccountData] = useState({ email: '', displayName: '', googleSub: '' });
+  const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+
+  useEffect(() => {
+    if (!profile) return;
+    setFormData({
+      username: profile.username || '',
+      bio: profile.bio || '',
+      publicInfo: profile.publicInfo || '',
+      bioVisibility: profile.bioVisibility || 'PUBLIC',
+      publicInfoVisibility: profile.publicInfoVisibility || 'PUBLIC',
+      pinnedTrack: profile.pinnedTrackId || '',
+      pinnedTrackVisibility: profile.pinnedTrackVisibility || 'PUBLIC',
+      allowPreview: Boolean(profile.allowPreviewPlayer),
+    });
+    setAccountData({
+      email: profile.email || currentUser?.email || '',
+      displayName: profile.displayName || '',
+      googleSub: '',
+    });
+  }, [profile, currentUser?.email]);
+
+  useEffect(() => {
+    let mounted = true;
+    const videoId = extractYouTubeId(profile?.pinnedTrackId || '');
+    setIsPlaying(false);
+    if (!videoId) {
+      setPinnedVideoDetails(null);
+      return undefined;
+    }
+    getYouTubeVideoDetails(videoId).then((details) => {
+      if (mounted) setPinnedVideoDetails(details || null);
+    });
+    return () => { mounted = false; };
+  }, [profile?.pinnedTrackId]);
+
+  const profileData = useMemo(() => {
+    if (!profile) return null;
+    const firstMusic = (profile.shelves || []).flatMap(s => s.items || []).find(item => item.type === 'music');
+    return {
+      name: profile.displayName || 'Soundbook user',
+      username: profile.username ? `@${profile.username}` : `@user${profile.userId}`,
+      bio: profile.bio || '',
+      publicInfo: profile.publicInfo || '',
+      description: profile.bio || profile.publicInfo || 'Chưa cập nhật giới thiệu cá nhân.',
+      avatar: fallbackAvatar(profile.userId),
+      avatarUrl: profile.avatarUrl,
+      coverUrl: profile.coverUrl,
+      themeColor: 'from-orange-500/20 to-purple-900/40',
+      matchScore: isGuest ? profile.matchScore : null,
+      matchReasons: profile.sharedFeatures || [],
+      friendshipStatus: profile.friendshipStatus || 'NONE',
+      friendRequestId: profile.friendRequestId,
+      canMessage: profile.canMessage,
+      following: Boolean(profile.following),
+      allowPreviewPlayer: Boolean(profile.allowPreviewPlayer),
+      stats: profile.stats,
+      pinnedSong: {
+        videoId: extractYouTubeId(profile.pinnedTrackId || ''),
+        title: pinnedVideoDetails?.title || firstMusic?.title || 'Chưa chọn nhạc ghim',
+        artist: pinnedVideoDetails?.channelTitle || firstMusic?.author || 'Music & Book community',
+        thumbnail: pinnedVideoDetails?.thumbnail || firstMusic?.image,
+        cover: 'bg-gradient-to-br from-indigo-500 to-purple-600',
+      },
+    };
+  }, [profile, isGuest, pinnedVideoDetails]);
+
+  const shelves = useMemo(() => (profile?.shelves || []).map(shelf => ({
+    ...shelf,
+    items: (shelf.items || []).map(normalizeShelfItem),
+  })), [profile]);
+
+  const friends = useMemo(() => (profile?.friendsPreview || []).map(friend => ({
+    id: friend.userId,
+    name: friend.displayName || 'Soundbook user',
+    avatar: fallbackAvatar(friend.userId),
+    avatarUrl: friend.avatarUrl,
+    isOnline: false,
+    match: Math.round(friend.matchScore || 0),
+  })), [profile]);
+
+  const posts = useMemo(() => (profile?.posts || []).map(normalizePost), [profile]);
+  const lastUpdate = profile?.updatedAt ? new Date(profile.updatedAt).toLocaleString('vi-VN') : 'Chưa cập nhật';
+
+  const replaceProfile = (data, successMessage) => {
+    setProfile(data);
+    if (successMessage) showNotice('success', successMessage);
+  };
+
+  const patchProfilePosts = (updater) => {
+    setProfile(prev => prev ? { ...prev, posts: updater(prev.posts || []) } : prev);
+  };
+
+  const handleAddFriend = async () => {
+    if (!profile?.userId) return;
+    try {
+      setSocialBusy(true);
+      const result = await friendsApi.sendRequest(profile.userId);
+      setProfile(prev => ({ ...prev, friendshipStatus: result.friendshipStatus, friendRequestId: result.requestId, canMessage: result.canMessage }));
+      showNotice('success', 'Đã gửi lời mời kết bạn.');
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể gửi lời mời kết bạn.');
+    } finally {
+      setSocialBusy(false);
+    }
+  };
+
+  const handleAcceptFriend = async () => {
+    if (!profile?.friendRequestId) return;
+    try {
+      setSocialBusy(true);
+      const result = await friendsApi.acceptRequest(profile.friendRequestId);
+      setProfile(prev => ({ ...prev, friendshipStatus: result.friendshipStatus, friendRequestId: result.requestId, canMessage: result.canMessage }));
+      await loadProfile();
+      showNotice('success', 'Đã chấp nhận lời mời kết bạn.');
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể chấp nhận lời mời.');
+    } finally {
+      setSocialBusy(false);
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!profile?.userId) return;
+    try {
+      setSocialBusy(true);
+      const data = await profileApi.followProfile(profile.userId);
+      replaceProfile(data, 'Đã theo dõi người dùng này.');
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể theo dõi profile.');
+    } finally {
+      setSocialBusy(false);
+    }
+  };
+
+  const handleUnfollow = async () => {
+    if (!profile?.userId) return;
+    try {
+      setSocialBusy(true);
+      const data = await profileApi.unfollowProfile(profile.userId);
+      replaceProfile(data, 'Đã bỏ theo dõi người dùng này.');
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể bỏ theo dõi profile.');
+    } finally {
+      setSocialBusy(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!profile?.userId) return;
+    try {
+      setSocialBusy(true);
+      const result = await friendsApi.startChat(profile.userId);
+      if (result?.dmThreadId) navigate(`/chat?threadId=${result.dmThreadId}`);
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể mở cuộc trò chuyện.');
+    } finally {
+      setSocialBusy(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleTogglePreview = () => {
-    setFormData(prev => ({ ...prev, allowPreview: !prev.allowPreview }));
-  };
+  const handleTogglePreview = () => setFormData(prev => ({ ...prev, allowPreview: !prev.allowPreview }));
 
-  const handleSaveInfo = () => {
-    console.log('Saving profile info:', formData);
-    setIsEditingInfo(false);
+  const handleSaveInfo = async () => {
+    try {
+      setBusy(true);
+      const data = await profileApi.updateProfile({
+        username: formData.username,
+        bio: formData.bio,
+        publicInfo: formData.publicInfo,
+        bioVisibility: formData.bioVisibility,
+        publicInfoVisibility: formData.publicInfoVisibility,
+        pinnedTrackId: extractYouTubeId(formData.pinnedTrack),
+        pinnedTrackVisibility: formData.pinnedTrackVisibility,
+        allowPreviewPlayer: formData.allowPreview,
+      });
+      replaceProfile(data, 'Đã lưu thông tin cá nhân.');
+      setIsEditingInfo(false);
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể lưu thông tin cá nhân.');
+    } finally {
+      setBusy(false);
+    }
   };
-
-  const [isEditingAccount, setIsEditingAccount] = useState(false);
-  const [accountData, setAccountData] = useState({
-    email: 'datnguyen@soundbook.vn',
-    displayName: PROFILE_DATA.username,
-    googleSub: '103829491820491823901'
-  });
 
   const handleAccountInputChange = (e) => {
     const { name, value } = e.target;
     setAccountData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveAccountInfo = () => {
-    console.log('Saving account info:', accountData);
-    setIsEditingAccount(false);
+  const handleSaveAccountInfo = async () => {
+    try {
+      setBusy(true);
+      const data = await profileApi.updateProfile({ displayName: accountData.displayName });
+      replaceProfile(data, 'Đã lưu tên hiển thị.');
+      setIsEditingAccount(false);
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể lưu tài khoản.');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+  const handleShareProfile = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      showNotice('success', 'Đã copy link profile.');
+    } catch {
+      setCopyModal({ open: true, url });
+    }
+  };
+
+  const openMediaModal = (kind) => {
+    setMediaModal({
+      open: true,
+      kind,
+      form: { url: kind === 'avatar' ? (profile?.avatarUrl || '') : (profile?.coverUrl || '') },
+    });
+  };
+
+  const saveMediaModal = async () => {
+    const value = mediaModal.form.url.trim();
+    try {
+      setBusy(true);
+      const data = await profileApi.updateProfile(mediaModal.kind === 'avatar' ? { avatarUrl: value } : { coverUrl: value });
+      replaceProfile(data, mediaModal.kind === 'avatar' ? 'Đã đổi ảnh đại diện.' : 'Đã đổi ảnh bìa.');
+      setMediaModal({ open: false, kind: 'avatar', form: emptyMediaForm });
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể cập nhật ảnh.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openShelfModal = (mode, shelfId, item = null) => {
+    const isMusic = shelfId === 'playlists';
+    setShelfModal({
+      open: true,
+      mode,
+      shelfId,
+      item,
+      form: isMusic
+        ? {
+          ...emptyMusicForm,
+          title: item?.title || '',
+          subtitle: item?.author || '',
+          coverUrl: item?.image || '',
+          itemId: item?.itemId || item?.original?.itemId || '',
+          visibility: item?.visibility || 'PUBLIC',
+        }
+        : {
+          ...emptyBookForm,
+          title: item?.title || '',
+          author: item?.author || '',
+          coverUrl: item?.image || '',
+          rating: item?.rating || 5,
+          progressPercent: item?.progress || 0,
+          visibility: item?.visibility || 'PUBLIC',
+        },
+    });
+  };
+
+  const saveShelfModal = async () => {
+    const { mode, shelfId, item, form } = shelfModal;
+    const isMusic = shelfId === 'playlists';
+    if (!form.title?.trim()) {
+      showNotice('error', 'Vui lòng nhập tiêu đề.');
+      return;
+    }
+
+    try {
+      setBusy(true);
+      const data = isMusic
+        ? (mode === 'add'
+          ? await profileApi.addMusic({
+            itemType: form.itemType || 'PLAYLIST',
+            itemId: extractYouTubeId(form.itemId || ''),
+            title: form.title.trim(),
+            subtitle: form.subtitle?.trim() || '',
+            coverUrl: form.coverUrl?.trim() || '',
+            visibility: form.visibility || 'PUBLIC',
+          })
+          : await profileApi.updateMusic(item.id, {
+            itemType: form.itemType || 'PLAYLIST',
+            itemId: extractYouTubeId(form.itemId || ''),
+            title: form.title.trim(),
+            subtitle: form.subtitle?.trim() || '',
+            coverUrl: form.coverUrl?.trim() || '',
+            visibility: form.visibility || 'PUBLIC',
+          }))
+        : (mode === 'add'
+          ? await profileApi.addBook({
+            shelfCode: form.shelfCode || 'WILL_READ',
+            title: form.title.trim(),
+            author: form.author?.trim() || '',
+            coverUrl: form.coverUrl?.trim() || '',
+            rating: Number(form.rating) || 5,
+            progressPercent: Number(form.progressPercent) || 0,
+            visibility: form.visibility || 'PUBLIC',
+          })
+          : await profileApi.updateBook(item.id, {
+            shelfCode: form.shelfCode || 'WILL_READ',
+            title: form.title.trim(),
+            author: form.author?.trim() || '',
+            coverUrl: form.coverUrl?.trim() || '',
+            rating: Number(form.rating) || 5,
+            progressPercent: Number(form.progressPercent) || 0,
+            visibility: form.visibility || 'PUBLIC',
+          }));
+
+      replaceProfile(data, mode === 'add' ? 'Đã thêm mục vào kệ.' : 'Đã lưu chỉnh sửa kệ.');
+      setShelfModal({ open: false, mode: 'add', shelfId: 'playlists', item: null, form: emptyMusicForm });
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể lưu kệ.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteShelfItem = async () => {
+    if (!deleteShelf?.item) return;
+    try {
+      setBusy(true);
+      const data = deleteShelf.shelfId === 'playlists'
+        ? await profileApi.deleteMusic(deleteShelf.item.id)
+        : await profileApi.deleteBook(deleteShelf.item.id);
+      replaceProfile(data, 'Đã xóa mục khỏi kệ.');
+      setDeleteShelf(null);
+    } catch (err) {
+      showNotice('error', err?.message || 'Không thể xóa mục này.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const searchPinnedTrack = async () => {
+    const query = pinnedModal.query.trim();
+    if (!query) {
+      setPinnedModal(prev => ({ ...prev, error: 'Nhập tên bài hát hoặc nghệ sĩ để tìm trên YouTube.' }));
+      return;
+    }
+    try {
+      setPinnedModal(prev => ({ ...prev, loading: true, error: '' }));
+      const results = await searchYouTubeVideos(query, 8);
+      setPinnedModal(prev => ({ ...prev, loading: false, results, error: results.length ? '' : 'Không tìm thấy kết quả phù hợp.' }));
+    } catch (err) {
+      setPinnedModal(prev => ({ ...prev, loading: false, error: err?.message || 'Không thể tìm YouTube.' }));
+    }
+  };
+
+  const selectPinnedTrack = (video) => {
+    setFormData(prev => ({ ...prev, pinnedTrack: video.videoId }));
+    setPinnedVideoDetails(video);
+    setPinnedModal({ open: false, query: '', loading: false, results: [], error: '' });
+    showNotice('info', 'Đã chọn nhạc ghim. Bấm Lưu trong Thông tin cá nhân để cập nhật.');
+    setIsEditingInfo(true);
+  };
 
   const handlePasswordInputChange = (e) => {
     const { name, value } = e.target;
@@ -133,96 +458,251 @@ const Profile = ({ isGuest = false }) => {
   };
 
   const handleSavePassword = () => {
-    console.log('Saving new password...', passwordData);
-
     setIsChangingPassword(false);
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    showNotice('info', 'Chức năng đổi mật khẩu chưa khả dụng.');
   };
+
+  if (isLoading) {
+    return <div className="rounded-2xl border border-gray-200 bg-surface-color p-10 text-center dark:border-gray-800">Đang tải trang cá nhân...</div>;
+  }
+
+  if (error || !profile || !profileData) {
+    return <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"><AlertCircle className="inline mr-2" size={18} />{error || 'Không tìm thấy profile.'}</div>;
+  }
+
+  const currentShelfIsMusic = shelfModal.shelfId === 'playlists';
 
   return (
     <div className="flex flex-col gap-6 -mt-6">
+      <ToastMessage notice={notice} onClose={() => setNotice(null)} />
 
       <ProfileHeader
-        profileData={PROFILE_DATA}
+        profileData={profileData}
         isGuest={isGuest}
         isPlaying={isPlaying}
         onTogglePlay={() => setIsPlaying(!isPlaying)}
         t={t}
+        onAddFriend={handleAddFriend}
+        onAcceptFriend={handleAcceptFriend}
+        onMessage={handleMessage}
+        onShareProfile={handleShareProfile}
+        onChangeAvatar={() => openMediaModal('avatar')}
+        onChangeCover={() => openMediaModal('cover')}
+        onChangePinnedTrack={() => setPinnedModal({ open: true, query: '', loading: false, results: [], error: '' })}
+        onFollow={handleFollow}
+        onUnfollow={handleUnfollow}
+        socialBusy={socialBusy}
       />
 
       <div className="max-w-screen-xl mx-auto w-full px-4 sm:px-6 lg:px-8 space-y-10 pb-20 pt-4">
-
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-2xl font-bold tracking-tight">{t('profile.title')}</h2>
           <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('shelf')}
-              className={`p-1.5 rounded-md ${viewMode === 'shelf' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-500' : 'text-text-muted transition-colors'}`}
-            >
-              <Grid3X3 size={18} />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-500' : 'text-text-muted transition-colors'}`}
-            >
-              <List size={18} />
-            </button>
+            <button onClick={() => setViewMode('shelf')} className={`p-1.5 rounded-md ${viewMode === 'shelf' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-500' : 'text-text-muted transition-colors'}`}><Grid3X3 size={18} /></button>
+            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-500' : 'text-text-muted transition-colors'}`}><List size={18} /></button>
           </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8 relative items-start">
-          {/* Friends */}
           <div className="w-full lg:w-[30%] space-y-6 lg:sticky lg:top-24 pb-4">
-
-            {/* Personal Info */}
-            <PersonalInfo
-              t={t}
-              isGuest={isGuest}
-              isEditingInfo={isEditingInfo}
-              setIsEditingInfo={setIsEditingInfo}
-              formData={formData}
-              handleInputChange={handleInputChange}
-              handleTogglePreview={handleTogglePreview}
-              handleSaveInfo={handleSaveInfo}
-              lastUpdate={lastUpdate}
-            />
-
-            {/* Account Info */}
-            <AccountInfo
-              t={t}
-              isGuest={isGuest}
-              isEditingAccount={isEditingAccount}
-              setIsEditingAccount={setIsEditingAccount}
-              accountData={accountData}
-              handleAccountInputChange={handleAccountInputChange}
-              handleSaveAccountInfo={handleSaveAccountInfo}
-              isChangingPassword={isChangingPassword}
-              setIsChangingPassword={setIsChangingPassword}
-              passwordData={passwordData}
-              handlePasswordInputChange={handlePasswordInputChange}
-              handleSavePassword={handleSavePassword}
-              lastUpdate={lastUpdate}
-            />
-
-            <FriendsList t={t} friends={MOCK_FRIENDS} />
-
-            <ConnectedAccounts t={t} />
+            <PersonalInfo t={t} isGuest={isGuest} profileData={profileData} isEditingInfo={isEditingInfo} setIsEditingInfo={setIsEditingInfo} formData={formData} handleInputChange={handleInputChange} handleTogglePreview={handleTogglePreview} handleSaveInfo={handleSaveInfo} lastUpdate={lastUpdate} onOpenPinnedTrackSearch={() => setPinnedModal({ open: true, query: '', loading: false, results: [], error: '' })} />
+            <AccountInfo t={t} isGuest={isGuest} isEditingAccount={isEditingAccount} setIsEditingAccount={setIsEditingAccount} accountData={accountData} handleAccountInputChange={handleAccountInputChange} handleSaveAccountInfo={handleSaveAccountInfo} isChangingPassword={isChangingPassword} setIsChangingPassword={setIsChangingPassword} passwordData={passwordData} handlePasswordInputChange={handlePasswordInputChange} handleSavePassword={handleSavePassword} lastUpdate={lastUpdate} />
+            <FriendsList t={t} friends={friends} />
+            {!isGuest ? <TasteSummaryCard /> : null}
           </div>
 
-          {/* Posts */}
           <div className="flex-1 w-full lg:w-[70%] space-y-16">
-
-            <ProfileShelves t={t} shelves={getShelves(t)} isGuest={isGuest} />
-
-            <ProfilePosts t={t} posts={getProfilePosts(t)} />
-
+            <ProfileShelves
+              t={t}
+              shelves={shelves}
+              isGuest={isGuest}
+              onAddItem={(shelfId) => openShelfModal('add', shelfId)}
+              onEditItem={(shelfId, item) => openShelfModal('edit', shelfId, item)}
+              onDeleteItem={(shelfId, item) => setDeleteShelf({ shelfId, item })}
+            />
+            <ProfilePosts
+              t={t}
+              posts={posts}
+              isGuest={isGuest}
+              onPostCreated={(rawPost) => patchProfilePosts(items => [rawPost, ...items.filter(item => item.id !== rawPost.id)])}
+              onPostDeleted={(postId) => patchProfilePosts(items => items.filter(item => item.id !== postId))}
+              onPostShared={(sharedPost) => patchProfilePosts(items => [sharedPost.original || sharedPost, ...items])}
+            />
           </div>
         </div>
       </div>
+
+      <ModalShell
+        open={mediaModal.open}
+        title={mediaModal.kind === 'avatar' ? 'Đổi ảnh đại diện' : 'Đổi ảnh bìa'}
+        description="Nhập URL ảnh hợp lệ để cập nhật trực tiếp trên trang cá nhân."
+        onClose={() => setMediaModal({ open: false, kind: 'avatar', form: emptyMediaForm })}
+        footer={(
+          <>
+            <button type="button" onClick={() => setMediaModal({ open: false, kind: 'avatar', form: emptyMediaForm })} disabled={busy} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-muted hover:bg-gray-100 disabled:opacity-60 dark:hover:bg-gray-800">Hủy</button>
+            <button type="button" onClick={saveMediaModal} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60">
+              <Save size={15} /> {busy ? 'Đang lưu...' : 'Lưu ảnh'}
+            </button>
+          </>
+        )}
+      >
+        <input
+          value={mediaModal.form.url}
+          onChange={(event) => setMediaModal(prev => ({ ...prev, form: { ...prev.form, url: event.target.value } }))}
+          placeholder="https://..."
+          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+        />
+        {mediaModal.form.url ? (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
+            <img src={mediaModal.form.url} alt="Preview" className="h-52 w-full object-cover" />
+          </div>
+        ) : null}
+      </ModalShell>
+
+      <ModalShell
+        open={copyModal.open}
+        title="Copy link profile"
+        description="Trình duyệt không cho copy tự động. Bạn có thể copy link dưới đây."
+        onClose={() => setCopyModal({ open: false, url: '' })}
+      >
+        <input readOnly value={copyModal.url} onFocus={(event) => event.target.select()} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800" />
+      </ModalShell>
+
+      <ModalShell
+        open={shelfModal.open}
+        title={`${shelfModal.mode === 'add' ? 'Thêm' : 'Sửa'} ${currentShelfIsMusic ? 'playlist/bài nhạc' : 'sách/truyện'}`}
+        description="Điền thông tin rồi bấm Lưu."
+        onClose={() => setShelfModal({ open: false, mode: 'add', shelfId: 'playlists', item: null, form: emptyMusicForm })}
+        footer={(
+          <>
+            <button type="button" onClick={() => setShelfModal({ open: false, mode: 'add', shelfId: 'playlists', item: null, form: emptyMusicForm })} disabled={busy} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-muted hover:bg-gray-100 disabled:opacity-60 dark:hover:bg-gray-800">Hủy</button>
+            <button type="button" onClick={saveShelfModal} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60">
+              <Save size={15} /> {busy ? 'Đang lưu...' : 'Lưu'}
+            </button>
+          </>
+        )}
+      >
+        <div className="space-y-3">
+          <input
+            value={shelfModal.form.title || ''}
+            onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, title: event.target.value } }))}
+            placeholder={currentShelfIsMusic ? 'Tên playlist/bài hát' : 'Tên sách/truyện'}
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+          />
+          <input
+            value={currentShelfIsMusic ? (shelfModal.form.subtitle || '') : (shelfModal.form.author || '')}
+            onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, [currentShelfIsMusic ? 'subtitle' : 'author']: event.target.value } }))}
+            placeholder={currentShelfIsMusic ? 'Nghệ sĩ/mô tả' : 'Tác giả'}
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+          />
+          <input
+            value={shelfModal.form.coverUrl || ''}
+            onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, coverUrl: event.target.value } }))}
+            placeholder="URL ảnh bìa/cover"
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+          />
+          {currentShelfIsMusic ? (
+            <div className="grid grid-cols-1 gap-2 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900/60">
+              <label className="text-[11px] font-semibold text-text-muted">YouTube videoId hoặc URL để phát được playlist/bài nhạc</label>
+              <input
+                value={shelfModal.form.itemId || ''}
+                onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, itemId: event.target.value } }))}
+                placeholder="https://www.youtube.com/watch?v=..."
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+              />
+            </div>
+          ) : null}
+          <select
+            value={shelfModal.form.visibility || 'PUBLIC'}
+            onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, visibility: event.target.value } }))}
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+          >
+            <option value="PUBLIC">Công khai</option>
+            <option value="FOLLOWERS">Người theo dõi</option>
+            <option value="FRIENDS">Bạn bè</option>
+            <option value="PRIVATE">Chỉ mình tôi</option>
+          </select>
+          {!currentShelfIsMusic ? (
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="number"
+                min="1"
+                max="5"
+                value={shelfModal.form.rating || 5}
+                onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, rating: event.target.value } }))}
+                placeholder="Đánh giá 1-5"
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+              />
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={shelfModal.form.progressPercent || 0}
+                onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, progressPercent: event.target.value } }))}
+                placeholder="Tiến độ %"
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+              />
+            </div>
+          ) : null}
+          {shelfModal.form.coverUrl ? (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
+              <img src={shelfModal.form.coverUrl} alt="Cover preview" className="h-48 w-full object-cover" />
+            </div>
+          ) : null}
+        </div>
+      </ModalShell>
+
+      <ModalShell
+        open={pinnedModal.open}
+        title="Chọn nhạc ghim từ YouTube"
+        description="Tìm bài hát, chọn bài rồi bấm Lưu trong phần Thông tin cá nhân."
+        onClose={() => setPinnedModal({ open: false, query: '', loading: false, results: [], error: '' })}
+      >
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <input
+              value={pinnedModal.query}
+              onChange={(event) => setPinnedModal(prev => ({ ...prev, query: event.target.value }))}
+              onKeyDown={(event) => { if (event.key === 'Enter') searchPinnedTrack(); }}
+              placeholder="Nhập tên bài hát, nghệ sĩ..."
+              className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+            />
+            <button type="button" onClick={searchPinnedTrack} disabled={pinnedModal.loading} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60">
+              {pinnedModal.loading ? 'Đang tìm...' : 'Tìm'}
+            </button>
+          </div>
+          {pinnedModal.error ? <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-300">{pinnedModal.error}</div> : null}
+          <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            {pinnedModal.results.map(video => (
+              <button
+                key={video.videoId}
+                type="button"
+                onClick={() => selectPinnedTrack(video)}
+                className="flex w-full items-center gap-3 rounded-2xl border border-gray-200 p-3 text-left hover:border-primary-500 hover:bg-primary-50 dark:border-gray-700 dark:hover:bg-primary-900/20"
+              >
+                <img src={video.thumbnail} alt={video.title} className="h-14 w-20 rounded-lg object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{video.title}</p>
+                  <p className="truncate text-xs text-text-muted">{video.channelTitle}</p>
+                </div>
+                <span className="rounded-full bg-primary-500 px-3 py-1 text-xs font-semibold text-white">Chọn</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </ModalShell>
+
+      <ConfirmDialog
+        open={Boolean(deleteShelf)}
+        danger
+        title="Xóa khỏi kệ"
+        message={`Bạn chắc chắn muốn xóa "${deleteShelf?.item?.title || 'mục này'}" khỏi profile?`}
+        confirmLabel="Xóa"
+        busy={busy}
+        onClose={() => setDeleteShelf(null)}
+        onConfirm={deleteShelfItem}
+      />
     </div>
   );
 };

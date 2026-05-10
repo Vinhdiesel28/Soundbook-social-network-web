@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -47,11 +48,13 @@ public class AuthService {
     private final UserOnboardingRepository userOnboardingRepository;
     private final TokenBlacklistService tokenBlacklistService;
 
-    @Value("${google.client-id}")
+    @Value("${google.client-id:}")
     private String googleClientId;
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        String email = normalizeEmail(request.getEmail());
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadCredentialsException("Incorrect email or password"));
 
         if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
@@ -59,21 +62,24 @@ public class AuthService {
         }
 
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(email, request.getPassword())
         );
-        return generateAuthResponse(request.getEmail());
+
+        return generateAuthResponse(user);
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email đã được sử dụng!");
+        String email = normalizeEmail(request.getEmail());
+
+        if (userRepository.existsByEmail(email)) {
+            throw new AppException(ErrorCode.USER_EXISTED);
         }
 
         User user = User.builder()
-                .email(request.getEmail())
+                .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .displayName(request.getDisplayName())
+                .displayName(request.getDisplayName() == null ? null : request.getDisplayName().trim())
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build();
@@ -81,7 +87,7 @@ public class AuthService {
         user = userRepository.save(user);
         createDefaultProfileAndOnboarding(user, null);
 
-        return generateAuthResponse(user.getEmail());
+        return generateAuthResponse(user);
     }
 
     @Transactional
@@ -92,13 +98,13 @@ public class AuthService {
             }
 
             if (googleClientId == null || googleClientId.trim().isEmpty()) {
-                System.err.println("--- ERROR: googleClientId is NULL/EMPTY! Check application.properties ---");
                 throw new RuntimeException("Cấu hình google.client-id bị thiếu ở Backend.");
             }
 
-            System.out.println("Sử dụng Google Client ID: " + googleClientId);
-
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(),
+                    new GsonFactory()
+            )
                     .setAudience(Collections.singletonList(googleClientId))
                     .build();
 
@@ -108,7 +114,7 @@ public class AuthService {
             }
 
             GoogleIdToken.Payload payload = idToken.getPayload();
-            String email = payload.getEmail();
+            String email = normalizeEmail(payload.getEmail());
             String googleSub = payload.getSubject();
             String name = (String) payload.get("name");
             String pictureUrl = (String) payload.get("picture");
@@ -137,39 +143,13 @@ public class AuthService {
                         .role(UserRole.USER)
                         .status(UserStatus.ACTIVE)
                         .build();
+
                 User savedUser = userRepository.save(newUser);
                 createDefaultProfileAndOnboarding(savedUser, pictureUrl);
                 return savedUser;
             });
 
-            return generateAuthResponse(user.getEmail());
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Lỗi đăng nhập Google: " + e.getMessage());
-        }
-    }
-
-    public void logout(String email, String authorizationHeader) {
-        try {
-            if (email == null || email.isBlank()) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
-            }
-
-            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
-            }
-
-            String token = authorizationHeader.substring(7).trim();
-            if (token.isEmpty()) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
-            }
-
-            if (!email.equals(jwtService.extractUsername(token))) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
-            }
-
-            tokenBlacklistService.blacklistToken(token, jwtService.extractExpiration(token));
-            SecurityContextHolder.clearContext();
+            return generateAuthResponse(user);
         } catch (AppException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -177,15 +157,45 @@ public class AuthService {
         }
     }
 
-    private AuthResponse generateAuthResponse(String email) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+    public void logout(String email, String authorizationHeader) {
+        try {
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                String token = authorizationHeader.substring(7).trim();
+                if (!token.isEmpty()) {
+                    String tokenEmail = jwtService.extractUsername(token);
+                    if (email == null || email.isBlank() || email.equals(tokenEmail)) {
+                        tokenBlacklistService.blacklistToken(token, jwtService.extractExpiration(token));
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Logout must be idempotent: even with an expired/invalid token, the client should be able to clear its local session.
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    private AuthResponse generateAuthResponse(User user) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(userDetails);
-        return AuthResponse.builder().token(jwtToken).type("Bearer").build();
+
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .userId(user.getId())
+                .email(user.getEmail())
+                .displayName(user.getDisplayName())
+                .role(user.getRole().name())
+                .onboardingCompleted(userOnboardingRepository.findById(user.getId())
+                        .map(onboarding -> Boolean.TRUE.equals(onboarding.getTasteDnaReady()))
+                        .orElse(false))
+                .build();
     }
 
     private void createDefaultProfileAndOnboarding(User user, String avatarUrl) {
         String baseUsername = user.getEmail().split("@")[0].replaceAll("[^a-zA-Z0-9]", "");
-        String uniqueUsername = baseUsername + "_" + UUID.randomUUID().toString().substring(0, 5);
+        String uniqueUsername = (baseUsername.isBlank() ? "user" : baseUsername)
+                + "_"
+                + UUID.randomUUID().toString().substring(0, 5);
 
         UserProfile profile = UserProfile.builder()
                 .user(user)
@@ -204,5 +214,9 @@ public class AuthService {
                 .tasteDnaReady(false)
                 .build();
         userOnboardingRepository.save(onboarding);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 }

@@ -67,7 +67,7 @@ public class AuthController {
             Authentication authentication,
             @RequestHeader(name = "Authorization", required = false) String authorizationHeader
     ) {
-        authService.logout(authentication.getName(), authorizationHeader);
+        authService.logout(authentication != null ? authentication.getName() : null, authorizationHeader);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .code(200)
                 .message("Logout successful")

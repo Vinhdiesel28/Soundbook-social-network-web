@@ -1,51 +1,88 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { ThemeProvider } from './context/ThemeContext'
-import { LanguageProvider } from './context/LanguageContext'
-import { GoogleOAuthProvider } from '@react-oauth/google'
-import Layout from './components/layout/Layout'
-import Onboarding from './pages/Onboarding'
-import Newsfeed from './pages/Newsfeed'
-import Profile from './pages/Profile'
-import FriendsPage from './pages/FriendsPage'
-import LiveSyncRoom from './pages/LiveSyncRoom'
-import Chat from './pages/Chat'
-import Login from './pages/Login'
-import AdminDashboard from './pages/AdminDashboard'
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { RoomSessionProvider } from './context/RoomSessionContext';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { GOOGLE_CLIENT_ID } from './config/env';
 
-const Discovery = () => <div>Discovery Page</div>
-const NotFound = () => <div className="min-h-screen grid flex-col items-center justify-center">404 Not Found</div>
+import Layout from './components/layout/Layout';
+import Onboarding from './pages/Onboarding';
+import TasteSettings from './pages/TasteSettings';
+import Newsfeed from './pages/Newsfeed';
+import Profile from './pages/Profile';
+import FriendsPage from './pages/FriendsPage';
+import Discovery from './pages/Discovery';
+import LiveSyncRoom from './pages/LiveSyncRoom';
+import Chat from './pages/Chat';
+import Login from './pages/Login';
+import AdminDashboard from './pages/AdminDashboard';
+import { getCurrentUser, isAdminRole, isLoggedIn, resolveHomePath } from './services/auth';
+
+const NotFound = () => <div className="min-h-screen grid flex-col items-center justify-center">404 Not Found</div>;
+
+const PublicOnlyRoute = () => {
+  const user = getCurrentUser();
+  if (isLoggedIn() && user?.role) {
+    return <Navigate to={resolveHomePath(user.role)} replace />;
+  }
+  return <Outlet />;
+};
+
+const RequireAuth = () => {
+  const location = useLocation();
+  if (!isLoggedIn()) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+  return <Outlet />;
+};
+
+const RequireAdmin = () => {
+  const user = getCurrentUser();
+  if (!isLoggedIn()) return <Navigate to="/login" replace />;
+  if (!isAdminRole(user?.role)) return <Navigate to="/feed" replace />;
+  return <Outlet />;
+};
 
 function App() {
-  const GOOGLE_CLIENT_ID = "320147041734-hkso7lionh433otua25vm34nbangsbns.apps.googleusercontent.com";
-
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ThemeProvider>
         <LanguageProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/admin" element={<AdminDashboard />} />
+          {/* RoomSessionProvider at root: one STOMP connection, survives navigation */}
+          <RoomSessionProvider>
+            <Router>
+              <Routes>
+                <Route element={<PublicOnlyRoute />}>
+                  <Route path="/login" element={<Login />} />
+                </Route>
 
-              <Route element={<Layout />}>
-                <Route path="/" element={<Navigate to="/login" />} />
-                <Route path="/feed" element={<Newsfeed />} />
+                <Route element={<RequireAuth />}>
+                  <Route path="/onboarding" element={<Onboarding />} />
 
-                <Route path="/discovery" element={<Discovery />} />
-                <Route path="/profile/:id" element={<Profile />} />
-                <Route path="/profile/:id/friends" element={<FriendsPage />} />
-                <Route path="/room/:id" element={<LiveSyncRoom />} />
-                <Route path="/chat" element={<Chat />} />
-              </Route>
+                  <Route element={<RequireAdmin />}>
+                    <Route path="/admin" element={<AdminDashboard />} />
+                  </Route>
 
-              <Route path="*" element={ <NotFound />} />
-            </Routes>
-          </Router>
+                  <Route element={<Layout />}>
+                    <Route path="/" element={<Navigate to="/feed" replace />} />
+                    <Route path="/feed" element={<Newsfeed />} />
+                    <Route path="/discovery" element={<Discovery />} />
+                    <Route path="/taste-settings" element={<TasteSettings />} />
+                    <Route path="/profile/:id" element={<Profile />} />
+                    <Route path="/profile/:id/friends" element={<FriendsPage />} />
+                    <Route path="/room/:id" element={<LiveSyncRoom />} />
+                    <Route path="/chat" element={<Chat />} />
+                  </Route>
+                </Route>
+
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Router>
+          </RoomSessionProvider>
         </LanguageProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;

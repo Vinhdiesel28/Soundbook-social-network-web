@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MoreHorizontal, Flag, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import ReportModal from '../common/ReportModal';
 
@@ -18,10 +19,14 @@ const PostHeaderBar = ({ post }) => {
   return (
     <div className="flex justify-between items-start mb-4">
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-full ${post.user.avatar}`}></div>
+        {post.user.avatarUrl ? (
+          <img src={post.user.avatarUrl} alt={post.user.name} className="h-10 w-10 rounded-full object-cover" />
+        ) : (
+          <div className={`w-10 h-10 rounded-full ${post.user.avatar} flex items-center justify-center text-xs font-bold text-white`}>{(post.user.name || 'U').charAt(0).toUpperCase()}</div>
+        )}
         <div>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h4 className="font-semibold text-sm">{post.user.name}</h4>
+            <Link to={`/profile/${post.user.id}`} className="font-semibold text-sm hover:underline">{post.user.name}</Link>
             <button
               onClick={() => setFollowed(f => !f)}
               className={`text-xs font-semibold transition-colors ${followed ? 'text-text-muted hover:text-rose-500' : 'text-primary-500 hover:text-primary-600'

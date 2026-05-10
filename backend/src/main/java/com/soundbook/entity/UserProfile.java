@@ -1,6 +1,7 @@
 package com.soundbook.entity;
 
 import com.soundbook.entity.enums.ThemeMode;
+import com.soundbook.entity.enums.Visibility;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -38,6 +39,19 @@ public class UserProfile {
     @Column(length = 500)
     private String bio;
 
+    @Column(name = "public_info", length = 1000)
+    private String publicInfo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "bio_visibility", nullable = false)
+    @Builder.Default
+    private Visibility bioVisibility = Visibility.PUBLIC;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "public_info_visibility", nullable = false)
+    @Builder.Default
+    private Visibility publicInfoVisibility = Visibility.PUBLIC;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "theme_mode", nullable = false)
     @Builder.Default
@@ -45,6 +59,11 @@ public class UserProfile {
 
     @Column(name = "pinned_track_id", length = 64)
     private String pinnedTrackId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pinned_track_visibility", nullable = false)
+    @Builder.Default
+    private Visibility pinnedTrackVisibility = Visibility.PUBLIC;
 
     @Column(name = "allow_preview_player", nullable = false)
     @Builder.Default

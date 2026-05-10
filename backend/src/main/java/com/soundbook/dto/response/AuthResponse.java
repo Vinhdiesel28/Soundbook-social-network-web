@@ -1,13 +1,23 @@
 package com.soundbook.dto.response;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
+@NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse {
     private String token;
+
+    @Builder.Default
     private String type = "Bearer";
-    // Có thể thêm user id, name,... tùy nhu cầu frontend
+
+    private Long userId;
+    private String email;
+    private String displayName;
+    private String role;
+    private Boolean onboardingCompleted;
 }

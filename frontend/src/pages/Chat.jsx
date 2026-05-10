@@ -1,52 +1,233 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
+import { getCurrentUser } from '../services/auth';
+import { getAllDmMessages, getDmThreads, sendDmMessage } from '../services/dm';
+import { disconnectRealtime, subscribeTopic } from '../lib/realtime';
 
-const CHATS = [
-  { id: 1, name: 'Đạt Nguyễn', type: 'direct', avatar: 'bg-orange-500', unread: 2, lastMsg: 'Đợi đến khi ông nghe bài này...', time: '10:42 SA', isLive: true },
-  { id: 2, name: 'Hội Indie 🎸', type: 'group', avatar: 'bg-indigo-500', unread: 0, lastMsg: 'Mai Linh: Vừa đọc xong cuốn Dune!', time: 'Hôm qua' },
-  { id: 3, name: 'Chill cùng Synthwave', type: 'group', avatar: 'bg-purple-600', unread: 5, lastMsg: 'Minh Tuấn đã bắt đầu một Phòng Nghe chung', time: 'Thứ Ba', isLive: true },
-  { id: 4, name: 'Bảo Trâm', type: 'direct', avatar: 'bg-pink-500', unread: 0, lastMsg: 'Cảm ơn vì lời giới thiệu nhé', time: 'Thứ Hai' },
+const AVATAR_CLASSES = [
+  'bg-orange-500',
+  'bg-indigo-500',
+  'bg-purple-600',
+  'bg-pink-500',
+  'bg-emerald-500',
+  'bg-cyan-500',
+  'bg-amber-500',
+  'bg-rose-500',
 ];
 
-const MESSAGES = [
-  { id: 1, user: 'Đạt Nguyễn', isMe: false, text: 'Ê! Ông nghe thử album tôi gửi chưa?', time: '10:30 SA', avatar: 'bg-orange-500' },
-  { id: 2, user: 'Tôi', isMe: true, text: 'Nghe rồi! Bản phối đỉnh thật sự. Nhất là bài số 3.', time: '10:35 SA' },
-  { id: 3, user: 'Đạt Nguyễn', isMe: false, text: 'Đúng không?? Đợi đến khi ông nghe bài này...', time: '10:42 SA', avatar: 'bg-orange-500' },
-  {
-    id: 4,
-    user: 'Đạt Nguyễn',
-    isMe: false,
-    type: 'audio',
-    media: { title: 'Na na na', artist: 'Daux Mysie', cover: 'bg-gradient-to-br from-fuchsia-500 to-cyan-500' },
-    time: '10:43 SA',
-    avatar: 'bg-orange-500'
-  },
-  {
-    id: 5,
-    user: 'Tôi',
-    isMe: true,
-    type: 'book',
-    text: 'Quá đỉnh! Nhân tiện đang chia sẻ đồ hay, ông phải đọc thử cuốn này:',
-    media: { title: 'Lịch sử Đảng Cộng Sản Việt Nam', author: 'PTIT', cover: 'bg-gray-800' },
-    time: '10:45 SA'
+const formatTimeLabel = (value) => {
+  if (!value) return 'Mới đây';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Mới đây';
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
+const getAvatarClass = (seed) => AVATAR_CLASSES[Math.abs(Number(seed) || 0) % AVATAR_CLASSES.length];
+
+const summarizeCardPayload = (payload) => {
+  if (!payload) return '';
+
+  try {
+    const parsed = JSON.parse(payload);
+    if (parsed?.note) return parsed.note;
+    if (parsed?.shareType && parsed?.shareRef) {
+      return `${parsed.shareType}: ${parsed.shareRef}`;
+    }
+  } catch {
+    return payload;
   }
-];
+
+  return payload;
+};
 
 const Chat = () => {
   const { t } = useLanguage();
-  const [activeChat, setActiveChat] = useState(1);
+  const currentUser = getCurrentUser();
+  const location = useLocation();
+  const requestedThreadId = new URLSearchParams(location.search).get('threadId');
+  const [chats, setChats] = useState([]);
+  const [activeChat, setActiveChat] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [draftMessage, setDraftMessage] = useState('');
   const [playingId, setPlayingId] = useState(null);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
-  const activeData = CHATS.find(c => c.id === activeChat);
+  const activeData = useMemo(
+    () => chats.find((chat) => chat.id === activeChat) || null,
+    [chats, activeChat]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadThreads = async () => {
+      if (!currentUser?.id) {
+        setChats([]);
+        setIsLoadingThreads(false);
+        return;
+      }
+
+      try {
+        setIsLoadingThreads(true);
+        const response = await getDmThreads(currentUser.id);
+        const items = response?.data?.items || [];
+        const mapped = items.map((thread, index) => ({
+          id: thread.threadId,
+          name: thread.peerDisplayName || `Người dùng ${thread.peerUserId}`,
+          type: 'direct',
+          avatar: getAvatarClass(thread.peerUserId ?? index),
+          unread: 0,
+          lastMsg: thread.lastMessagePreview || 'Chưa có tin nhắn',
+          time: formatTimeLabel(thread.updatedAt),
+          isLive: false,
+          avatarUrl: thread.peerAvatarUrl,
+        }));
+
+        if (cancelled) return;
+
+        setChats(mapped);
+        const requestedId = requestedThreadId ? Number(requestedThreadId) : null;
+        const requestedExists = requestedId && mapped.some((thread) => thread.id === requestedId);
+        setActiveChat((current) => requestedExists ? requestedId : (current ?? mapped[0]?.id ?? null));
+      } catch {
+        if (!cancelled) {
+          setChats([]);
+          setActiveChat(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingThreads(false);
+        }
+      }
+    };
+
+    loadThreads();
+
+    return () => {
+      cancelled = true;
+      disconnectRealtime();
+    };
+  }, [currentUser?.id, requestedThreadId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let unsubscribe = null;
+
+    const loadMessages = async () => {
+      if (!currentUser?.id || !activeChat) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        setIsLoadingMessages(true);
+        const items = await getAllDmMessages(activeChat, currentUser.id);
+
+        if (cancelled) return;
+
+        setMessages(items.map((message) => ({
+          id: message.messageId,
+          user: message.senderDisplayName || `Người dùng ${message.senderUserId}`,
+          isMe: message.senderUserId === currentUser.id,
+          text: message.contentText || summarizeCardPayload(message.cardPayloadJson),
+          time: formatTimeLabel(message.createdAt),
+          avatar: getAvatarClass(message.senderUserId),
+          messageType: message.messageType,
+          cardPayloadJson: message.cardPayloadJson,
+          replyToMessageId: message.replyToMessageId,
+        })));
+
+        unsubscribe = await subscribeTopic(`/topic/dm/threads/${activeChat}/messages`, (incoming) => {
+          if (incoming?.threadId !== activeChat) {
+            return;
+          }
+
+          setMessages((prev) => [...prev, {
+            id: incoming.messageId,
+            user: incoming.senderDisplayName || `Người dùng ${incoming.senderUserId}`,
+            isMe: incoming.senderUserId === currentUser.id,
+            text: incoming.contentText || summarizeCardPayload(incoming.cardPayloadJson),
+            time: formatTimeLabel(incoming.createdAt),
+            avatar: getAvatarClass(incoming.senderUserId),
+            messageType: incoming.messageType,
+            cardPayloadJson: incoming.cardPayloadJson,
+            replyToMessageId: incoming.replyToMessageId,
+          }]);
+
+          setChats((prev) => prev.map((chat) => (
+            chat.id === activeChat
+              ? {
+                  ...chat,
+                  lastMsg: incoming.contentText || summarizeCardPayload(incoming.cardPayloadJson) || chat.lastMsg,
+                  time: formatTimeLabel(incoming.createdAt),
+                }
+              : chat
+          )));
+        });
+      } catch {
+        if (!cancelled) {
+          setMessages([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingMessages(false);
+        }
+      }
+    };
+
+    loadMessages();
+
+    return () => {
+      cancelled = true;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [activeChat, currentUser?.id]);
+
+  const handleSendMessage = async () => {
+    const contentText = draftMessage.trim();
+    if (!contentText || !activeChat || !currentUser?.id) {
+      return;
+    }
+
+    try {
+      setIsSending(true);
+      await sendDmMessage(activeChat, {
+        senderUserId: currentUser.id,
+        contentText,
+        cardPayloadJson: null,
+      });
+      setDraftMessage('');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  if (!currentUser?.id) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center rounded-2xl border border-gray-200 dark:border-gray-800 bg-surface-color text-text-muted">
+        Bạn cần đăng nhập để xem tin nhắn.
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-8rem)] bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
 
       <ChatList
         t={t}
-        chats={CHATS}
+        chats={isLoadingThreads && chats.length === 0 ? [] : chats}
         activeChat={activeChat}
         setActiveChat={setActiveChat}
       />
@@ -54,9 +235,14 @@ const Chat = () => {
       <ChatWindow
         t={t}
         activeData={activeData}
-        messages={MESSAGES}
+        messages={messages}
         playingId={playingId}
         setPlayingId={setPlayingId}
+        draftMessage={draftMessage}
+        setDraftMessage={setDraftMessage}
+        onSendMessage={handleSendMessage}
+        isSending={isSending}
+        isLoadingMessages={isLoadingMessages}
       />
 
     </div>

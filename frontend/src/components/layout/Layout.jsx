@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
+import MiniPlayer from '../livesync/MiniPlayer';
 
 const Layout = () => {
   return (
@@ -8,6 +9,7 @@ const Layout = () => {
       <main className="flex-1 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Outlet />
       </main>
+      <MiniPlayer />
     </div>
   );
 };
