@@ -26,6 +26,8 @@ const LiveSyncRoom = () => {
   const [room, setRoom] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [volume, setVolume] = useState(100);
+  const [controlsVisible, setControlsVisible] = useState(true);
   const { showToast } = useToast();
   
   const lastSyncRef = useRef(Date.now());
@@ -354,15 +356,26 @@ const LiveSyncRoom = () => {
       <div className="flex-1 lg:w-[65%] flex flex-col gap-6 h-full">
 
         {/* Main */}
-        <div className="flex-1 bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col relative">
-
+        <div 
+          className="flex-1 bg-black rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden relative group"
+          onMouseMove={() => {
+             if (window.uiTimeout) clearTimeout(window.uiTimeout);
+             setControlsVisible(true);
+             window.uiTimeout = setTimeout(() => setControlsVisible(false), 3000);
+          }}
+          onMouseLeave={() => {
+             if (window.uiTimeout) clearTimeout(window.uiTimeout);
+             setControlsVisible(false);
+          }}
+        >
           <RoomHeader
             membersCount={members.length}
             roomName={room?.name}
             roomId={room?.roomId || roomId}
+            visible={controlsVisible}
           />
 
-          <div className="flex-1 overflow-hidden p-4">
+          <div className="w-full h-full">
             <YouTubePlayer
               videoId={playbackState?.trackId || (queue.length > 0 ? queue[0].trackId : null)}
               isPlaying={isPlaying}
@@ -375,8 +388,10 @@ const LiveSyncRoom = () => {
               onSeek={handleExplicitSeek}
               onEnded={handleEnded}
               onSkip={handleEnded}
-              volume={100}
+              volume={volume}
+              onVolumeChange={setVolume}
               onAddSongRequest={() => setActiveRightPanel('queue')}
+              forceShowControls={controlsVisible}
             />
           </div>
         </div>

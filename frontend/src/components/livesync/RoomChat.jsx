@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Heart } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { resolveUrl } from '../../services/auth';
 
 const RoomChat = ({ chatMessages, chatInput, setChatInput, onSendMessage, isSending = false }) => {
   const { t } = useLanguage();
@@ -22,7 +23,17 @@ const RoomChat = ({ chatMessages, chatInput, setChatInput, onSendMessage, isSend
           <div className="mt-auto space-y-4">
             {chatMessages.map((msg) => (
               <div key={msg.id} className="flex gap-3">
-                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold text-[10px] overflow-hidden">
+                  {msg.avatar ? (
+                    <img 
+                      src={resolveUrl(msg.avatar)} 
+                      alt={msg.user} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <span>{(msg.user || 'U').charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
                 <div>
                   <span className="font-semibold text-xs text-text-muted">{msg.user}</span>
                   <p className="text-sm bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-2xl rounded-tl-sm text-text-color inline-block mt-0.5 shadow-sm">

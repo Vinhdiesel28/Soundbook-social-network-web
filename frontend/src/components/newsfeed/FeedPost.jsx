@@ -12,6 +12,7 @@ import { normalizeComment, normalizePost } from '../../utils/feedNormalizers';
 import { useRef, useEffect, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import PostDetailModal from './PostDetailModal';
+import PostAiInsight from './PostAiInsight';
 
 const toApiType = (type) => {
   if (type === 'audio') return 'MUSIC_QUICK_NOTE';
@@ -33,6 +34,7 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isReactionModalOpen, setIsReactionModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
   const [shareForm, setShareForm] = useState({
     caption: 'Mình muốn chia sẻ bài viết này với mọi người.',
     visibility: 'PUBLIC',
@@ -158,14 +160,13 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
         </div>
 
         <div className="flex items-center gap-0.5 flex-shrink-0">
-          {livePost?.media && (
-            <button
-              title={t?.('ai.summary_title') || 'Tóm tắt AI'}
-              className="text-text-muted hover:text-violet-500 p-2 rounded-full hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors"
-            >
-              <Sparkles size={18} />
-            </button>
-          )}
+          <button
+            onClick={() => setIsAiOpen(true)}
+            title={t?.('ai.summary_title') || 'Soundbook AI'}
+            className="text-text-muted hover:text-primary-500 p-2 rounded-xl hover:bg-primary-500/10 transition-colors"
+          >
+            <Sparkles size={18} />
+          </button>
 
           <div className="relative">
             <button onClick={() => setMenuOpen(prev => !prev)} className="rounded-full p-2 text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -316,6 +317,12 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
         isPlaying={isPlaying}
         onTogglePlay={onTogglePlay}
         onChanged={setUpdatedPost}
+      />
+
+      <PostAiInsight
+        isOpen={isAiOpen}
+        onClose={() => setIsAiOpen(false)}
+        post={livePost}
       />
     </div>
   );

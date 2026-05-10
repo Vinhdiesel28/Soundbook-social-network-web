@@ -7,7 +7,7 @@ import { leaveRoom } from '../../services/room';
 import { getCurrentUser } from '../../services/auth';
 import ReportModal from '../common/ReportModal';
 
-const RoomHeader = ({ membersCount, roomName, roomId }) => {
+const RoomHeader = ({ membersCount, roomName, roomId, visible = true }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { closeSession } = useRoomSession();
@@ -44,7 +44,7 @@ const RoomHeader = ({ membersCount, roomName, roomId }) => {
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
+      <div className={`absolute top-0 left-0 w-full p-4 flex justify-between items-center z-20 bg-gradient-to-b from-black/80 to-transparent transition-all duration-500 transform ${visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
         <div className="text-white pointer-events-auto">
           <h2 className="font-bold text-lg drop-shadow-md">{roomName || 'Live Room'}</h2>
           {roomId && <p className="text-[11px] text-white/80 drop-shadow-md">ID: {roomId}</p>}

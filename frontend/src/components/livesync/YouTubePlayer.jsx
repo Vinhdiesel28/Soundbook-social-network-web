@@ -15,11 +15,13 @@ const YouTubePlayer = ({
   onSeek,
   onAddSongRequest,
   onSkip,
+  forceShowControls = false,
 }) => {
   const playerRef = useRef(null);
   const [localIsPlaying, setLocalIsPlaying] = useState(isPlaying);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [showControls, setShowControls] = useState(false);
   const seekTimeRef = useRef(null);
 
   useEffect(() => {
@@ -211,7 +213,11 @@ const YouTubePlayer = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-black rounded-lg overflow-hidden relative">
+    <div 
+      className="w-full h-full flex flex-col bg-black rounded-lg overflow-hidden relative group"
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
+    >
       <div className="flex-1 relative">
         <YouTube
           videoId={videoId}
@@ -223,10 +229,35 @@ const YouTubePlayer = ({
         />
         {/* Invisible overlay to block interactions for non-hosts */}
         {!isHost && <div className="absolute inset-0 z-10 bg-transparent" />}
+
+        {/* Central Play/Pause button - Only visible on hover/movement */}
+        {(showControls || forceShowControls) && isHost && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTogglePlay();
+              }}
+              className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-2xl transform transition-all duration-300 hover:scale-110 hover:bg-black/60 pointer-events-auto"
+            >
+              {localIsPlaying ? <Pause size={40} fill="white" /> : <Play size={40} className="ml-2" fill="white" />}
+            </button>
+          </div>
+        )}
+        
+        {/* Title overlay when controls are hidden */}
+        {!(showControls || forceShowControls) && isPlaying && (
+          <div className="absolute bottom-4 left-4 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">Đang phát</span>
+             </div>
+          </div>
+        )}
       </div>
 
-      {/* Custom controls */}
-      <div className="bg-gray-900 p-4 space-y-2">
+      {/* Custom controls - Slide up animation on hover */}
+      <div className={`absolute bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm p-4 space-y-2 z-30 transition-all duration-300 transform ${(showControls || forceShowControls) ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
         {/* Progress bar */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-400 w-8">{formatTime(currentTime)}</span>
