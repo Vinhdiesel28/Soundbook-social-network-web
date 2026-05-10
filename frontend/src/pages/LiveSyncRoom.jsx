@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Play, Pause, SkipForward, SkipBack, Volume2, Maximize2, Users, MessageSquare, Heart, Settings, Plus, List, MoreHorizontal } from 'lucide-react';
 import RoomHeader from '../components/livesync/RoomHeader';
 import VisualizerCover from '../components/livesync/VisualizerCover';
@@ -13,9 +13,11 @@ import { getCurrentUser } from '../services/auth';
 import { getRoomDetail, getRoomQueue, joinRoom, leaveRoom } from '../services/room';
 import { publishMessage } from '../lib/realtime';
 import { useRoomSession } from '../context/RoomSessionContext';
+import { useToast } from '../context/ToastContext';
 
 const LiveSyncRoom = () => {
   const { id: roomIdParam } = useParams();
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const currentUser = getCurrentUser();
   const [roomId, setRoomId] = useState(null);
@@ -24,6 +26,7 @@ const LiveSyncRoom = () => {
   const [room, setRoom] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const { showToast } = useToast();
   
   const lastSyncRef = useRef(Date.now());
   const { session, joinSession, leaveSession, updateMembers, setLocalPlayback } = useRoomSession();
@@ -184,6 +187,14 @@ const LiveSyncRoom = () => {
     if (!room || !playbackState) return;
     // Context already receives STOMP updates — just keep local UI state in sync
   }, [playbackState, room, queue]);
+
+  // Handle room end signal
+  useEffect(() => {
+    if (session?.ended && roomIdParam) {
+      showToast('Phòng đã kết thúc bởi quản trị viên hoặc chủ phòng.', 'info');
+      navigate('/feed', { replace: true });
+    }
+  }, [session?.ended, roomIdParam, navigate, showToast]);
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !roomId || !currentUser?.id || isSendingMessage) return;

@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class AdminRoomServiceImpl implements AdminRoomService
     private final RoomMessageRepository roomMessageRepository;
     private final RoomQueueRepository roomQueueRepository;
     private final RoomPlaybackStateRepository roomPlaybackStateRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     public PageResponse<AdminRoomResponse> getAllRooms(String keyword, int page, int size)
@@ -71,6 +73,11 @@ public class AdminRoomServiceImpl implements AdminRoomService
         roomRepository.save(room);
 
         roomMemberRepository.updateLeaveTimeForAllMembers(id, LocalDateTime.now());
+
+        messagingTemplate.convertAndSend(
+                "/topic/rooms/" + id + "/status",
+                java.util.Map.of("status", "ENDED", "roomId", id)
+        );
     }
 
     @Override
