@@ -8,12 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
-
-@Repository
-public interface UserRepository extends JpaRepository<User, Long> {
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -46,7 +42,7 @@ public interface UserRepository extends JpaRepository<User, Long>
             order by u.createdAt desc
             """)
     List<User> findCandidateUsers(@Param("currentUserId") Long currentUserId, Pageable pageable);
-}
+
     @Query("SELECT u FROM User u WHERE " +
             ":keyword IS NULL OR :keyword = '' " +
             "OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :keyword, '%'))" +

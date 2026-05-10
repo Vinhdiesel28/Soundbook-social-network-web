@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Disc3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import { GoogleLogin } from '@react-oauth/google';
 import { isGoogleAuthConfigured } from '../config/env';
 import {
   canSwitchAccount,
   getCurrentUser,
   getStoredAuth,
+  isAdminRole,
   login,
   loginWithGoogle,
   register,
@@ -20,6 +22,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
+  const { showToast } = useToast();
 
   const currentSession = useMemo(() => getStoredAuth(), []);
   const currentUser = currentSession?.user || getCurrentUser();
@@ -33,12 +36,12 @@ const Login = () => {
 
   const handleGoogleLogin = async (idToken) => {
     if (!idToken) {
-      alert('Google không trả về ID token hợp lệ. Vui lòng thử lại.');
+      showToast('Google không trả về ID token hợp lệ. Vui lòng thử lại.', 'error');
       return;
     }
 
     if (sessionLocked) {
-      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      showToast(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`, 'warning');
       return;
     }
 
@@ -46,49 +49,12 @@ const Login = () => {
 
     try {
       const result = await loginWithGoogle(idToken);
-      navigate(result?.data?.onboardingCompleted ? resolveHomePath(result?.data?.role) : '/onboarding', { replace: true });
+      const userRole = result?.data?.role;
+      const shouldGoHome = isAdminRole(userRole) || result?.data?.onboardingCompleted;
+      navigate(shouldGoHome ? resolveHomePath(userRole) : '/onboarding', { replace: true });
     } catch (error) {
       console.error('Lỗi đăng nhập Google:', error);
-      alert(error.message || 'Đăng nhập Google thất bại.');
-    setLoading(true);
-
-    try {
-      const response = await fetch('http://localhost:8081/api/v1/auth/google', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('token', result.data.token);
-        const auth = {
-            token: result.data.token,
-            user: {
-                id: result.data.userId,
-                email: result.data.email,
-                displayName: result.data.displayName,
-                role: result.data.role?.toUpperCase().replace(/^ROLE_/, '')
-            }
-        };
-        localStorage.setItem('soundbook_auth', JSON.stringify(auth));
-        
-        const isAdmin = ['ADMIN', 'MODERATOR'].includes(auth.user.role);
-        if (isAdmin) {
-          navigate('/admin');
-        } else {
-          navigate('/feed');
-        }
-      } else {
-        alert(result.message || 'Đăng nhập Google thất bại.');
-      }
-    } catch (error) {
-      console.error("Lỗi đăng nhập Google:", error);
-      alert('Không thể kết nối đến Backend khi đăng nhập bằng Google.');
+      showToast(error.message || 'Đăng nhập Google thất bại.', 'error');
     } finally {
       setLoading(false);
     }
@@ -96,7 +62,7 @@ const Login = () => {
 
   const handleToggle = () => {
     if (sessionLocked) {
-      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      showToast(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`, 'warning');
       return;
     }
 
@@ -104,11 +70,11 @@ const Login = () => {
     setFormData({ email: '', username: '', password: '', displayName: '' });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (sessionLocked) {
-      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      showToast(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`, 'warning');
       return;
     }
 
@@ -126,78 +92,17 @@ const Login = () => {
             displayName: formData.displayName || formData.username,
           });
 
-      navigate(result?.data?.onboardingCompleted ? resolveHomePath(result?.data?.role) : '/onboarding', { replace: true });
+      const userRole = result?.data?.role;
+      const shouldGoHome = isAdminRole(userRole) || result?.data?.onboardingCompleted;
+      navigate(shouldGoHome ? resolveHomePath(userRole) : '/onboarding', { replace: true });
     } catch (error) {
       if (!isLogin && error?.status === 400 && String(error.message || '').toLowerCase().includes('email')) {
         setIsLogin(true);
-        alert('Email này đã tồn tại. Mình đã chuyển sang chế độ đăng nhập, bạn hãy nhập mật khẩu để đăng nhập.');
+        showToast('Email này đã tồn tại. Mình đã chuyển sang chế độ đăng nhập, bạn hãy nhập mật khẩu để đăng nhập.', 'info');
       } else {
         console.error('Lỗi kết nối:', error);
-        alert(error.message || 'Thao tác thất bại. Vui lòng kiểm tra lại.');
+        showToast(error.message || 'Thao tác thất bại. Vui lòng kiểm tra lại.', 'error');
       }
-    setLoading(true);
-
-    // URL Backend của bạn (vì vite.config.js không đổi được nên dùng URL đầy đủ)
-    const BASE_URL = 'http://localhost:8081/api/v1';
-    const endpoint = isLogin ? `${BASE_URL}/auth/login` : `${BASE_URL}/auth/register`;
-
-    // Chuẩn bị dữ liệu gửi lên
-    const body = isLogin
-        ? { email: formData.email, password: formData.password }
-        : {
-          email: formData.email,
-          password: formData.password,
-          // Ưu tiên dùng username làm displayName nếu không nhập displayName
-          displayName: formData.displayName || formData.username
-        };
-
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // 1. Lưu JWT Token vào LocalStorage để dùng cho các trang sau
-        localStorage.setItem('token', result.data.token);
-        
-        // Lưu thông tin user để dùng cho việc phân quyền (isLoggedIn, isAdminRole)
-        const auth = {
-            token: result.data.token,
-            user: {
-                id: result.data.userId,
-                email: result.data.email,
-                displayName: result.data.displayName,
-                role: result.data.role?.toUpperCase().replace(/^ROLE_/, '')
-            }
-        };
-        localStorage.setItem('soundbook_auth', JSON.stringify(auth));
-
-        // 2. Điều hướng người dùng
-        if (isLogin) {
-          const isAdmin = ['ADMIN', 'MODERATOR'].includes(auth.user.role);
-          if (isAdmin) {
-            navigate('/admin');
-          } else {
-            navigate('/feed');
-          }
-        } else {
-          // Người mới đăng ký thì đi qua trang Onboarding
-          navigate('/onboarding');
-        }
-      } else {
-        // Hiển thị thông báo lỗi từ Backend (Sai mật khẩu, Email đã tồn tại...)
-        alert(result.message || "Thao tác thất bại. Vui lòng kiểm tra lại.");
-      }
-    } catch (error) {
-      console.error("Lỗi kết nối:", error);
-      alert("Không thể kết nối đến Backend (Cổng 8081). Hãy chắc chắn bạn đã chạy ứng dụng Spring Boot.");
     } finally {
       setLoading(false);
     }
@@ -319,7 +224,7 @@ const Login = () => {
                         handleGoogleLogin(credentialResponse?.credential);
                       }}
                       onError={() => {
-                        alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
+                        showToast('Đăng nhập Google thất bại. Vui lòng thử lại.', 'error');
                       }}
                       type="standard"
                       shape="pill"

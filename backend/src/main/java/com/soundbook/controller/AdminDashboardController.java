@@ -1,8 +1,8 @@
 package com.soundbook.controller;
 
-import com.soundbook.dto.response.ApiResponse;
-import com.soundbook.dto.response.DashboardStatsResponse;
-import com.soundbook.dto.response.TrendingPostResponse;
+import com.soundbook.dto.common.response.ApiResponse;
+import com.soundbook.dto.admin.response.DashboardStatsResponse;
+import com.soundbook.dto.admin.response.TrendingPostResponse;
 import com.soundbook.service.admin.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

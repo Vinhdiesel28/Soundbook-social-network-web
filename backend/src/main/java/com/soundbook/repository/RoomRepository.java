@@ -16,8 +16,7 @@ import java.util.List;
 @Repository
 public interface RoomRepository extends JpaRepository<Room, Long> {
 	List<Room> findByStatusOrderByCreatedAtDesc(RoomStatus status, Pageable pageable);
-public interface RoomRepository extends JpaRepository<Room, Long>
-{
+
     @Query("SELECT r FROM Room r JOIN FETCH r.host h " +
             "WHERE (:keyword IS NULL OR :keyword = '' " +
             "OR LOWER(r.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

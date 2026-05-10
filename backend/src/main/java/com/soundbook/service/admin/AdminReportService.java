@@ -1,8 +1,8 @@
 package com.soundbook.service.admin;
 
-import com.soundbook.dto.response.AdminReportDetailResponse;
-import com.soundbook.dto.response.AdminReportResponse;
-import com.soundbook.dto.response.PageResponse;
+import com.soundbook.dto.admin.response.AdminReportDetailResponse;
+import com.soundbook.dto.admin.response.AdminReportResponse;
+import com.soundbook.dto.common.response.PageResponse;
 import com.soundbook.entity.enums.ReportStatus;
 
 public interface AdminReportService

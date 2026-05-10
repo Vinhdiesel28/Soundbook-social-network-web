@@ -1,6 +1,6 @@
 package com.soundbook.utils;
 
-import com.soundbook.dto.response.PageResponse;
+import com.soundbook.dto.common.response.PageResponse;
 import org.springframework.data.domain.Page;
 
 import java.util.List;

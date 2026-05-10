@@ -1,9 +1,11 @@
-import React from 'react';
-import { Disc3, BookOpen, Pause, Play } from 'lucide-react';
+import React, { useState } from 'react';
+import { Disc3, BookOpen, Pause, Play, Flag } from 'lucide-react';
+import ReportModal from '../common/ReportModal';
 import { useLanguage } from '../../context/LanguageContext';
 
 const ChatMessage = ({ msg, playingId, setPlayingId, isUserOnline = false }) => {
   const { t } = useLanguage();
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   return (
     <div className={`flex gap-3 max-w-[85%] sm:max-w-[70%] ${msg.isMe ? 'ml-auto flex-row-reverse' : ''}`}>
       {!msg.isMe && (
@@ -59,8 +61,29 @@ const ChatMessage = ({ msg, playingId, setPlayingId, isUserOnline = false }) => 
           </div>
         )}
 
-        <span className="text-[10px] text-gray-400 mt-1 mx-1">{msg.time}</span>
+        <div className="flex items-center gap-2 mt-1 mx-1">
+          <span className="text-[10px] text-gray-400">{msg.time}</span>
+          {!msg.isMe && (
+            <button 
+              onClick={() => {
+                console.log('Opening report for message:', msg);
+                setIsReportModalOpen(true);
+              }}
+              className="text-gray-400 hover:text-rose-500 transition-colors"
+              title="Báo cáo tin nhắn"
+            >
+              <Flag size={14} />
+            </button>
+          )}
+        </div>
       </div>
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        type="DM_MESSAGE"
+        targetId={msg.id || msg.messageId}
+      />
     </div>
   );
 };

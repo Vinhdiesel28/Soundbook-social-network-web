@@ -35,37 +35,89 @@ public class PostService {
     @Transactional
     public FeedPostResponse createPost(String email, PostMutationRequest request) {
         User user = currentUser(email);
+
+        PostType actualType = request.getType() == null ? PostType.BLOG : request.getType();
+        validatePostAttachment(actualType, request);
+
         Post post = Post.builder()
                 .user(user)
-                .type(request.getType() == null ? PostType.BLOG : request.getType())
+                .type(actualType)
                 .visibility(request.getVisibility() == null ? Visibility.PUBLIC : request.getVisibility())
                 .caption(blankToNull(request.getCaption()))
                 .contentRich(blankToNull(request.getContentRich()))
                 .moodTag(blankToNull(request.getMoodTag()))
-                .refJson(blankToNull(request.getRefJson()))
                 .commentsEnabled(request.getCommentsEnabled() == null || Boolean.TRUE.equals(request.getCommentsEnabled()))
-                .shareCount(0L)
+                .refJson(isJsonType(actualType) ? blankToNull(request.getRefJson()) : null)
                 .build();
+
         Post saved = postRepository.save(post);
         saveMediaIfPresent(saved, request);
+
         return feedService.getPost(email, saved.getId());
+    }
+
+    private void validatePostAttachment(PostType type, PostMutationRequest request)
+    {
+        boolean hasRefJson = blankToNull(request.getRefJson()) != null;
+
+        if (type == PostType.BLOG && hasRefJson)
+        {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (isJsonType(type) && !hasRefJson)
+        {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private boolean isJsonType(PostType type)
+    {
+        return type == PostType.MUSIC_QUICK_NOTE ||
+                type == PostType.BOOK_READING_UPDATE ||
+                type == PostType.BOOK_QUOTE_CARD ||
+                type == PostType.BOOK_REVIEW;
     }
 
     @Transactional
     public FeedPostResponse updatePost(String email, Long postId, PostMutationRequest request) {
         User user = currentUser(email);
         Post post = ownPost(user, postId);
-        if (request.getType() != null) post.setType(request.getType());
+        PostType actualType = request.getType() != null ? request.getType() : post.getType();
+
+        validatePostAttachment(actualType, request);
+
+        post.setType(actualType);
         if (request.getVisibility() != null) post.setVisibility(request.getVisibility());
+
+        if (request.getType() != null) post.setType(request.getType());
         post.setCaption(blankToNull(request.getCaption()));
         post.setContentRich(blankToNull(request.getContentRich()));
         post.setMoodTag(blankToNull(request.getMoodTag()));
-        post.setRefJson(blankToNull(request.getRefJson()));
+        post.setRefJson(isJsonType(actualType) ? blankToNull(request.getRefJson()) : null);
         if (request.getCommentsEnabled() != null) post.setCommentsEnabled(request.getCommentsEnabled());
+
         postRepository.save(post);
-        postMediaRepository.deleteByPost_Id(post.getId());
-        saveMediaIfPresent(post, request);
+        updateMedia(post, request);
+
         return feedService.getPost(email, post.getId());
+    }
+
+    private void updateMedia(Post post, PostMutationRequest request)
+    {
+        String newUrl = blankToNull(request.getMediaUrl());
+
+        postMediaRepository.deleteByPost_Id(post.getId());
+
+        if (newUrl != null)
+        {
+            PostMedia media = PostMedia.builder()
+                    .post(post)
+                    .url(newUrl)
+                    .mediaType(request.getMediaType() == null ? MediaType.IMAGE : request.getMediaType())
+                    .build();
+            postMediaRepository.save(media);
+        }
     }
 
     @Transactional
@@ -110,6 +162,30 @@ public class PostService {
             }
         });
         return feedService.getPost(email, post.getId());
+    }
+
+    @Transactional
+    public void reactComment(String email, Long commentId, PostReactionRequest request) {
+        User user = currentUser(email);
+        Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+        ReactionType newType = request == null ? ReactionType.LIKE : request.getReactionType();
+        reactionRepository.findByUser_IdAndTargetTypeAndTargetId(user.getId(), TargetType.COMMENT, comment.getId()).ifPresentOrElse(existing -> {
+            if (newType == null || existing.getReactionType() == newType) {
+                reactionRepository.delete(existing);
+            } else {
+                existing.setReactionType(newType);
+                reactionRepository.save(existing);
+            }
+        }, () -> {
+            if (newType != null) {
+                reactionRepository.save(Reaction.builder()
+                        .user(user)
+                        .targetType(TargetType.COMMENT)
+                        .targetId(comment.getId())
+                        .reactionType(newType)
+                        .build());
+            }
+        });
     }
 
     @Transactional

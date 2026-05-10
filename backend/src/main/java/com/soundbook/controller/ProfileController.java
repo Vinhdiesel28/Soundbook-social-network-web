@@ -1,22 +1,32 @@
 package com.soundbook.controller;
 
 import com.soundbook.common.dto.ApiResponse;
+import com.soundbook.common.exception.AppException;
+import com.soundbook.common.exception.ErrorCode;
 import com.soundbook.dto.profile.BookShelfRequest;
 import com.soundbook.dto.profile.MusicShelfRequest;
 import com.soundbook.dto.profile.ProfileResponse;
 import com.soundbook.dto.profile.ProfileUpdateRequest;
+import com.soundbook.entity.User;
+import com.soundbook.repository.UserRepository;
 import com.soundbook.service.ProfileMutationService;
 import com.soundbook.service.ProfileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v1/profiles")
 @RequiredArgsConstructor
 public class ProfileController {
 
+    private final UserRepository userRepository;
     private final ProfileService profileService;
     private final ProfileMutationService profileMutationService;
 
@@ -68,5 +78,49 @@ public class ProfileController {
     @DeleteMapping("/me/books/{itemId}")
     public ResponseEntity<ApiResponse<ProfileResponse>> deleteBook(Authentication authentication, @PathVariable Long itemId) {
         return ResponseEntity.ok(ApiResponse.success(profileMutationService.deleteBook(authentication.getName(), itemId)));
+    }
+
+    @PatchMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Void>> updateAvatar(
+            @RequestParam("file") MultipartFile file) throws IOException
+    {
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Long currentUserId = currentUser.getId();
+
+        if (file.isEmpty())
+        {
+            throw new IllegalArgumentException("File ảnh không được để trống");
+        }
+
+        profileService.updateAvatar(currentUserId, file);
+
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .message("Cập nhật ảnh đại diện thành công")
+                .build());
+    }
+
+    @PatchMapping(value = "/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Void>> updateCover(
+            @RequestParam("file") MultipartFile file) throws IOException
+    {
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Long currentUserId = currentUser.getId();
+
+        if (file.isEmpty())
+        {
+            throw new IllegalArgumentException("File ảnh không được để trống");
+        }
+
+        profileService.updateCover(currentUserId, file);
+
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .message("Cập nhật ảnh bìa thành công")
+                .build());
     }
 }

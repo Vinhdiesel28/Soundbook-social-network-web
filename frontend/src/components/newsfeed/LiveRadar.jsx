@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { ArrowLeft, Disc3, Headphones, Keyboard, LogIn, Music, Plus, Radio, RefreshCw, Users, X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';

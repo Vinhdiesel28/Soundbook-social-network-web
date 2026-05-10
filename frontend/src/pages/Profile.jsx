@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Grid3X3, List, Save } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { AlertCircle, Grid3X3, List, Save, X, Camera } from 'lucide-react';
+import Cropper from 'react-easy-crop';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -13,7 +14,8 @@ import ProfilePosts from '../components/profile/ProfilePosts';
 import ModalShell from '../components/common/ModalShell';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import ToastMessage from '../components/common/ToastMessage';
-import { getCurrentUser } from '../services/auth';
+import ReportModal from '../components/common/ReportModal';
+import { getCurrentUser, updateStoredUser } from '../services/auth';
 import { profileApi } from '../services/profile';
 import { searchYouTubeVideos, getYouTubeVideoDetails } from '../services/youtube';
 import { friendsApi } from '../services/friends';
@@ -51,12 +53,20 @@ const Profile = () => {
   const [socialBusy, setSocialBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
-  const [mediaModal, setMediaModal] = useState({ open: false, kind: 'avatar', form: emptyMediaForm });
+  const [mediaModal, setMediaModal] = useState({ open: false, kind: 'avatar' });
+  const fileInputRef = useRef(null);
+
+  // Cropping State
+  const [imageSrc, setImageSrc] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [copyModal, setCopyModal] = useState({ open: false, url: '' });
   const [shelfModal, setShelfModal] = useState({ open: false, mode: 'add', shelfId: 'playlists', item: null, form: emptyMusicForm });
   const [deleteShelf, setDeleteShelf] = useState(null);
   const [pinnedVideoDetails, setPinnedVideoDetails] = useState(null);
   const [pinnedModal, setPinnedModal] = useState({ open: false, query: '', loading: false, results: [], error: '' });
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const targetId = id || 'me';
   const isGuest = Boolean(profile && currentUser?.id && String(profile.userId) !== String(currentUser.id));
@@ -134,8 +144,8 @@ const Profile = () => {
       publicInfo: profile.publicInfo || '',
       description: profile.bio || profile.publicInfo || 'Chưa cập nhật giới thiệu cá nhân.',
       avatar: fallbackAvatar(profile.userId),
-      avatarUrl: profile.avatarUrl,
-      coverUrl: profile.coverUrl,
+      avatarUrl: profile.avatarUrl ? `${profile.avatarUrl}${profile.avatarUrl.includes('?') ? '&' : '?'}t=${new Date(profile.updatedAt || Date.now()).getTime()}` : null,
+      coverUrl: profile.coverUrl ? `${profile.coverUrl}${profile.coverUrl.includes('?') ? '&' : '?'}t=${new Date(profile.updatedAt || Date.now()).getTime()}` : null,
       themeColor: 'from-orange-500/20 to-purple-900/40',
       matchScore: isGuest ? profile.matchScore : null,
       matchReasons: profile.sharedFeatures || [],
@@ -307,20 +317,69 @@ const Profile = () => {
   };
 
   const openMediaModal = (kind) => {
-    setMediaModal({
-      open: true,
-      kind,
-      form: { url: kind === 'avatar' ? (profile?.avatarUrl || '') : (profile?.coverUrl || '') },
-    });
+    setMediaModal({ open: true, kind });
+    fileInputRef.current?.click();
   };
 
-  const saveMediaModal = async () => {
-    const value = mediaModal.form.url.trim();
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener('load', () => setImageSrc(reader.result));
+      reader.readAsDataURL(file);
+      e.target.value = ''; // Reset for same file selection
+    }
+  };
+
+  const uploadCroppedImage = async () => {
+    if (!croppedAreaPixels || !imageSrc) return;
     try {
       setBusy(true);
-      const data = await profileApi.updateProfile(mediaModal.kind === 'avatar' ? { avatarUrl: value } : { coverUrl: value });
-      replaceProfile(data, mediaModal.kind === 'avatar' ? 'Đã đổi ảnh đại diện.' : 'Đã đổi ảnh bìa.');
-      setMediaModal({ open: false, kind: 'avatar', form: emptyMediaForm });
+      const image = new Image();
+      image.src = imageSrc;
+      await new Promise((resolve) => (image.onload = resolve));
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      canvas.width = croppedAreaPixels.width;
+      canvas.height = croppedAreaPixels.height;
+
+      ctx.drawImage(
+        image,
+        croppedAreaPixels.x,
+        croppedAreaPixels.y,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height,
+        0,
+        0,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height
+      );
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+      const file = new File([blob], `${mediaModal.kind}.jpg`, { type: 'image/jpeg' });
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const apiResult = await (mediaModal.kind === 'avatar' 
+        ? profileApi.updateAvatar(formData) 
+        : profileApi.updateCover(formData));
+
+      const updatedProfile = await loadProfile();
+      
+      if (mediaModal.kind === 'avatar') {
+        const newAvatarUrl = apiResult?.avatarUrl || apiResult?.avatar || updatedProfile.avatarUrl || updatedProfile.avatar;
+        updateStoredUser({ avatarUrl: newAvatarUrl, avatar: newAvatarUrl });
+      }
+      showNotice('success', mediaModal.kind === 'avatar' ? 'Đã cập nhật ảnh đại diện.' : 'Đã cập nhật ảnh bìa.');
+      setImageSrc(null);
+      setMediaModal({ open: false, kind: 'avatar' });
     } catch (err) {
       showNotice('error', err?.message || 'Không thể cập nhật ảnh.');
     } finally {
@@ -492,6 +551,7 @@ const Profile = () => {
         onChangePinnedTrack={() => setPinnedModal({ open: true, query: '', loading: false, results: [], error: '' })}
         onFollow={handleFollow}
         onUnfollow={handleUnfollow}
+        onReport={() => setIsReportModalOpen(true)}
         socialBusy={socialBusy}
       />
 
@@ -533,32 +593,74 @@ const Profile = () => {
         </div>
       </div>
 
-      <ModalShell
-        open={mediaModal.open}
-        title={mediaModal.kind === 'avatar' ? 'Đổi ảnh đại diện' : 'Đổi ảnh bìa'}
-        description="Nhập URL ảnh hợp lệ để cập nhật trực tiếp trên trang cá nhân."
-        onClose={() => setMediaModal({ open: false, kind: 'avatar', form: emptyMediaForm })}
-        footer={(
-          <>
-            <button type="button" onClick={() => setMediaModal({ open: false, kind: 'avatar', form: emptyMediaForm })} disabled={busy} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-muted hover:bg-gray-100 disabled:opacity-60 dark:hover:bg-gray-800">Hủy</button>
-            <button type="button" onClick={saveMediaModal} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60">
-              <Save size={15} /> {busy ? 'Đang lưu...' : 'Lưu ảnh'}
-            </button>
-          </>
-        )}
-      >
-        <input
-          value={mediaModal.form.url}
-          onChange={(event) => setMediaModal(prev => ({ ...prev, form: { ...prev.form, url: event.target.value } }))}
-          placeholder="https://..."
-          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
-        />
-        {mediaModal.form.url ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
-            <img src={mediaModal.form.url} alt="Preview" className="h-52 w-full object-cover" />
+      <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
+
+      {/* Image Cropper Modal */}
+      {imageSrc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="bg-surface-color w-full max-w-xl rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-900 z-10 relative">
+              <h3 className="font-bold">
+                {mediaModal.kind === 'avatar' ? 'Cắt ảnh đại diện' : 'Cắt ảnh bìa'}
+              </h3>
+              <button onClick={() => setImageSrc(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="relative w-full h-[400px] bg-black/50">
+              <Cropper
+                image={imageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={mediaModal.kind === 'avatar' ? 1 : 16 / 9}
+                cropShape={mediaModal.kind === 'avatar' ? 'round' : 'rect'}
+                showGrid={false}
+                onCropChange={setCrop}
+                onCropComplete={onCropComplete}
+                onZoomChange={setZoom}
+              />
+            </div>
+
+            <div className="p-5 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex flex-col gap-4 z-10 relative">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Thu phóng</label>
+                  <span className="text-[10px] font-mono text-primary-500">{Math.round(zoom * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="w-full accent-primary-500"
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={() => setImageSrc(null)}
+                  disabled={busy}
+                  className="px-5 py-2 font-semibold text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-text-color rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={uploadCroppedImage}
+                  disabled={busy}
+                  className="px-8 py-2 font-bold text-sm bg-primary-500 hover:bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-500/20 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {busy ? 'Đang xử lý...' : 'Lưu & Cập nhật'}
+                </button>
+              </div>
+            </div>
           </div>
-        ) : null}
-      </ModalShell>
+        </div>
+      )}
 
       <ModalShell
         open={copyModal.open}
@@ -702,6 +804,13 @@ const Profile = () => {
         busy={busy}
         onClose={() => setDeleteShelf(null)}
         onConfirm={deleteShelfItem}
+      />
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        type="USER"
+        targetId={targetId || profileData?.userId || profileData?.id}
       />
     </div>
   );

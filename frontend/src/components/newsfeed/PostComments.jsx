@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Send, Smile, Lock, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import CommentItem from './CommentItem';
+import { getCurrentUser, resolveUrl } from '../../services/auth';
 
 const PostComments = ({ comments = [], enabled = true, onSubmitComment, focusSignal = 0 }) => {
   const { t } = useLanguage();
@@ -9,7 +10,14 @@ const PostComments = ({ comments = [], enabled = true, onSubmitComment, focusSig
   const [commentInput, setCommentInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    const handleUserUpdate = () => setCurrentUser(getCurrentUser());
+    window.addEventListener('soundbook_user_updated', handleUserUpdate);
+    return () => window.removeEventListener('soundbook_user_updated', handleUserUpdate);
+  }, []);
 
   useEffect(() => {
     if (focusSignal) {
@@ -59,7 +67,17 @@ const PostComments = ({ comments = [], enabled = true, onSubmitComment, focusSig
 
       {enabled ? (
         <div className="flex items-center gap-2 mt-2">
-          <div className="w-7 h-7 rounded-full bg-primary-500 flex-shrink-0" />
+          <div className="w-7 h-7 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold text-[10px] overflow-hidden flex-shrink-0">
+            {currentUser?.avatarUrl ? (
+              <img 
+                src={`${resolveUrl(currentUser.avatarUrl)}${String(currentUser.avatarUrl).includes('?') ? '&' : '?'}t=${currentUser.updatedAt || 'initial'}`} 
+                alt={currentUser.displayName || 'User'} 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <span>{(currentUser?.displayName || 'U').charAt(0).toUpperCase()}</span>
+            )}
+          </div>
           <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-800/70 rounded-full px-3 py-1.5 gap-2">
             <input
               ref={inputRef}

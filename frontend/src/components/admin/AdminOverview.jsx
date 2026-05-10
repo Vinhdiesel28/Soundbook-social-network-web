@@ -6,6 +6,7 @@ const AdminOverview = ({ t, onNavigate }) => {
   const [stats, setStats] = useState({ users: 0, rooms: 0, posts: 0, reports: 0 });
   const [trendingPosts, setTrendingPosts] = useState([]);
   const [pendingReports, setPendingReports] = useState([]);
+  const [totalPending, setTotalPending] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +24,10 @@ const AdminOverview = ({ t, onNavigate }) => {
       
       if (statsRes.data) setStats(statsRes.data);
       if (trendingRes.data) setTrendingPosts(trendingRes.data.slice(0, 4));
-      if (reportsRes.data && reportsRes.data.content) setPendingReports(reportsRes.data.content.slice(0, 4));
+      if (reportsRes.data && reportsRes.data.content) {
+        setPendingReports(reportsRes.data.content.slice(0, 4));
+        setTotalPending(reportsRes.data.totalElements || reportsRes.data.content.length);
+      }
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
     } finally {
@@ -148,7 +152,7 @@ const AdminOverview = ({ t, onNavigate }) => {
               </div>
               <div>
                 <h3 className="font-bold text-base">{t('admin.overview.pending_reports')}</h3>
-                <p className="text-xs text-text-muted">{pendingReports.length} {t('admin.overview.awaiting_review')}</p>
+                <p className="text-xs text-text-muted">{totalPending} {t('admin.overview.awaiting_review')}</p>
               </div>
             </div>
             <button

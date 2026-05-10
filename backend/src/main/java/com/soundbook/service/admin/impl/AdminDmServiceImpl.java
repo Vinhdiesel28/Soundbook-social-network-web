@@ -2,9 +2,9 @@ package com.soundbook.service.admin.impl;
 
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
-import com.soundbook.dto.response.AdminDmMessageResponse;
-import com.soundbook.dto.response.AdminDmThreadResponse;
-import com.soundbook.dto.response.PageResponse;
+import com.soundbook.dto.admin.response.AdminDmMessageResponse;
+import com.soundbook.dto.admin.response.AdminDmThreadResponse;
+import com.soundbook.dto.common.response.PageResponse;
 import com.soundbook.entity.DmMessage;
 import com.soundbook.entity.DmThread;
 import com.soundbook.repository.DmMessageRepository;

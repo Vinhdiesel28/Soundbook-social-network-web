@@ -1,8 +1,8 @@
 package com.soundbook.service.admin;
 
-import com.soundbook.dto.response.AdminDmMessageResponse;
-import com.soundbook.dto.response.AdminDmThreadResponse;
-import com.soundbook.dto.response.PageResponse;
+import com.soundbook.dto.admin.response.AdminDmMessageResponse;
+import com.soundbook.dto.admin.response.AdminDmThreadResponse;
+import com.soundbook.dto.common.response.PageResponse;
 
 public interface AdminDmService
 {

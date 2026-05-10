@@ -19,7 +19,6 @@ public interface RoomQueueRepository extends JpaRepository<RoomQueueItem, Long> 
 
     @Query("SELECT MAX(rq.positionOrder) FROM RoomQueueItem rq WHERE rq.room.id = :roomId")
     Optional<Integer> findMaxPositionOrderByRoomId(@Param("roomId") Long roomId);
-}
 
     @Query(value = "SELECT q FROM RoomQueueItem q JOIN FETCH q.addedBy " +
             "WHERE q.room.id = :roomId AND q.playedAt IS NULL",

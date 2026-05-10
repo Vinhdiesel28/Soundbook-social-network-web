@@ -49,7 +49,7 @@ const TasteSettings = () => {
   return (
     <div className="min-h-screen bg-bg-color text-text-color px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto mb-6 flex max-w-5xl flex-wrap items-center justify-between gap-3">
-        <Link to="/feed" className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
+        <Link to="/profile/me" className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
           <ArrowLeft size={16} /> Quay lại
         </Link>
         <button onClick={loadTaste} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-800">

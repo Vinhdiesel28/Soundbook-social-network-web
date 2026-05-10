@@ -33,53 +33,83 @@ export const normalizeComment = (comment = {}) => ({
   },
   text: comment.text || comment.content || '',
   time: formatTime(comment.createdAt),
-  reacts: comment.reacts || 0,
+  reacts: comment.reactsCount || comment.reacts || 0,
+  currentUserReaction: comment.currentUserReaction ? comment.currentUserReaction.toLowerCase() : null,
   original: comment,
 });
 
-export const normalizePost = (post = {}) => ({
-  id: post.id,
-  type: post.type || 'book_review',
-  content: post.caption || post.contentRich || post.reason || 'Bài viết từ cộng đồng Soundbook.',
-  reason: post.reason,
-  tasteScore: post.tasteScore || 0,
-  authorMatch: post.authorMatch || 0,
-  finalScore: post.finalScore || 0,
-  commentsEnabled: post.commentsEnabled !== false,
-  currentUserReaction: safeLower(post.currentUserReaction),
-  canEdit: Boolean(post.canEdit),
-  original: post,
-  user: {
-    id: post.user?.userId,
-    name: post.user?.displayName || 'Soundbook user',
-    username: post.user?.username,
-    avatarUrl: post.user?.avatarUrl,
-    avatar: fallbackAvatar(post.user?.userId),
-    time: formatTime(post.createdAt),
-  },
-  media: {
-    title: post.media?.title || (post.type === 'audio' ? 'Bài chia sẻ âm nhạc' : 'Bài chia sẻ sách/truyện'),
-    artist: post.media?.subtitle || post.user?.displayName || 'Soundbook',
-    author: post.media?.subtitle || post.user?.displayName || 'Soundbook',
-    coverUrl: post.media?.coverUrl || post.media?.url,
-    cover: post.type === 'audio'
-      ? 'bg-gradient-to-br from-purple-500 to-indigo-600'
-      : 'bg-gradient-to-br from-orange-400 to-red-600',
-    rating: post.media?.rating,
-  },
-  reactions: {
-    like: post.reactions?.like || 0,
-    heart: post.reactions?.heart || 0,
-    fire: post.reactions?.fire || 0,
-    flame: post.reactions?.fire || 0,
-    laugh: post.reactions?.laugh || 0,
-    wow: post.reactions?.wow || 0,
-    sad: post.reactions?.sad || 0,
-    comments: post.reactions?.comments || 0,
-    shares: post.reactions?.shares || 0,
-  },
-  comments: (post.comments || []).map(normalizeComment),
-});
+export const normalizePost = (post = {}) => {
+  const ref = (() => {
+    if (!post.refJson) return null;
+    if (typeof post.refJson === 'object') return post.refJson;
+    try {
+      return JSON.parse(post.refJson);
+    } catch (e) {
+      console.error('Failed to parse refJson', e);
+      return null;
+    }
+  })();
+
+  const type = post.type?.toLowerCase() || 'blog';
+  const isAudio = type === 'audio' || type === 'music_quick_note';
+
+  return {
+    id: post.id,
+    type: type,
+    content: post.caption || post.contentRich || '',
+    reason: post.reason,
+    tasteScore: post.tasteScore || 0,
+    authorMatch: post.authorMatch || 0,
+    finalScore: post.finalScore || 0,
+    commentsEnabled: post.commentsEnabled !== false,
+    currentUserReaction: safeLower(post.currentUserReaction),
+    canEdit: Boolean(post.canEdit),
+    visibility: post.visibility,
+    status: post.status,
+    createdAt: post.createdAt,
+    original: post,
+    user: {
+      id: post.user?.userId,
+      name: post.user?.displayName || 'Soundbook user',
+      username: post.user?.username,
+      avatarUrl: post.user?.avatarUrl,
+      avatar: fallbackAvatar(post.user?.userId),
+      time: formatTime(post.createdAt),
+    },
+    media: (() => {
+      const thumb = ref?.thumbnail || post.media?.coverUrl || post.media?.url || '';
+      // Extract YouTube videoId from thumbnail URL if id is missing
+      const thumbMatch = thumb.match(/\/vi\/([a-zA-Z0-9_-]{11})\//);
+      const videoId = ref?.id || ref?.videoId || ref?.itemId || (thumbMatch ? thumbMatch[1] : null);
+      return {
+        id: videoId,
+        title: ref?.title || post.media?.title || (isAudio ? 'Bài chia sẻ âm nhạc' : 'Bài chia sẻ sách/truyện'),
+        artist: ref?.artist || ref?.channelTitle || (ref?.subtitle || '').trim() || post.media?.subtitle || 'Soundbook',
+        author: ref?.author || (ref?.subtitle || '').trim() || post.media?.subtitle || 'Soundbook',
+        coverUrl: thumb || null,
+        cover: isAudio
+          ? 'bg-gradient-to-br from-purple-500 to-indigo-600'
+          : 'bg-gradient-to-br from-orange-400 to-red-600',
+        rating: post.media?.rating,
+        ref: { ...(ref || {}), id: videoId },
+      };
+    })(),
+    reactions: {
+      like: post.reactions?.like || 0,
+      heart: post.reactions?.heart || 0,
+      fire: post.reactions?.fire || 0,
+      flame: post.reactions?.fire || 0,
+      haha: post.reactions?.haha || post.reactions?.laugh || 0,
+      laugh: post.reactions?.laugh || post.reactions?.haha || 0,
+      wow: post.reactions?.wow || 0,
+      sad: post.reactions?.sad || 0,
+      angry: post.reactions?.angry || 0,
+      comments: post.reactions?.comments || 0,
+      shares: post.reactions?.shares || 0,
+    },
+    comments: (post.comments || []).map(normalizeComment),
+  };
+};
 
 export const normalizeSuggestion = (user = {}) => ({
   id: user.userId,

@@ -1,6 +1,7 @@
 package com.soundbook.service.admin;
 
-import com.soundbook.dto.response.*;
+import com.soundbook.dto.admin.response.*;
+import com.soundbook.dto.common.response.*;
 
 public interface AdminRoomService
 {

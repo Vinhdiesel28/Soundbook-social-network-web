@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -41,12 +42,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             order by p.createdAt desc
             """)
     List<Post> searchPublicPosts(@Param("keyword") String keyword, @Param("visibility") Visibility visibility, Pageable pageable);
-import java.time.LocalDateTime;
-import java.util.List;
 
-@Repository
-public interface PostRepository extends JpaRepository<Post, Long>
-{
     @Query(value = "SELECT p FROM Post p JOIN FETCH p.user u " +
             "WHERE :keyword IS NULL OR :keyword = '' " +
             "OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

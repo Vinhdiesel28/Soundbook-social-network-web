@@ -1,11 +1,11 @@
 package com.soundbook.controller;
 
 import com.soundbook.common.dto.ApiResponse;
-import com.soundbook.dto.request.GoogleLoginRequest;
-import com.soundbook.dto.request.LoginRequest;
-import com.soundbook.dto.request.RegisterRequest;
-import com.soundbook.dto.response.AuthResponse;
-import com.soundbook.dto.response.UserMeResponse;
+import com.soundbook.dto.common.request.GoogleLoginRequest;
+import com.soundbook.dto.common.request.LoginRequest;
+import com.soundbook.dto.common.request.RegisterRequest;
+import com.soundbook.dto.common.response.AuthResponse;
+import com.soundbook.dto.common.response.UserMeResponse;
 import com.soundbook.service.AuthService;
 import com.soundbook.service.UserService;
 import jakarta.validation.Valid;

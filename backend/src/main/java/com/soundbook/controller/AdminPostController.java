@@ -1,6 +1,9 @@
 package com.soundbook.controller;
 
-import com.soundbook.dto.response.*;
+import com.soundbook.dto.admin.response.AdminCommentResponse;
+import com.soundbook.dto.admin.response.AdminPostResponse;
+import com.soundbook.dto.admin.response.ReactionResponse;
+import com.soundbook.dto.common.response.*;
 import com.soundbook.entity.enums.ReactionType;
 import com.soundbook.service.admin.AdminPostService;
 import lombok.RequiredArgsConstructor;

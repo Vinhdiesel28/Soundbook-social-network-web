@@ -1,17 +1,16 @@
 package com.soundbook.service.admin.impl;
 
-import com.soundbook.dto.request.AdminCreateUserRequest;
-import com.soundbook.dto.request.AdminUpdateUserRequest;
-import com.soundbook.dto.response.AdminUserDetailResponse;
-import com.soundbook.dto.response.AdminUserResponse;
-import com.soundbook.dto.response.PageResponse;
+import com.soundbook.dto.admin.request.AdminCreateUserRequest;
+import com.soundbook.dto.admin.request.AdminUpdateUserRequest;
+import com.soundbook.dto.admin.response.AdminUserDetailResponse;
+import com.soundbook.dto.admin.response.AdminUserResponse;
+import com.soundbook.dto.common.response.PageResponse;
 import com.soundbook.entity.User;
 import com.soundbook.entity.UserOnboarding;
 import com.soundbook.entity.UserProfile;
 import com.soundbook.entity.enums.UserStatus;
 import com.soundbook.exception.ResourceNotFoundException;
 import com.soundbook.repository.UserRepository;
-import com.soundbook.security.SecurityConfig;
 import com.soundbook.service.admin.AdminUserService;
 import com.soundbook.utils.PageMapper;
 import lombok.RequiredArgsConstructor;

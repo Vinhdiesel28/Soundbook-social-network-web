@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, Clock, MessageCircle, Search, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Check, Clock, MessageCircle, Search, UserPlus, X, Flag } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { friendsApi } from '../services/friends';
+import ReportModal from '../components/common/ReportModal';
 
 const AVATAR_CLASSES = ['bg-blue-500', 'bg-pink-500', 'bg-green-500', 'bg-purple-500', 'bg-yellow-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500', 'bg-orange-500'];
 const fallbackAvatar = (id) => AVATAR_CLASSES[Number(id || 0) % AVATAR_CLASSES.length];
@@ -24,6 +25,7 @@ const FriendsPage = () => {
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState('');
   const [error, setError] = useState('');
+  const [reportTarget, setReportTarget] = useState(null);
 
   const load = async () => {
     try {
@@ -143,10 +145,24 @@ const FriendsPage = () => {
             <div className="flex gap-2 shrink-0 items-center">
               {renderActions(friend)}
               <Link to={`/profile/${friend.userId}`} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-500 text-text-muted transition-colors">{t('profile.view', { defaultValue: 'View' })}</Link>
+              <button
+                onClick={() => setReportTarget(friend)}
+                className="p-2 rounded-lg text-text-muted hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                title="Báo cáo"
+              >
+                <Flag size={14} />
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      <ReportModal
+        isOpen={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        type="USER"
+        targetId={reportTarget?.userId || reportTarget?.id}
+      />
     </div>
   );
 };

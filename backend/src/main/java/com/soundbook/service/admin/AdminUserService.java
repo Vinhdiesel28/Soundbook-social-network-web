@@ -1,10 +1,10 @@
 package com.soundbook.service.admin;
 
-import com.soundbook.dto.request.AdminCreateUserRequest;
-import com.soundbook.dto.request.AdminUpdateUserRequest;
-import com.soundbook.dto.response.AdminUserDetailResponse;
-import com.soundbook.dto.response.AdminUserResponse;
-import com.soundbook.dto.response.PageResponse;
+import com.soundbook.dto.admin.request.AdminCreateUserRequest;
+import com.soundbook.dto.admin.request.AdminUpdateUserRequest;
+import com.soundbook.dto.admin.response.AdminUserDetailResponse;
+import com.soundbook.dto.admin.response.AdminUserResponse;
+import com.soundbook.dto.common.response.PageResponse;
 
 public interface AdminUserService
 {

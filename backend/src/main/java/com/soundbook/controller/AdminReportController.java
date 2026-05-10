@@ -2,10 +2,10 @@ package com.soundbook.controller;
 
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
-import com.soundbook.dto.response.AdminReportDetailResponse;
-import com.soundbook.dto.response.AdminReportResponse;
-import com.soundbook.dto.response.ApiResponse;
-import com.soundbook.dto.response.PageResponse;
+import com.soundbook.dto.admin.response.AdminReportDetailResponse;
+import com.soundbook.dto.admin.response.AdminReportResponse;
+import com.soundbook.dto.common.response.ApiResponse;
+import com.soundbook.dto.common.response.PageResponse;
 import com.soundbook.entity.User;
 import com.soundbook.entity.enums.ReportStatus;
 import com.soundbook.repository.UserRepository;

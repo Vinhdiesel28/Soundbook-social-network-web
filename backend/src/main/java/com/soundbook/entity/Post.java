@@ -38,6 +38,7 @@ public class Post {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private PostStatus status = PostStatus.ACTIVE;
 
     @Column(columnDefinition = "TEXT")

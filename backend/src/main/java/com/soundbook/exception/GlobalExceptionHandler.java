@@ -1,6 +1,6 @@
 package com.soundbook.exception;
 
-import com.soundbook.dto.response.ErrorResponse;
+import com.soundbook.dto.common.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

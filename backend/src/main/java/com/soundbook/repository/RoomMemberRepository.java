@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,11 +21,8 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, RoomMemb
 	List<RoomMember> findByRoom_IdAndLeftAtIsNull(Long roomId);
 
 	long countByRoom_IdAndLeftAtIsNull(Long roomId);
-import java.time.LocalDateTime;
+	long countByRoom_Id(Long roomId);
 
-@Repository
-public interface RoomMemberRepository extends JpaRepository<RoomMember, RoomMemberId>
-{
     Page<RoomMember> findByRoomId(Long roomId, Pageable pageable);
 
     @Modifying

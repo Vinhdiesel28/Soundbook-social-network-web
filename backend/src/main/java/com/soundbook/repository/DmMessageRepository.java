@@ -38,8 +38,7 @@ public interface DmMessageRepository extends JpaRepository<DmMessage, Long> {
 						@Param("cursorId") Long cursorId,
 						Pageable pageable
 		);
-public interface DmMessageRepository extends JpaRepository<DmMessage, Long>
-{
+
     @Query(value = "SELECT m FROM DmMessage m JOIN FETCH m.sender WHERE m.thread.id = :threadId",
             countQuery = "SELECT COUNT(m) FROM DmMessage m WHERE m.thread.id = :threadId")
     Page<DmMessage> findByThreadId(@Param("threadId") Long threadId, Pageable pageable);

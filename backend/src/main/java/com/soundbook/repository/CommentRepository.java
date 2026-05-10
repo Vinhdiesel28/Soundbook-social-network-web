@@ -15,9 +15,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByPostIdAndParentIsNullOrderByCreatedAtDesc(Long postId, Pageable pageable);
 
     void deleteByPostId(Long postId);
-public interface CommentRepository extends JpaRepository<Comment, Long>
-{
-    Page<Comment> findByPostId(Long postId, Pageable pageable);
 
-    long countByPostId(Long postId);
+    Page<Comment> findByPostId(Long postId, Pageable pageable);
 }

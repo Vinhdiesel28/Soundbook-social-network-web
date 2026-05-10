@@ -1,7 +1,7 @@
 package com.soundbook.service.admin.impl;
 
-import com.soundbook.dto.response.DashboardStatsResponse;
-import com.soundbook.dto.response.TrendingPostResponse;
+import com.soundbook.dto.admin.response.DashboardStatsResponse;
+import com.soundbook.dto.admin.response.TrendingPostResponse;
 import com.soundbook.entity.Post;
 import com.soundbook.entity.enums.ReportStatus;
 import com.soundbook.entity.enums.RoomStatus;

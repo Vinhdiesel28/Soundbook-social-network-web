@@ -2,9 +2,9 @@ package com.soundbook.service.admin.impl;
 
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
-import com.soundbook.dto.request.AdminUpdateProfileRequest;
-import com.soundbook.dto.request.ChangePasswordRequest;
-import com.soundbook.dto.response.AdminProfileResponse;
+import com.soundbook.dto.admin.request.AdminUpdateProfileRequest;
+import com.soundbook.dto.common.request.ChangePasswordRequest;
+import com.soundbook.dto.admin.response.AdminProfileResponse;
 import com.soundbook.entity.User;
 import com.soundbook.entity.UserProfile;
 import com.soundbook.exception.ResourceNotFoundException;

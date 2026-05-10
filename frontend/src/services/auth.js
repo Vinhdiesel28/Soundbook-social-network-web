@@ -42,6 +42,13 @@ export const getStoredAuth = () => safeParse(localStorage.getItem(STORAGE_KEY));
 export const getToken = () => getStoredAuth()?.token || localStorage.getItem('token');
 
 export const getCurrentUser = () => getStoredAuth()?.user || null;
+export const resolveUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    // Prefix relative paths with the server root
+    const base = API_BASE_URL.replace('/api/v1', '');
+    return `${base}/${url.replace(/^\/+/, '')}`;
+};
 
 export const isLoggedIn = () => Boolean(getToken());
 
@@ -56,15 +63,16 @@ export const saveAuth = (auth) => {
                 email: auth.user.email ?? '',
                 displayName: auth.user.displayName ?? '',
                 username: auth.user.username ?? '',
-                avatarUrl: auth.user.avatarUrl ?? '',
+                avatarUrl: auth.user.avatarUrl || auth.user.avatar || '',
+                avatar: auth.user.avatar || auth.user.avatarUrl || '',
                 role: normalizeRole(auth.user.role),
                 onboardingCompleted: Boolean(auth.user.onboardingCompleted),
+                updatedAt: auth.user.updatedAt || Date.now(),
             }
             : null,
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedAuth));
-    console.log(normalizedAuth.user.role);
 
     if (normalizedAuth.token) {
         localStorage.setItem('token', normalizedAuth.token);
@@ -78,11 +86,14 @@ export const clearAuth = () => {
     localStorage.removeItem('token');
 };
 
-const buildHeaders = (includeAuth = false) => {
+const buildHeaders = (includeAuth = false, isFormData = false) => {
     const headers = {
-        'Content-Type': 'application/json',
         Accept: 'application/json',
     };
+
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
 
     if (includeAuth) {
         const token = getToken();
@@ -95,10 +106,11 @@ const buildHeaders = (includeAuth = false) => {
 };
 
 export const request = async (path, options = {}) => {
+    const isFormData = options.body instanceof FormData;
     const response = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
         headers: {
-            ...buildHeaders(Boolean(options.auth)),
+            ...buildHeaders(Boolean(options.auth), isFormData),
             ...(options.headers || {}),
         },
     });
@@ -128,7 +140,8 @@ const persistAuthFromResponse = (payload) => {
             email: payload?.data?.email ?? '',
             displayName: payload?.data?.displayName ?? '',
             username: payload?.data?.username ?? '',
-            avatarUrl: payload?.data?.avatarUrl ?? '',
+            avatarUrl: payload?.data?.avatarUrl || payload?.data?.avatar || '',
+            avatar: payload?.data?.avatar || payload?.data?.avatarUrl || '',
             role: payload?.data?.role ?? '',
             onboardingCompleted: Boolean(payload?.data?.onboardingCompleted),
         },
@@ -209,6 +222,23 @@ export const logout = async () => {
     } finally {
         clearAuth();
     }
+};
+
+export const updateStoredUser = (partialUser) => {
+    const auth = getStoredAuth();
+    if (!auth || !auth.user) return;
+
+    const updatedAuth = {
+        ...auth,
+        user: {
+            ...auth.user,
+            ...partialUser,
+            updatedAt: Date.now(),
+        },
+    };
+
+    saveAuth(updatedAuth);
+    window.dispatchEvent(new CustomEvent('soundbook_user_updated', { detail: updatedAuth.user }));
 };
 
 export { API_BASE_URL, normalizeRole };

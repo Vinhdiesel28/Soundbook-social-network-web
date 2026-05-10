@@ -6,5 +6,6 @@ public enum ReportTargetType
     COMMENT,
     USER,
     DM_MESSAGE,
-    ROOM
+    ROOM,
+    OTHER
 }

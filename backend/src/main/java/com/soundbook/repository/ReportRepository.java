@@ -2,6 +2,7 @@ package com.soundbook.repository;
 
 import com.soundbook.entity.Report;
 import com.soundbook.entity.enums.ReportStatus;
+import com.soundbook.entity.enums.ReportTargetType;
 import com.soundbook.entity.enums.RoomStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,4 +35,6 @@ public interface ReportRepository extends JpaRepository<Report, Long>
     long countByStatus(ReportStatus status);
 
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    boolean existsByReporterIdAndTargetTypeAndTargetId(Long reporterId, ReportTargetType targetType, Long targetId);
 }

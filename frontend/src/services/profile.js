@@ -1,4 +1,4 @@
-import { request } from './auth';
+import { request, getToken, API_BASE_URL } from './auth';
 
 const unwrap = (payload) => payload?.data ?? payload;
 
@@ -57,4 +57,36 @@ export const profileApi = {
     method: 'DELETE',
     auth: true,
   })),
+
+  updateAvatar: async (formData) => {
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}/profiles/avatar`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.message || payload?.error || 'Không thể cập nhật ảnh đại diện');
+    }
+    return unwrap(payload);
+  },
+
+  updateCover: async (formData) => {
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}/profiles/cover`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.message || payload?.error || 'Không thể cập nhật ảnh bìa');
+    }
+    return unwrap(payload);
+  },
 };

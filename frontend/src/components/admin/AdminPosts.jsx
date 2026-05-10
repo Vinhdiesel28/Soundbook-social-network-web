@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Eye, EyeOff, X, MessageCircle, Heart, ChevronDown, ChevronUp } from 'lucide-react';
 import { getPosts, getPostById, deletePost, hidePost, unhidePost, getPostComments, getPostReactions, getCommentReactions } from '../../services/adminApi';
+import PostMediaCard from '../newsfeed/PostMediaCard';
+import { normalizePost } from '../../utils/feedNormalizers';
 
 const AdminPosts = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
@@ -84,7 +86,7 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
         getPostComments(id).catch(() => ({ data: { content: [] } })),
         getPostReactions(id).catch(() => ({ data: { content: [] } }))
       ]);
-      setDetailPost(postRes.data);
+      setDetailPost(normalizePost(postRes.data));
       setComments(commentsRes.data?.content || []);
       setReactions(reactionsRes.data?.content || []);
       setShowDetailModal(true);
@@ -202,28 +204,34 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                   </div>
                   
                   <div>
-                    <p className="text-sm font-semibold mb-2">Nội dung</p>
+                    <p className="text-sm font-semibold mb-2">Nội dung & Media</p>
                     <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-gray-900">
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{detailPost.caption || <span className="italic text-gray-500">Không có nội dung văn bản</span>}</p>
+                      {detailPost.content && (
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed mb-4">{detailPost.content}</p>
+                      )}
+                      <PostMediaCard post={detailPost} />
+                      {!detailPost.content && !detailPost.media?.id && !detailPost.media?.coverUrl && (
+                        <p className="italic text-gray-500 text-sm">Không có nội dung văn bản hoặc media</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
                       <p className="text-xs font-semibold text-text-muted mb-1">Loại bài viết</p>
-                      <p className="font-bold">{detailPost.type}</p>
+                      <p className="font-bold uppercase">{detailPost.type}</p>
                     </div>
                     <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
                       <p className="text-xs font-semibold text-text-muted mb-1">Quyền riêng tư</p>
-                      <p className="font-bold">{detailPost.visibility}</p>
+                      <p className="font-bold">{detailPost.visibility || 'PUBLIC'}</p>
                     </div>
                     <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
                       <p className="text-xs font-semibold text-text-muted mb-1">Trạng thái</p>
-                      <p className="font-bold">{detailPost.status}</p>
+                      <p className="font-bold">{detailPost.status || 'ACTIVE'}</p>
                     </div>
                     <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
                       <p className="text-xs font-semibold text-text-muted mb-1">Ngày tạo</p>
-                      <p className="font-bold">{new Date(detailPost.createdAt).toLocaleString()}</p>
+                      <p className="font-bold">{detailPost.createdAt ? new Date(detailPost.createdAt).toLocaleString('vi-VN') : 'N/A'}</p>
                     </div>
                   </div>
                 </div>

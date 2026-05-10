@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import { Info, MoreVertical, Disc3, Plus, Image, Smile, Send, MessageSquare } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Info, MoreVertical, Disc3, Plus, Image, Smile, Send, MessageSquare, Flag } from 'lucide-react';
 import ChatMessage from './ChatMessage';
+import ReportModal from '../common/ReportModal';
 
 const ChatWindow = ({
   t,
@@ -15,6 +16,8 @@ const ChatWindow = ({
   isLoadingMessages,
 }) => {
   const messagesContainerRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -54,9 +57,33 @@ const ChatWindow = ({
                 </button>
               )}
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"><Info size={18} /></button>
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"><MoreVertical size={18} /></button>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowMenu(m => !m)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                >
+                  <MoreVertical size={18} />
+                </button>
+                {showMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 p-1 z-50">
+                    <button 
+                      onClick={() => { setShowMenu(false); setIsReportModalOpen(true); }}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                    >
+                      <Flag size={16} /> Báo cáo tin nhắn
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          <ReportModal 
+            isOpen={isReportModalOpen}
+            onClose={() => setIsReportModalOpen(false)}
+            type="USER"
+            targetId={activeData.userId}
+          />
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-repeat bg-[length:100px] relative">

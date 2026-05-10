@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Eye, Trash2, X, MessageSquare, Undo2, Ban } from 'lucide-react';
 import { getDmThreads, getDmThreadMessages, deleteDmMessage, deleteDmMessageForEveryone } from '../../services/adminApi';
+import { useToast } from '../../context/ToastContext';
 
 const AdminMessages = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
@@ -11,6 +12,7 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const { showToast, confirm } = useToast();
 
   useEffect(() => {
     fetchThreads();
@@ -26,10 +28,13 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
     try {
       setLoading(true);
       const res = await getDmThreads();
-      if (res.data && res.data.content) {
-        setThreads(res.data.content);
-      } else if (res.data && Array.isArray(res.data)) {
-        setThreads(res.data);
+      const payloadData = res.data || res;
+      if (payloadData && payloadData.content) {
+        setThreads(payloadData.content);
+      } else if (Array.isArray(payloadData)) {
+        setThreads(payloadData);
+      } else if (payloadData && Array.isArray(payloadData.data)) {
+        setThreads(payloadData.data);
       }
     } catch (error) {
       console.error("Failed to fetch threads:", error);
@@ -45,40 +50,66 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
   };
 
   const fetchMessages = async (threadId) => {
+    if (!threadId) return;
     try {
       setLoadingMessages(true);
       const res = await getDmThreadMessages(threadId);
-      // Reverse array so oldest is top, newest is bottom if needed, or keep as is.
-      // Usually chat history is newest at bottom, so if backend returns newest first, we reverse.
-      // Assuming backend returns newest first.
-      const msgs = res.data?.content || [];
+      const payloadData = res.data || res;
+      
+      let msgs = [];
+      if (payloadData && payloadData.content) {
+        msgs = payloadData.content;
+      } else if (Array.isArray(payloadData)) {
+        msgs = payloadData;
+      } else if (payloadData && Array.isArray(payloadData.data)) {
+        msgs = payloadData.data;
+      }
+      
       setMessages([...msgs].reverse());
     } catch (error) {
-      console.error(error);
-      alert('Lỗi tải tin nhắn');
+      console.error("Failed to fetch messages:", error);
+      showToast('Lỗi tải tin nhắn', 'error');
     } finally {
       setLoadingMessages(false);
     }
   };
 
   const handleDeleteMessage = async (msgId) => {
-    if (window.confirm("Bạn có chắc chắn muốn XÓA VĨNH VIỄN tin nhắn này khỏi cơ sở dữ liệu?")) {
+    const ok = await confirm({
+      title: 'Xóa vĩnh viễn',
+      message: 'Bạn có chắc chắn muốn XÓA VĨNH VIỄN tin nhắn này khỏi cơ sở dữ liệu?',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy'
+    });
+
+    if (ok) {
       try {
         await deleteDmMessage(msgId);
+        showToast('Đã xóa tin nhắn vĩnh viễn', 'success');
         fetchMessages(selectedThread.id);
       } catch (error) {
         console.error(error);
+        showToast('Lỗi khi xóa tin nhắn', 'error');
       }
     }
   };
 
   const handleRecallMessage = async (msgId) => {
-    if (window.confirm("Bạn muốn THU HỒI tin nhắn này đối với tất cả người dùng trong hội thoại?")) {
+    const ok = await confirm({
+      title: 'Thu hồi tin nhắn',
+      message: 'Bạn muốn THU HỒI tin nhắn này đối với tất cả người dùng trong hội thoại?',
+      confirmText: 'Thu hồi',
+      cancelText: 'Hủy'
+    });
+
+    if (ok) {
       try {
         await deleteDmMessageForEveryone(msgId);
+        showToast('Đã thu hồi tin nhắn', 'success');
         fetchMessages(selectedThread.id);
       } catch (error) {
         console.error(error);
+        showToast('Lỗi khi thu hồi tin nhắn', 'error');
       }
     }
   };
@@ -110,23 +141,52 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-            {loading ? <tr><td colSpan="5" className="text-center py-4 text-gray-500">Loading...</td></tr> : threads.length === 0 ? <tr><td colSpan="5" className="text-center py-4 text-gray-500">Không tìm thấy hội thoại</td></tr> : threads.filter(thread => 
-              thread.id?.toString() === searchQuery ||
-              (thread.user1Name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
-              (thread.user2Name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-            ).map(thread => (
-              <tr key={thread.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                <td className="px-6 py-4 font-bold text-sm text-primary-500">{thread.user1Name || 'Unknown'}</td>
-                <td className="px-6 py-4 font-bold text-sm text-green-500">{thread.user2Name || 'Unknown'}</td>
-                <td className="px-6 py-4 text-sm text-text-muted flex items-center gap-2"><MessageSquare size={14} /> Hội thoại #{thread.id}</td>
-                <td className="px-6 py-4 text-sm text-text-muted">{new Date(thread.updatedAt || thread.createdAt).toLocaleString()}</td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2 text-text-muted">
-                    <button onClick={() => handleViewDetail(thread)} className="p-1.5 bg-gray-100 hover:bg-primary-50 dark:bg-gray-800 dark:hover:bg-primary-900/20 hover:text-primary-500 rounded-lg transition-colors" title="Xem tin nhắn"><Eye size={16} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {loading ? (
+              <tr><td colSpan="5" className="text-center py-10 text-gray-500">Đang tải dữ liệu...</td></tr>
+            ) : (() => {
+              const filtered = threads.filter(thread => 
+                String(thread.id) === searchQuery ||
+                (thread.user1Name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+                (thread.user2Name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+              );
+
+              if (filtered.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan="5" className="text-center py-10 text-gray-500">
+                      {threads.length === 0 ? 'Chưa có hội thoại nào' : 'Không tìm thấy hội thoại phù hợp'}
+                    </td>
+                  </tr>
+                );
+              }
+
+              return filtered.map(thread => (
+                <tr key={thread.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                  <td className="px-6 py-4 font-bold text-sm text-primary-500">{thread.user1Name || 'Unknown'}</td>
+                  <td className="px-6 py-4 font-bold text-sm text-green-500">{thread.user2Name || 'Unknown'}</td>
+                  <td className="px-6 py-4 text-sm text-text-muted">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare size={14} /> 
+                      Hội thoại #{thread.id}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-text-muted">
+                    {thread.updatedAt || thread.createdAt ? new Date(thread.updatedAt || thread.createdAt).toLocaleString() : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2 text-text-muted">
+                      <button 
+                        onClick={() => handleViewDetail(thread)} 
+                        className="p-1.5 bg-gray-100 hover:bg-primary-50 dark:bg-gray-800 dark:hover:bg-primary-900/20 hover:text-primary-500 rounded-lg transition-colors" 
+                        title="Xem tin nhắn"
+                      >
+                        <Eye size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ));
+            })()}
           </tbody>
         </table>
       </div>
@@ -152,18 +212,18 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
                 <p className="text-center text-text-muted py-10 font-medium">Chưa có tin nhắn nào</p>
               ) : (
                 messages.map(msg => {
-                  const isUser1 = msg.senderId === selectedThread.user1Id;
+
                   const isDeleted = msg.deletedForEveryone;
 
                   return (
-                    <div key={msg.id} className={`flex w-full ${isUser1 ? 'justify-start' : 'justify-end'}`}>
-                      <div className={`max-w-[70%] flex flex-col gap-1 ${isUser1 ? 'items-start' : 'items-end'}`}>
+                    <div key={msg.id} className={`flex w-full ${String(msg.senderId) === String(selectedThread.user1Id) ? 'justify-start' : 'justify-end'}`}>
+                      <div className={`max-w-[70%] flex flex-col gap-1 ${String(msg.senderId) === String(selectedThread.user1Id) ? 'items-start' : 'items-end'}`}>
                         {/* Sender Name */}
-                        <span className="text-[11px] font-bold text-gray-400 mx-1">{msg.senderName}</span>
+                        <span className="text-[11px] font-bold text-gray-400 mx-1">{msg.senderName || 'Người dùng'}</span>
                         
                         {/* Bubble */}
-                        <div className={`group relative flex items-center gap-2 ${isUser1 ? 'flex-row' : 'flex-row-reverse'}`}>
-                          <div className={`px-4 py-2.5 rounded-2xl relative ${isDeleted ? 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 italic' : (isUser1 ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-text-color' : 'bg-primary-500 text-white shadow-md shadow-primary-500/20')} ${isUser1 ? 'rounded-tl-sm' : 'rounded-tr-sm'}`}>
+                        <div className={`group relative flex items-center gap-2 ${String(msg.senderId) === String(selectedThread.user1Id) ? 'flex-row' : 'flex-row-reverse'}`}>
+                          <div className={`px-4 py-2.5 rounded-2xl relative ${isDeleted ? 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 italic' : (String(msg.senderId) === String(selectedThread.user1Id) ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-text-color' : 'bg-primary-500 text-white shadow-md shadow-primary-500/20')} ${String(msg.senderId) === String(selectedThread.user1Id) ? 'rounded-tl-sm' : 'rounded-tr-sm'}`}>
                             {isDeleted ? (
                               <span className="flex items-center gap-2 text-sm"><Ban size={14} /> Tin nhắn đã bị thu hồi</span>
                             ) : (
@@ -172,7 +232,7 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
                           </div>
                           
                           {/* Admin Actions (Visible on hover) */}
-                          <div className={`opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity ${isUser1 ? 'flex-row' : 'flex-row-reverse'}`}>
+                          <div className={`opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity ${String(msg.senderId) === String(selectedThread.user1Id) ? 'flex-row' : 'flex-row-reverse'}`}>
                             {!isDeleted && (
                               <button onClick={() => handleRecallMessage(msg.id)} className="p-1.5 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/20 transition-colors" title="Thu hồi tin nhắn">
                                 <Undo2 size={13} />

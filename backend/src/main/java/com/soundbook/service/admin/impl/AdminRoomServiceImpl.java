@@ -2,7 +2,8 @@ package com.soundbook.service.admin.impl;
 
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
-import com.soundbook.dto.response.*;
+import com.soundbook.dto.admin.response.*;
+import com.soundbook.dto.common.response.*;
 import com.soundbook.entity.Room;
 import com.soundbook.entity.RoomMember;
 import com.soundbook.entity.RoomMemberId;
@@ -62,14 +63,14 @@ public class AdminRoomServiceImpl implements AdminRoomService
     @Transactional
     public void endRoom(Long id)
     {
-//        Room room = roomRepository.findById(id)
-//                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
-//
-//        room.setStatus(RoomStatus.ENDED);
-//        room.setEndedAt(LocalDateTime.now());
-//        roomRepository.save(room);
-//
-//        roomMemberRepository.updateLeaveTimeForAllMembers(id, LocalDateTime.now());
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+
+        room.setStatus(RoomStatus.ENDED);
+        room.setEndedAt(LocalDateTime.now());
+        roomRepository.save(room);
+
+        roomMemberRepository.updateLeaveTimeForAllMembers(id, LocalDateTime.now());
     }
 
     @Override
@@ -92,11 +93,11 @@ public class AdminRoomServiceImpl implements AdminRoomService
     @Transactional
     public void kickAndBanMember(Long roomId, Long userId)
     {
-//        RoomMember member = roomMemberRepository.findById(new RoomMemberId(roomId, userId))
-//                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-//        member.setBanned(true);
-//        member.setLeftAt(LocalDateTime.now());
-//        roomMemberRepository.save(member);
+        RoomMember member = roomMemberRepository.findById(new RoomMemberId(roomId, userId))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        member.setBanned(true);
+        member.setLeftAt(LocalDateTime.now());
+        roomMemberRepository.save(member);
     }
 
     @Override
@@ -120,7 +121,7 @@ public class AdminRoomServiceImpl implements AdminRoomService
     @Transactional
     public void deleteRoomMessage(Long messageId)
     {
-//        roomMessageRepository.deleteById(messageId);
+        roomMessageRepository.deleteById(messageId);
     }
 
     @Override
@@ -144,18 +145,20 @@ public class AdminRoomServiceImpl implements AdminRoomService
     @Transactional
     public void removeFromQueue(Long queueId)
     {
-//        roomQueueRepository.deleteById(queueId);
+        roomQueueRepository.deleteById(queueId);
     }
 
     private AdminRoomResponse mapToAdminRoomResponse(Room room)
     {
+        long memberCount = roomMemberRepository.countByRoom_Id(room.getId());
         return AdminRoomResponse.builder()
                 .id(room.getId())
                 .name(room.getName())
-                .topic(room.getTopic())
+                .topic(room.getTopic() != null ? room.getTopic() : room.getName())
                 .hostName(room.getHost().getDisplayName())
                 .isPublic(room.getIsPublic())
                 .status(room.getStatus().toString())
+                .memberCount((int) memberCount)
                 .createdAt(room.getCreatedAt())
                 .endedAt(room.getEndedAt())
                 .build();

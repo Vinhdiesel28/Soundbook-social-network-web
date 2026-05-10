@@ -2,16 +2,14 @@ package com.soundbook.controller;
 
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
-import com.soundbook.dto.request.AdminUpdateProfileRequest;
-import com.soundbook.dto.request.ChangePasswordRequest;
-import com.soundbook.dto.response.AdminProfileResponse;
-import com.soundbook.dto.response.ApiResponse;
+import com.soundbook.dto.admin.request.AdminUpdateProfileRequest;
+import com.soundbook.dto.common.request.ChangePasswordRequest;
+import com.soundbook.dto.common.response.ApiResponse;
 import com.soundbook.security.JwtService;
 import com.soundbook.service.admin.AdminProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 

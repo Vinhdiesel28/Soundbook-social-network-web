@@ -1,9 +1,9 @@
 package com.soundbook.service.admin;
 
-import com.soundbook.dto.response.AdminCommentResponse;
-import com.soundbook.dto.response.AdminPostResponse;
-import com.soundbook.dto.response.PageResponse;
-import com.soundbook.dto.response.ReactionResponse;
+import com.soundbook.dto.admin.response.AdminCommentResponse;
+import com.soundbook.dto.admin.response.AdminPostResponse;
+import com.soundbook.dto.common.response.PageResponse;
+import com.soundbook.dto.admin.response.ReactionResponse;
 import com.soundbook.entity.enums.ReactionType;
 
 public interface AdminPostService

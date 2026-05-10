@@ -15,6 +15,7 @@ import {
   Bell,
   BellOff,
   Music2,
+  Flag,
 } from 'lucide-react';
 
 const ProfileHeader = ({
@@ -32,6 +33,7 @@ const ProfileHeader = ({
   onChangePinnedTrack,
   onFollow,
   onUnfollow,
+  onReport,
   socialBusy = false,
 }) => {
   const status = profileData.friendshipStatus || 'NONE';
@@ -63,9 +65,11 @@ const ProfileHeader = ({
   };
 
   return (
-    <div className={`w-full h-64 sm:h-80 relative overflow-hidden bg-gradient-to-b ${profileData.themeColor}`}>
-      {profileData.coverUrl ? <img src={profileData.coverUrl} alt="cover" className="absolute inset-0 h-full w-full object-cover" /> : null}
-      <div className="absolute inset-0 bg-black/20 dark:bg-black/40" />
+    <div className={`w-full h-64 sm:h-80 relative bg-gradient-to-b ${profileData.themeColor}`}>
+      <div className="absolute inset-0 overflow-hidden">
+        {profileData.coverUrl ? <img src={profileData.coverUrl} alt="cover" className="absolute inset-0 h-full w-full object-cover" /> : null}
+        <div className="absolute inset-0 bg-black/20 dark:bg-black/40" />
+      </div>
 
       {canPlayPinnedTrack ? (
         <div className="absolute opacity-0 pointer-events-none h-0 w-0 overflow-hidden">
@@ -162,6 +166,13 @@ const ProfileHeader = ({
                     <UserPlus size={16} /> Kết bạn
                   </button>
                 )}
+                <button
+                  onClick={onReport}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md hover:bg-white/30 transition-colors"
+                  title="Báo cáo người dùng"
+                >
+                  <Flag size={16} />
+                </button>
               </div>
             ) : null}
           </div>

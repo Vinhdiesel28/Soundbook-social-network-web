@@ -83,6 +83,7 @@ const Chat = () => {
         const items = response?.data?.items || [];
         const mapped = items.map((thread, index) => ({
           id: thread.threadId,
+          userId: thread.peerUserId,
           name: thread.peerDisplayName || `Người dùng ${thread.peerUserId}`,
           type: 'direct',
           avatar: getAvatarClass(thread.peerUserId ?? index),

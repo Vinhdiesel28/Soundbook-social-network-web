@@ -2,11 +2,13 @@ package com.soundbook.service.admin.impl;
 
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
-import com.soundbook.dto.response.AdminReportDetailResponse;
-import com.soundbook.dto.response.AdminReportResponse;
-import com.soundbook.dto.response.PageResponse;
+import com.soundbook.dto.admin.response.AdminReportDetailResponse;
+import com.soundbook.dto.admin.response.AdminReportResponse;
+import com.soundbook.dto.common.response.PageResponse;
 import com.soundbook.entity.Report;
 import com.soundbook.entity.enums.ReportStatus;
+import com.soundbook.repository.CommentRepository;
+import com.soundbook.repository.DmMessageRepository;
 import com.soundbook.repository.ReportRepository;
 import com.soundbook.repository.UserRepository;
 import com.soundbook.service.admin.AdminReportService;
@@ -17,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,8 @@ public class AdminReportServiceImpl implements AdminReportService
 {
     private final ReportRepository reportRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
+    private final DmMessageRepository dmMessageRepository;
 
     @Override
     public PageResponse<AdminReportResponse> getAllReports(String keyword, ReportStatus status, int page, int size)
@@ -91,15 +94,27 @@ public class AdminReportServiceImpl implements AdminReportService
 
     private AdminReportResponse mapToResponse(Report report)
     {
+        Long parentId = null;
         String summary = switch (report.getTargetType())
         {
             case POST -> "Bài viết #" + report.getTargetId();
-            case COMMENT -> "Bình luận #" + report.getTargetId();
+            case COMMENT -> {
+                parentId = commentRepository.findById(report.getTargetId())
+                        .map(c -> c.getPost().getId())
+                        .orElse(null);
+                yield "Bình luận #" + report.getTargetId();
+            }
             case USER -> userRepository.findById(report.getTargetId())
                     .map(u -> "@" + u.getDisplayName())
                     .orElse("Tài khoản đã xóa");
             case ROOM -> "Phòng #" + report.getTargetId();
-            case DM_MESSAGE -> "Tin nhắn DM #" + report.getTargetId();
+            case DM_MESSAGE -> {
+                parentId = dmMessageRepository.findById(report.getTargetId())
+                        .map(m -> m.getThread().getId())
+                        .orElse(null);
+                yield "Tin nhắn DM #" + report.getTargetId();
+            }
+            case OTHER -> "Khác";
         };
 
         return AdminReportResponse.builder()
@@ -108,6 +123,7 @@ public class AdminReportServiceImpl implements AdminReportService
                 .reporterName(report.getReporter().getDisplayName())
                 .targetType(report.getTargetType())
                 .targetId(report.getTargetId())
+                .targetParentId(parentId)
                 .targetSummary(summary)
                 .reason(report.getReason())
                 .status(report.getStatus())

@@ -35,8 +35,7 @@ public interface DmThreadRepository extends JpaRepository<DmThread, Long> {
 						@Param("cursorId") Long cursorId,
 						Pageable pageable
 		);
-public interface DmThreadRepository extends JpaRepository<DmThread, Long>
-{
+
     @Query(value = "SELECT t FROM DmThread t JOIN FETCH t.user1 u1 JOIN FETCH t.user2 u2 " +
             "WHERE :keyword IS NULL OR :keyword = '' " +
             "OR LOWER(u1.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

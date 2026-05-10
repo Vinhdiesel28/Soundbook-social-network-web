@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Ban, Eye, X, Users, MessageSquare, ListMusic, Trash2 } from 'lucide-react';
 import { getRooms, endRoom, getRoomById, getRoomMembers, removeRoomMember, getRoomMessages, deleteRoomMessage, getRoomQueue, removeRoomQueueItem } from '../../services/adminApi';
+import { useToast } from '../../context/ToastContext';
 
 const AdminRooms = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
@@ -9,6 +10,7 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailRoom, setDetailRoom] = useState(null);
+  const { showToast, confirm } = useToast();
   const [selectedRoomId, setSelectedRoomId] = useState(null);
   const [members, setMembers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -42,13 +44,22 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
   };
 
   const handleEndRoom = async (id) => {
-    if (window.confirm("Are you sure you want to END this room?")) {
+    const ok = await confirm({
+      title: 'Kết thúc phòng',
+      message: 'Bạn có chắc chắn muốn KẾT THÚC phòng này? Hành động này không thể hoàn tác.',
+      confirmText: 'Kết thúc',
+      cancelText: 'Hủy'
+    });
+
+    if (ok) {
       try {
         await endRoom(id);
+        showToast('Đã kết thúc phòng', 'success');
         fetchRooms();
         if (selectedRoomId === id) setShowDetailModal(false);
       } catch (error) {
         console.error("Failed to end room:", error);
+        showToast('Lỗi khi kết thúc phòng', 'error');
       }
     }
   };
@@ -70,31 +81,48 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
       setShowDetailModal(true);
     } catch (error) {
       console.error(error);
-      alert('Lỗi lấy chi tiết phòng');
+      showToast('Lỗi lấy chi tiết phòng', 'error');
     }
   };
 
   const handleKickMember = async (userId) => {
-    if (window.confirm("Bạn có chắc muốn KICK và BAN người dùng này khỏi phòng?")) {
+    const ok = await confirm({
+      title: 'Kick & Ban',
+      message: 'Bạn có chắc muốn KICK và BAN người dùng này khỏi phòng?',
+      confirmText: 'Xác nhận',
+      cancelText: 'Hủy'
+    });
+
+    if (ok) {
       try {
         await removeRoomMember(selectedRoomId, userId);
+        showToast('Đã kick người dùng', 'success');
         const res = await getRoomMembers(selectedRoomId);
         setMembers(res.data?.content || []);
       } catch (e) {
         console.error(e);
-        alert('Lỗi kick người dùng');
+        showToast('Lỗi kick người dùng', 'error');
       }
     }
   };
 
   const handleDeleteMessage = async (msgId) => {
-    if (window.confirm("Bạn có chắc muốn XÓA tin nhắn này?")) {
+    const ok = await confirm({
+      title: 'Xóa tin nhắn',
+      message: 'Bạn có chắc chắn muốn XÓA tin nhắn này?',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy'
+    });
+
+    if (ok) {
       try {
         await deleteRoomMessage(msgId);
+        showToast('Đã xóa tin nhắn', 'success');
         const res = await getRoomMessages(selectedRoomId);
         setMessages(res.data?.content || []);
       } catch (e) {
         console.error(e);
+        showToast('Lỗi khi xóa tin nhắn', 'error');
       }
     }
   };
@@ -250,9 +278,7 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
                         <p className="font-bold text-sm">{m.displayName}</p>
                         <p className="text-xs text-text-muted">Vai trò: <span className={m.role === 'HOST' ? 'text-primary-500 font-bold' : ''}>{m.role}</span> {m.isBanned && <span className="text-red-500 font-bold">(BANNED)</span>}</p>
                       </div>
-                      {m.role !== 'HOST' && !m.isBanned && (
-                        <button onClick={() => handleKickMember(m.userId)} className="p-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors" title="Kick & Ban"><Ban size={16} /></button>
-                      )}
+                      {/* Kick/Ban button removed */}
                     </div>
                   ))}
                 </div>
@@ -268,7 +294,7 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
                       </div>
                       <div className="flex items-end justify-between">
                         <p className="text-sm">{m.contentText}</p>
-                        <button onClick={() => handleDeleteMessage(m.id)} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                        {/* Delete message button removed */}
                       </div>
                     </div>
                   ))}
@@ -279,10 +305,12 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
                 <div className="space-y-2">
                   {queue.length === 0 ? <p className="text-center text-gray-500 py-4">Hàng đợi trống</p> : queue.map((q, idx) => {
                     let trackName = q.trackId;
+                    let artistName = '';
                     try {
                       if (q.trackPayloadJson) {
                         const payload = JSON.parse(q.trackPayloadJson);
-                        trackName = payload.name || q.trackId;
+                        trackName = payload.title || payload.name || payload.trackTitle || q.trackId;
+                        artistName = payload.artist || payload.singer || payload.channelTitle || '';
                       }
                     } catch(e) {}
                     return (
@@ -291,10 +319,13 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
                           <span className="font-black text-gray-400 w-4 text-center">{idx + 1}</span>
                           <div>
                             <p className="font-bold text-sm">{trackName}</p>
-                            <p className="text-xs text-text-muted">Thêm bởi: {q.addedByName}</p>
+                            <div className="flex items-center gap-2 text-xs text-text-muted">
+                              {artistName && <span>{artistName} • </span>}
+                              <span>Thêm bởi: {q.addedByName}</span>
+                            </div>
                           </div>
                         </div>
-                        <button onClick={() => handleRemoveQueueItem(q.id)} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                        {/* Remove from queue button removed */}
                       </div>
                     );
                   })}

@@ -29,21 +29,21 @@ public class Report
     private User reporter;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "target_type", nullable = false)
+    @Column(name = "target_type", nullable = false, columnDefinition = "VARCHAR(50)")
     private ReportTargetType targetType;
 
     @Column(name = "target_id", nullable = false)
     private Long targetId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "reason", nullable = false)
+    @Column(name = "reason", nullable = false, columnDefinition = "VARCHAR(50)")
     private ReportReason reason;
 
     @Column(name = "description", length = 500)
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, columnDefinition = "VARCHAR(50)")
     @Builder.Default
     private ReportStatus status = ReportStatus.PENDING;
 

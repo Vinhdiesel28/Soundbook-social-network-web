@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShieldCheck, ExternalLink, XCircle, Eye, X, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { getReports, getReportById, reviewReport, resolveReport, rejectReport } from '../../services/adminApi';
+import { useToast } from '../../context/ToastContext';
 
 const AdminReports = ({ t, onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -10,6 +11,7 @@ const AdminReports = ({ t, onNavigate }) => {
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailReport, setDetailReport] = useState(null);
+  const { showToast, confirm } = useToast();
 
   useEffect(() => {
     fetchReports();
@@ -31,14 +33,18 @@ const AdminReports = ({ t, onNavigate }) => {
     }
   };
 
-  const handleTargetClick = (targetType, targetId) => {
+  const handleTargetClick = (report) => {
     if (!onNavigate) return;
+    const { targetType, targetId, targetParentId } = report;
+    const searchId = targetParentId || targetId;
+
     switch (targetType) {
-      case 'USER': onNavigate('users', { searchQuery: targetId.toString() }); break;
+      case 'USER': onNavigate('users', { searchQuery: searchId.toString() }); break;
       case 'POST': 
-      case 'COMMENT': onNavigate('posts', { searchQuery: targetId.toString() }); break;
-      case 'ROOM': onNavigate('rooms', { searchQuery: targetId.toString() }); break;
-      case 'MESSAGE': onNavigate('messages', { searchQuery: targetId.toString() }); break;
+      case 'COMMENT': onNavigate('posts', { searchQuery: searchId.toString() }); break;
+      case 'ROOM': onNavigate('rooms', { searchQuery: searchId.toString() }); break;
+      case 'MESSAGE': 
+      case 'DM_MESSAGE': onNavigate('messages', { searchQuery: searchId.toString() }); break;
       default: break;
     }
   };
@@ -60,7 +66,7 @@ const AdminReports = ({ t, onNavigate }) => {
       setShowDetailModal(true);
     } catch (error) {
       console.error(error);
-      alert('Lỗi lấy chi tiết báo cáo');
+      showToast('Lỗi lấy chi tiết báo cáo', 'error');
     }
   };
 
@@ -74,25 +80,43 @@ const AdminReports = ({ t, onNavigate }) => {
   };
 
   const handleResolve = async (id) => {
-    if (window.confirm("Xác nhận ĐÃ GIẢI QUYẾT báo cáo này? (Đã xử lý đối tượng vi phạm)")) {
+    const ok = await confirm({
+      title: 'Xác nhận giải quyết',
+      message: 'Xác nhận ĐÃ GIẢI QUYẾT báo cáo này? (Đã xử lý đối tượng vi phạm)',
+      confirmText: 'Xác nhận',
+      cancelText: 'Hủy'
+    });
+    
+    if (ok) {
       try {
         await resolveReport(id, { action: 'RESOLVED', notes: 'Admin action' });
+        showToast('Đã giải quyết báo cáo', 'success');
         fetchReports();
         if (detailReport && detailReport.info.id === id) setShowDetailModal(false);
       } catch (error) {
         console.error("Failed to resolve report:", error);
+        showToast('Lỗi khi giải quyết báo cáo', 'error');
       }
     }
   };
 
   const handleReject = async (id) => {
-    if (window.confirm("Xác nhận BÁC BỎ báo cáo này? (Báo cáo không hợp lệ)")) {
+    const ok = await confirm({
+      title: 'Xác nhận bác bỏ',
+      message: 'Xác nhận BÁC BỎ báo cáo này? (Báo cáo không hợp lệ)',
+      confirmText: 'Bác bỏ',
+      cancelText: 'Hủy'
+    });
+
+    if (ok) {
       try {
         await rejectReport(id);
+        showToast('Đã bác bỏ báo cáo', 'info');
         fetchReports();
         if (detailReport && detailReport.info.id === id) setShowDetailModal(false);
       } catch (error) {
         console.error("Failed to reject report:", error);
+        showToast('Lỗi khi bác bỏ báo cáo', 'error');
       }
     }
   };
@@ -101,7 +125,7 @@ const AdminReports = ({ t, onNavigate }) => {
     switch (status) {
       case 'RESOLVED': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700"><CheckCircle size={12}/> Đã xử lý</span>;
       case 'REJECTED': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700"><XCircle size={12}/> Bác bỏ</span>;
-      case 'UNDER_REVIEW': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700"><Search size={12}/> Đang xem xét</span>;
+      case 'REVIEWED': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700"><Search size={12}/> Đang xem xét</span>;
       default: return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700"><Clock size={12}/> Chờ xử lý</span>;
     }
   };
@@ -118,7 +142,7 @@ const AdminReports = ({ t, onNavigate }) => {
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="PENDING">Chờ xử lý</option>
-            <option value="UNDER_REVIEW">Đang xem xét</option>
+            <option value="REVIEWED">Đang xem xét</option>
             <option value="RESOLVED">Đã xử lý</option>
             <option value="REJECTED">Bác bỏ</option>
           </select>
@@ -157,7 +181,7 @@ const AdminReports = ({ t, onNavigate }) => {
                 <td className="px-6 py-4 font-medium text-sm text-primary-500">{report.reporterName || 'Unknown'}</td>
                 <td className="px-6 py-4 text-sm">
                   <div className="flex flex-col items-start">
-                    <button onClick={() => handleTargetClick(report.targetType, report.targetId)} className="font-bold flex items-center gap-1 hover:text-primary-500 hover:underline transition-all text-left">
+                    <button onClick={() => handleTargetClick(report)} className="font-bold flex items-center gap-1 hover:text-primary-500 hover:underline transition-all text-left">
                       {report.targetType} #{report.targetId} <ExternalLink size={12} className="text-text-muted" />
                     </button>
                     <span className="text-xs text-text-muted truncate max-w-[150px]">{report.targetSummary || 'Không có mô tả'}</span>
@@ -174,7 +198,7 @@ const AdminReports = ({ t, onNavigate }) => {
                     {report.status === 'PENDING' && (
                       <button onClick={() => handleReview(report.id)} className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors" title="Đang xem xét (Review)"><Search size={16} /></button>
                     )}
-                    {(report.status === 'PENDING' || report.status === 'UNDER_REVIEW') && (
+                    {(report.status === 'PENDING' || report.status === 'REVIEWED') && (
                       <>
                         <button onClick={() => handleResolve(report.id)} className="p-1.5 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg transition-colors" title="Đã xử lý (Resolve)"><ShieldCheck size={16} /></button>
                         <button onClick={() => handleReject(report.id)} className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors" title="Bác bỏ (Reject)"><XCircle size={16} /></button>
@@ -243,7 +267,7 @@ const AdminReports = ({ t, onNavigate }) => {
                 <h4 className="font-bold text-sm uppercase text-text-muted mb-3 flex items-center gap-2"><ExternalLink size={16}/> Đối tượng bị tố cáo</h4>
                 <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
                   <div className="flex items-center gap-2 mb-2">
-                    <button onClick={() => { setShowDetailModal(false); handleTargetClick(detailReport.info.targetType, detailReport.info.targetId); }} className="px-2 py-1 bg-gray-200 hover:bg-primary-100 hover:text-primary-600 dark:bg-gray-700 dark:hover:bg-primary-900/50 rounded text-xs font-bold transition-colors flex items-center gap-1">
+                    <button onClick={() => { setShowDetailModal(false); handleTargetClick(detailReport.info); }} className="px-2 py-1 bg-gray-200 hover:bg-primary-100 hover:text-primary-600 dark:bg-gray-700 dark:hover:bg-primary-900/50 rounded text-xs font-bold transition-colors flex items-center gap-1">
                       {detailReport.info.targetType} <ExternalLink size={10} />
                     </button>
                     <span className="font-bold text-sm">ID: {detailReport.info.targetId}</span>
@@ -257,7 +281,7 @@ const AdminReports = ({ t, onNavigate }) => {
             </div>
             
             <div className="p-6 border-t border-gray-200 dark:border-gray-800 shrink-0 flex flex-col gap-3 bg-gray-50 dark:bg-gray-900 rounded-b-2xl">
-              {(detailReport.info.status === 'PENDING' || detailReport.info.status === 'UNDER_REVIEW') ? (
+              {(detailReport.info.status === 'PENDING' || detailReport.info.status === 'REVIEWED') ? (
                 <>
                   <p className="text-xs text-center text-text-muted mb-1">Hãy xem xét đối tượng vi phạm trên hệ thống trước khi đưa ra quyết định.</p>
                   <div className="flex gap-3">

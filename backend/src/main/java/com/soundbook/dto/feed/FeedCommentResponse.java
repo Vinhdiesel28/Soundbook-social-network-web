@@ -16,4 +16,6 @@ public class FeedCommentResponse {
     private FeedUserResponse user;
     private String text;
     private LocalDateTime createdAt;
+    private long reactsCount;
+    private String currentUserReaction;
 }

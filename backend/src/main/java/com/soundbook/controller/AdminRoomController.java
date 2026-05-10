@@ -1,6 +1,7 @@
 package com.soundbook.controller;
 
-import com.soundbook.dto.response.*;
+import com.soundbook.dto.admin.response.*;
+import com.soundbook.dto.common.response.*;
 import com.soundbook.service.admin.AdminRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

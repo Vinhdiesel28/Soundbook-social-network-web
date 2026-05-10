@@ -21,18 +21,12 @@ public interface ReactionRepository extends JpaRepository<Reaction, Long> {
     Optional<Reaction> findByUser_IdAndTargetTypeAndTargetId(Long userId, TargetType targetType, Long targetId);
 
     void deleteByTargetTypeAndTargetId(TargetType targetType, Long targetId);
-public interface ReactionRepository extends JpaRepository<Reaction, Long>
-{
-    @Query(value = "SELECT r FROM Reaction r JOIN FETCH r.user u LEFT JOIN FETCH u.profile " +
-            "WHERE r.targetId = :targetId AND r.targetType = :targetType " +
-            "AND (:type IS NULL OR r.reactionType = :type)",
-            countQuery = "SELECT COUNT(r) FROM Reaction r " +
-                    "WHERE r.targetId = :targetId AND r.targetType = :targetType " +
-                    "AND (:type IS NULL OR r.reactionType = :type)")
-    Page<Reaction> findByTarget(@Param("targetId") Long targetId,
-                                @Param("targetType") TargetType targetType,
-                                @Param("type") ReactionType type,
-                                Pageable pageable);
+
+    @Query("SELECT r FROM Reaction r JOIN FETCH r.user u LEFT JOIN FETCH u.profile " +
+           "WHERE r.targetId = :targetId AND r.targetType = :targetType")
+    Page<Reaction> findByTargetIdAndTargetType(@Param("targetId") Long targetId,
+                                               @Param("targetType") com.soundbook.entity.enums.TargetType targetType,
+                                               Pageable pageable);
 
     long countByTargetIdAndTargetType(Long targetId, TargetType targetType);
 }

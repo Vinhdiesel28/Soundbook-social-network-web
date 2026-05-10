@@ -193,7 +193,7 @@ public class FeedService {
                 .user(buildUserResponse(post.getUser()))
                 .media(buildMediaResponse(post))
                 .reactions(reactions)
-                .comments(buildComments(post.getId()))
+                .comments(buildComments(post.getId(), currentUser))
                 .commentsEnabled(Boolean.TRUE.equals(post.getCommentsEnabled()))
                 .currentUserReaction(currentUserReaction(currentUser.getId(), post.getId()))
                 .canEdit(post.getUser().getId().equals(currentUser.getId()))
@@ -219,6 +219,7 @@ public class FeedService {
         Optional<PostMedia> media = postMediaRepository.findFirstByPost_IdOrderByIdAsc(post.getId());
         RefPayload refPayload = parseRefPayload(post.getRefJson());
         return FeedMediaResponse.builder()
+                .id(refPayload.id())
                 .mediaType(media.map(item -> item.getMediaType().name()).orElse(null))
                 .url(media.map(PostMedia::getUrl).orElse(null))
                 .title(firstNonBlank(refPayload.title(), defaultMediaTitle(post)))
@@ -233,7 +234,7 @@ public class FeedService {
                 .like(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.LIKE))
                 .heart(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.HEART))
                 .fire(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.FIRE))
-                .laugh(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.LAUGH))
+                .laugh(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.HAHA))
                 .wow(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.WOW))
                 .sad(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.SAD))
                 .comments(commentRepository.countByPostId(postId))
@@ -248,15 +249,18 @@ public class FeedService {
                 .orElse(null);
     }
 
-    private List<FeedCommentResponse> buildComments(Long postId) {
+    private List<FeedCommentResponse> buildComments(Long postId, User currentUser) {
         List<Comment> comments = commentRepository.findByPostIdAndParentIsNullOrderByCreatedAtDesc(postId, PageRequest.of(0, 3));
         Collections.reverse(comments);
         return comments.stream()
-                .map(comment -> FeedCommentResponse.builder()
+                    .map(comment -> FeedCommentResponse.builder()
                         .id(comment.getId())
                         .user(buildUserResponse(comment.getUser()))
                         .text(comment.getContent())
                         .createdAt(comment.getCreatedAt())
+                        .reactsCount(reactionRepository.countByTargetIdAndTargetType(comment.getId(), TargetType.COMMENT))
+                        .currentUserReaction(reactionRepository.findByUser_IdAndTargetTypeAndTargetId(currentUser.getId(), TargetType.COMMENT, comment.getId())
+                                .map(r -> r.getReactionType().name()).orElse(null))
                         .build())
                 .collect(Collectors.toList());
     }
@@ -374,18 +378,27 @@ public class FeedService {
         return "Bài viết Soundbook";
     }
 
-    private RefPayload parseRefPayload(String refJson) {
-        if (refJson == null || refJson.isBlank()) {
+    private RefPayload parseRefPayload(Object refJsonObj) {
+        if (refJsonObj == null) {
             return RefPayload.empty();
         }
         try {
-            Map<String, Object> payload = objectMapper.readValue(refJson, new TypeReference<LinkedHashMap<String, Object>>() {});
+            Map<String, Object> payload;
+            if (refJsonObj instanceof Map) {
+                payload = (Map<String, Object>) refJsonObj;
+            } else {
+                String refJson = String.valueOf(refJsonObj);
+                if (refJson.isBlank()) return RefPayload.empty();
+                payload = objectMapper.readValue(refJson, new TypeReference<LinkedHashMap<String, Object>>() {});
+            }
+            
             return new RefPayload(
+                    textValue(payload, "id", "videoId", "itemId"),
                     textValue(payload, "title", "name", "bookTitle", "trackTitle"),
                     textValue(payload, "subtitle", "description"),
                     textValue(payload, "artist", "singer"),
                     textValue(payload, "author", "writer"),
-                    textValue(payload, "coverUrl", "cover", "image", "imageUrl"),
+                    textValue(payload, "coverUrl", "cover", "image", "imageUrl", "thumbnail"),
                     intValue(payload, "rating")
             );
         } catch (Exception exception) {
@@ -490,9 +503,9 @@ public class FeedService {
         return value.substring(0, maxLength - 1) + "…";
     }
 
-    private record RefPayload(String title, String subtitle, String artist, String author, String coverUrl, Integer rating) {
+    private record RefPayload(String id, String title, String subtitle, String artist, String author, String coverUrl, Integer rating) {
         static RefPayload empty() {
-            return new RefPayload(null, null, null, null, null, null);
+            return new RefPayload(null, null, null, null, null, null, null);
         }
     }
 }
