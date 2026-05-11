@@ -23,4 +23,6 @@ public interface AdminPostService
     void unhidePost(Long id);
 
     PageResponse<AdminCommentResponse> getPostComments(Long postId, int page, int size);
+
+    void deleteComment(Long id);
 }

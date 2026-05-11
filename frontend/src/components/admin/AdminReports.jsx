@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, ShieldCheck, ExternalLink, XCircle, Eye, X, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { getReports, getReportById, reviewReport, resolveReport, rejectReport } from '../../services/adminApi';
 import { useToast } from '../../context/ToastContext';
@@ -8,23 +8,32 @@ const AdminReports = ({ t, onNavigate }) => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailReport, setDetailReport] = useState(null);
   const { showToast, confirm } = useToast();
+  const isFirstMount = useRef(true);
 
   useEffect(() => {
-    fetchReports();
+    fetchReports(1);
   }, []);
 
-  const fetchReports = async () => {
+  const fetchReports = async (page = currentPage) => {
     try {
       setLoading(true);
-      const res = await getReports();
+      const res = await getReports({ page, size: 10, keyword: searchQuery });
       if (res.data && res.data.content) {
         setReports(res.data.content);
+        setTotalPages(res.data.totalPages || 1);
+        setTotalElements(res.data.totalElements || 0);
+        setCurrentPage(page);
       } else if (res.data && Array.isArray(res.data)) {
         setReports(res.data);
+        setTotalPages(1);
+        setTotalElements(res.data.length);
       }
     } catch (error) {
       console.error("Failed to fetch reports:", error);
@@ -32,6 +41,17 @@ const AdminReports = ({ t, onNavigate }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetchReports(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, statusFilter]);
 
   const handleTargetClick = (report) => {
     if (!onNavigate) return;
@@ -131,7 +151,7 @@ const AdminReports = ({ t, onNavigate }) => {
   };
 
   return (
-    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden animate-in fade-in duration-300 relative">
+    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden relative">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="font-bold text-lg">{t('admin.title.reports') || 'Quản lý Báo cáo'}</h3>
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -158,7 +178,7 @@ const AdminReports = ({ t, onNavigate }) => {
           </div>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[500px]">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase tracking-wider text-text-muted border-b border-gray-200 dark:border-gray-800">
@@ -172,10 +192,7 @@ const AdminReports = ({ t, onNavigate }) => {
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
             {loading ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">Loading...</td></tr> : reports.length === 0 ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">Không có báo cáo nào</td></tr> : reports.filter(report =>
-              (statusFilter === 'ALL' || report.status === statusFilter) &&
-              ((report.reporterName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-              (report.reason?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-              (report.targetSummary?.toLowerCase() || '').includes(searchQuery.toLowerCase()))
+              (statusFilter === 'ALL' || report.status === statusFilter)
             ).map(report => (
               <tr key={report.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                 <td className="px-6 py-4 font-medium text-sm text-primary-500">{report.reporterName || 'Unknown'}</td>
@@ -211,6 +228,51 @@ const AdminReports = ({ t, onNavigate }) => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <p className="text-sm text-text-muted">Tổng cộng {totalElements} báo cáo</p>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => fetchReports(currentPage - 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang trước
+            </button>
+            <div className="flex items-center gap-1.5 text-sm font-semibold">
+              <span>Trang</span>
+              <input 
+                type="number"
+                min={1}
+                max={totalPages}
+                defaultValue={currentPage}
+                key={currentPage}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt(e.currentTarget.value);
+                    if (val >= 1 && val <= totalPages) fetchReports(val);
+                  }
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.currentTarget.value);
+                  if (val >= 1 && val <= totalPages && val !== currentPage) fetchReports(val);
+                  else e.currentTarget.value = currentPage;
+                }}
+                className="w-12 py-0.5 text-center border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span>/ {totalPages}</span>
+            </div>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => fetchReports(currentPage + 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang sau
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DETAIL MODAL */}
       {showDetailModal && detailReport && detailReport.info && (

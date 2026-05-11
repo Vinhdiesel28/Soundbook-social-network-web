@@ -87,6 +87,17 @@ public class AdminPostController
                 .build());
     }
 
+    @DeleteMapping("{postId}/comments/{commentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteComment(
+            @PathVariable Long postId,
+            @PathVariable Long commentId)
+    {
+        adminPostService.deleteComment(commentId);
+
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .message("Đã hiển thị lại bài viết thành công")
+                .build());
+    }
 
     @GetMapping("/{id}/reactions")
     public ResponseEntity<ApiResponse<PageResponse<ReactionResponse>>> getPostReactions(

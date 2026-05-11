@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Trash2, Eye, EyeOff, X, MessageCircle, Heart, ChevronDown, ChevronUp } from 'lucide-react';
-import { getPosts, getPostById, deletePost, hidePost, unhidePost, getPostComments, getPostReactions, getCommentReactions } from '../../services/adminApi';
+import { getPosts, getPostById, deletePost, hidePost, unhidePost, getPostComments, getPostReactions, getCommentReactions, deleteComment } from '../../services/adminApi';
 import PostMediaCard from '../newsfeed/PostMediaCard';
 import { normalizePost } from '../../utils/feedNormalizers';
 
@@ -8,10 +8,16 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailPost, setDetailPost] = useState(null);
   const [comments, setComments] = useState([]);
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [commentsTotalPages, setCommentsTotalPages] = useState(1);
+  const [commentsTotalElements, setCommentsTotalElements] = useState(0);
   const [reactions, setReactions] = useState([]);
   const [activeTab, setActiveTab] = useState('info'); // 'info', 'comments', 'reactions'
 
@@ -19,9 +25,10 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
   const [expandedCommentId, setExpandedCommentId] = useState(null);
   const [currentCommentReactions, setCurrentCommentReactions] = useState([]);
   const [loadingCommentReactions, setLoadingCommentReactions] = useState(false);
+  const isFirstMount = useRef(true);
 
   useEffect(() => {
-    fetchPosts();
+    fetchPosts(1);
   }, []);
 
   useEffect(() => {
@@ -30,14 +37,20 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
     }
   }, [initialSearchQuery]);
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (page = currentPage) => {
     try {
       setLoading(true);
-      const res = await getPosts();
-      if (res.data && res.data.content) {
-        setPosts(res.data.content);
-      } else if (res.data && Array.isArray(res.data)) {
-        setPosts(res.data);
+      const res = await getPosts({ page, size: 10, keyword: searchQuery });
+      const payloadData = res.data || res;
+      if (payloadData && payloadData.content) {
+        setPosts(payloadData.content);
+        setTotalPages(payloadData.totalPages || 1);
+        setTotalElements(payloadData.totalElements || 0);
+        setCurrentPage(page);
+      } else if (Array.isArray(payloadData)) {
+        setPosts(payloadData);
+        setTotalPages(1);
+        setTotalElements(payloadData.length);
       }
     } catch (error) {
       console.error("Failed to fetch posts:", error);
@@ -45,6 +58,17 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetchPosts(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this post?")) {
@@ -81,13 +105,16 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
     try {
       setActiveTab('info');
       setExpandedCommentId(null);
+      setCommentsPage(1);
       const [postRes, commentsRes, reactionsRes] = await Promise.all([
         getPostById(id),
-        getPostComments(id).catch(() => ({ data: { content: [] } })),
+        getPostComments(id, 1, 10).catch(() => ({ data: { content: [], totalElements: 0, totalPages: 1 } })),
         getPostReactions(id).catch(() => ({ data: { content: [] } }))
       ]);
       setDetailPost(normalizePost(postRes.data));
       setComments(commentsRes.data?.content || []);
+      setCommentsTotalPages(commentsRes.data?.totalPages || 1);
+      setCommentsTotalElements(commentsRes.data?.totalElements || 0);
       setReactions(reactionsRes.data?.content || []);
       setShowDetailModal(true);
     } catch (error) {
@@ -113,8 +140,33 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
     }
   };
 
+  const handleDeleteComment = async (commentId) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa bình luận này?")) {
+      try {
+        await deleteComment(detailPost.id, commentId);
+        setComments(prev => prev.map(c => c.id === commentId ? { ...c, status: 'DELETED' } : c));
+      } catch (error) {
+        console.error("Failed to delete comment:", error);
+        alert('Lỗi khi xóa bình luận');
+      }
+    }
+  };
+
+  const loadMoreComments = async () => {
+    try {
+      const nextPage = commentsPage + 1;
+      const res = await getPostComments(detailPost.id, nextPage, 10);
+      setComments(prev => [...prev, ...(res.data?.content || [])]);
+      setCommentsPage(nextPage);
+      setCommentsTotalPages(res.data?.totalPages || 1);
+      setCommentsTotalElements(res.data?.totalElements || 0);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
-    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden animate-in fade-in duration-300 relative">
+    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden relative">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="font-bold text-lg">{t('admin.title.posts')}</h3>
         <div className="relative w-full sm:w-64">
@@ -128,7 +180,7 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
           />
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[500px]">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase tracking-wider text-text-muted border-b border-gray-200 dark:border-gray-800">
@@ -141,18 +193,14 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-            {loading ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">Loading...</td></tr> : posts.length === 0 ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">No posts found</td></tr> : posts.filter(post => 
-              post.id?.toString() === searchQuery ||
-              (post.authorName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
-              (post.caption?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-            ).map(post => (
+            {loading ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">Loading...</td></tr> : posts.length === 0 ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">No posts found</td></tr> : posts.map(post => (
               <tr key={post.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                 <td className="px-6 py-4 font-medium text-sm">{post.authorName || 'Unknown'}</td>
                 <td className="px-6 py-4 text-sm text-text-muted truncate max-w-xs">{post.caption || 'Không có nội dung'}</td>
                 <td className="px-6 py-4 text-sm">
                   <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-semibold">{post.type || 'Standard'}</span>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 flex flex-wrap gap-1">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                     post.visibility === 'PUBLIC' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
                     post.visibility === 'FRIENDS' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 
@@ -161,16 +209,27 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                   }`}>
                     {post.visibility || 'PUBLIC'}
                   </span>
-                  {post.status === 'HIDDEN' && (
-                     <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">HIDDEN</span>
-                  )}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                    post.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' :
+                    post.status === 'HIDDEN' ? 'bg-yellow-100 text-yellow-700' :
+                    post.status === 'DELETED' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {post.status || 'ACTIVE'}
+                  </span>
                 </td>
                 <td className="px-6 py-4 text-sm text-text-muted">{new Date(post.createdAt).toLocaleDateString()}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2 text-text-muted">
                     <button onClick={() => handleViewDetail(post.id)} className="p-1 hover:text-blue-500" title="View"><Eye size={16} /></button>
-                    <button onClick={() => handleToggleHide(post)} className="p-1 hover:text-yellow-500" title={post.status === 'HIDDEN' ? 'Hiển thị bài viết' : 'Ẩn bài viết'}><EyeOff size={16} /></button>
-                    <button onClick={() => handleDelete(post.id)} className="p-1 hover:text-red-500" title="Delete"><Trash2 size={16} /></button>
+                    {post.status !== 'DELETED' && (
+                      <>
+                        <button onClick={() => handleToggleHide(post)} className="p-1 hover:text-yellow-500" title={post.status === 'HIDDEN' ? 'Hiển thị bài viết' : 'Ẩn bài viết'}>
+                          {post.status === 'HIDDEN' ? <Eye size={16} /> : <EyeOff size={16} />}
+                        </button>
+                        <button onClick={() => handleDelete(post.id)} className="p-1 hover:text-red-500" title="Delete"><Trash2 size={16} /></button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -178,6 +237,51 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <p className="text-sm text-text-muted">Tổng cộng {totalElements} bài viết</p>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => fetchPosts(currentPage - 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang trước
+            </button>
+            <div className="flex items-center gap-1.5 text-sm font-semibold">
+              <span>Trang</span>
+              <input 
+                type="number"
+                min={1}
+                max={totalPages}
+                defaultValue={currentPage}
+                key={currentPage}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt(e.currentTarget.value);
+                    if (val >= 1 && val <= totalPages) fetchPosts(val);
+                  }
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.currentTarget.value);
+                  if (val >= 1 && val <= totalPages && val !== currentPage) fetchPosts(val);
+                  else e.currentTarget.value = currentPage;
+                }}
+                className="w-12 py-0.5 text-center border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span>/ {totalPages}</span>
+            </div>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => fetchPosts(currentPage + 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang sau
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DETAIL MODAL */}
       {showDetailModal && detailPost && (
@@ -190,7 +294,7 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
             
             <div className="flex border-b border-gray-200 dark:border-gray-800 shrink-0">
               <button onClick={() => setActiveTab('info')} className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors ${activeTab === 'info' ? 'border-primary-500 text-primary-500' : 'border-transparent text-text-muted hover:text-text-color hover:bg-gray-50 dark:hover:bg-gray-800'}`}>Thông tin</button>
-              <button onClick={() => setActiveTab('comments')} className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === 'comments' ? 'border-primary-500 text-primary-500' : 'border-transparent text-text-muted hover:text-text-color hover:bg-gray-50 dark:hover:bg-gray-800'}`}><MessageCircle size={16} /> Bình luận ({comments.length})</button>
+              <button onClick={() => setActiveTab('comments')} className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === 'comments' ? 'border-primary-500 text-primary-500' : 'border-transparent text-text-muted hover:text-text-color hover:bg-gray-50 dark:hover:bg-gray-800'}`}><MessageCircle size={16} /> Bình luận ({commentsTotalElements})</button>
               <button onClick={() => setActiveTab('reactions')} className={`flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === 'reactions' ? 'border-primary-500 text-primary-500' : 'border-transparent text-text-muted hover:text-text-color hover:bg-gray-50 dark:hover:bg-gray-800'}`}><Heart size={16} /> Tương tác ({reactions.length})</button>
             </div>
 
@@ -199,8 +303,7 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                 <div className="space-y-4">
                   <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                     <p className="text-sm font-semibold mb-1">Tác giả</p>
-                    <p className="font-bold text-lg text-primary-500">{detailPost.authorName}</p>
-                    <p className="text-sm text-text-muted">{detailPost.authorEmail}</p>
+                    <p className="font-bold text-lg text-primary-500">{detailPost.user?.name !== 'Soundbook user' ? detailPost.user?.name : (detailPost.original?.authorName || 'Soundbook User')}</p>
                   </div>
                   
                   <div>
@@ -245,13 +348,33 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                     comments.map(comment => (
                       <div key={comment.id} className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50/50 dark:bg-gray-800/30">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-primary-500 overflow-hidden flex items-center justify-center shrink-0">
-                              {comment.authorAvatar ? <img src={comment.authorAvatar} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-[10px] font-bold">{comment.authorName?.[0] || 'U'}</span>}
+                          <div className="flex flex-1 flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-primary-500 overflow-hidden flex items-center justify-center shrink-0">
+                                {comment.authorAvatar ? <img src={comment.authorAvatar} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-[10px] font-bold">{comment.authorName?.[0] || 'U'}</span>}
+                              </div>
+                              <p className="text-sm font-bold">{comment.authorName}</p>
                             </div>
-                            <p className="text-sm font-bold">{comment.authorName}</p>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              comment.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' :
+                              comment.status === 'DELETED' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {comment.status || 'ACTIVE'}
+                            </span>
                           </div>
-                          <span className="text-xs text-text-muted">{new Date(comment.createdAt).toLocaleString()}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-text-muted">{new Date(comment.createdAt).toLocaleString()}</span>
+                            {comment.status !== 'DELETED' && (
+                              <button 
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="p-1 text-text-muted hover:text-red-500 transition-colors"
+                                title="Xóa bình luận"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <p className="text-sm pl-8 mb-2">{comment.content}</p>
                         
@@ -288,6 +411,16 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                       </div>
                     ))
                   )}
+                  {commentsPage < commentsTotalPages && (
+                    <div className="flex justify-center pt-2 pb-4">
+                      <button 
+                        onClick={loadMoreComments}
+                        className="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-text-color rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                      >
+                        Tải thêm bình luận
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -311,13 +444,17 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
             </div>
             
             <div className="p-6 border-t border-gray-200 dark:border-gray-800 shrink-0 flex gap-3">
-              <button onClick={() => handleToggleHide(detailPost)} className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${detailPost.status === 'HIDDEN' ? 'bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-500/10 dark:hover:bg-green-500/20' : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-600 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20'}`}>
-                {detailPost.status === 'HIDDEN' ? 'Bỏ ẩn bài viết' : 'Ẩn bài viết'}
-              </button>
-              <button onClick={() => handleDelete(detailPost.id)} className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg font-semibold text-sm transition-colors">
-                Xóa bài viết
-              </button>
-              <button onClick={() => setShowDetailModal(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm transition-colors">
+              {detailPost.status !== 'DELETED' && (
+                <>
+                  <button onClick={() => handleToggleHide(detailPost)} className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${detailPost.status === 'HIDDEN' ? 'bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-500/10 dark:hover:bg-green-500/20' : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-600 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20'}`}>
+                    {detailPost.status === 'HIDDEN' ? 'Bỏ ẩn bài viết' : 'Ẩn bài viết'}
+                  </button>
+                  <button onClick={() => handleDelete(detailPost.id)} className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg font-semibold text-sm transition-colors">
+                    Xóa bài viết
+                  </button>
+                </>
+              )}
+              <button onClick={() => setShowDetailModal(false)} className={`flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm transition-colors ${detailPost.status === 'DELETED' ? 'w-full' : ''}`}>
                 Đóng
               </button>
             </div>

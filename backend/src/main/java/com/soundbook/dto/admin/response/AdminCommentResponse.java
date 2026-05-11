@@ -1,5 +1,6 @@
 package com.soundbook.dto.admin.response;
 
+import com.soundbook.entity.enums.CommentStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,5 +16,6 @@ public class AdminCommentResponse
     private String authorName;
     private String authorAvatar;
     private String content;
+    private CommentStatus status;
     private LocalDateTime createdAt;
 }

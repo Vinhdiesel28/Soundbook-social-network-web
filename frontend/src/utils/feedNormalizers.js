@@ -77,7 +77,13 @@ export const normalizePost = (post = {}) => {
       time: formatTime(post.createdAt),
     },
     media: (() => {
+      if (type === 'blog' && !post.media?.coverUrl && !post.media?.url) return null;
       const thumb = ref?.thumbnail || post.media?.coverUrl || post.media?.url || '';
+      const title = ref?.title || post.media?.title;
+      
+      // Only consider it having media if there's a reference title OR an actual image/video URL
+      const hasMedia = (ref && ref.title) || thumb || post.media?.title;
+      if (!hasMedia) return null;
       // Extract YouTube videoId from thumbnail URL if id is missing
       const thumbMatch = thumb.match(/\/vi\/([a-zA-Z0-9_-]{11})\//);
       const videoId = ref?.id || ref?.videoId || ref?.itemId || (thumbMatch ? thumbMatch[1] : null);

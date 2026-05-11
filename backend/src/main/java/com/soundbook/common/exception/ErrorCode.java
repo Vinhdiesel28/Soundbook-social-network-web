@@ -35,6 +35,7 @@ public enum ErrorCode {
 
     // Lỗi Xung đột dữ liệu / Logic (409/400)
     USER_EXISTED(400, "User with this email already exists", HttpStatus.BAD_REQUEST),
+    USER_DELETED(404, "Tài khoản này đã bị xóa. Vui lòng liên hệ hỗ trợ nếu đây là sự nhầm lẫn.", HttpStatus.NOT_FOUND),
     ALREADY_FRIENDS(400, "You are already friends", HttpStatus.BAD_REQUEST),
     ROOM_ALREADY_JOINED(400, "User already joined this room", HttpStatus.BAD_REQUEST),
     ROOM_ALREADY_ENDED(400, "Room is already ended", HttpStatus.BAD_REQUEST),

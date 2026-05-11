@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Eye, Trash2, X, MessageSquare, Undo2, Ban } from 'lucide-react';
 import { getDmThreads, getDmThreadMessages, deleteDmMessage, deleteDmMessageForEveryone } from '../../services/adminApi';
 import { useToast } from '../../context/ToastContext';
@@ -7,15 +7,19 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const { showToast, confirm } = useToast();
+  const isFirstMount = useRef(true);
 
   useEffect(() => {
-    fetchThreads();
+    fetchThreads(1);
   }, []);
 
   useEffect(() => {
@@ -24,17 +28,24 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
     }
   }, [initialSearchQuery]);
 
-  const fetchThreads = async () => {
+  const fetchThreads = async (page = currentPage) => {
     try {
       setLoading(true);
-      const res = await getDmThreads();
+      const res = await getDmThreads({ page, size: 10, keyword: searchQuery });
       const payloadData = res.data || res;
       if (payloadData && payloadData.content) {
         setThreads(payloadData.content);
+        setTotalPages(payloadData.totalPages || 1);
+        setTotalElements(payloadData.totalElements || 0);
+        setCurrentPage(page);
       } else if (Array.isArray(payloadData)) {
         setThreads(payloadData);
+        setTotalPages(1);
+        setTotalElements(payloadData.length);
       } else if (payloadData && Array.isArray(payloadData.data)) {
         setThreads(payloadData.data);
+        setTotalPages(1);
+        setTotalElements(payloadData.data.length);
       }
     } catch (error) {
       console.error("Failed to fetch threads:", error);
@@ -42,6 +53,17 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetchThreads(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleViewDetail = async (thread) => {
     setSelectedThread(thread);
@@ -115,7 +137,7 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
   };
 
   return (
-    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden animate-in fade-in duration-300 relative">
+    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden relative">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="font-bold text-lg">{t('admin.title.messages') || 'Quản lý Tin nhắn'}</h3>
         <div className="relative w-full sm:w-64">
@@ -129,7 +151,7 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
           />
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[500px]">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase tracking-wider text-text-muted border-b border-gray-200 dark:border-gray-800">
@@ -144,23 +166,17 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
             {loading ? (
               <tr><td colSpan="5" className="text-center py-10 text-gray-500">Đang tải dữ liệu...</td></tr>
             ) : (() => {
-              const filtered = threads.filter(thread => 
-                String(thread.id) === searchQuery ||
-                (thread.user1Name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
-                (thread.user2Name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-              );
-
-              if (filtered.length === 0) {
+              if (threads.length === 0) {
                 return (
                   <tr>
                     <td colSpan="5" className="text-center py-10 text-gray-500">
-                      {threads.length === 0 ? 'Chưa có hội thoại nào' : 'Không tìm thấy hội thoại phù hợp'}
+                      Chưa có hội thoại nào
                     </td>
                   </tr>
                 );
               }
 
-              return filtered.map(thread => (
+              return threads.map(thread => (
                 <tr key={thread.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                   <td className="px-6 py-4 font-bold text-sm text-primary-500">{thread.user1Name || 'Unknown'}</td>
                   <td className="px-6 py-4 font-bold text-sm text-green-500">{thread.user2Name || 'Unknown'}</td>
@@ -190,6 +206,51 @@ const AdminMessages = ({ t, initialSearchQuery = '' }) => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <p className="text-sm text-text-muted">Tổng cộng {totalElements} hội thoại</p>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => fetchThreads(currentPage - 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang trước
+            </button>
+            <div className="flex items-center gap-1.5 text-sm font-semibold">
+              <span>Trang</span>
+              <input 
+                type="number"
+                min={1}
+                max={totalPages}
+                defaultValue={currentPage}
+                key={currentPage}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt(e.currentTarget.value);
+                    if (val >= 1 && val <= totalPages) fetchThreads(val);
+                  }
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.currentTarget.value);
+                  if (val >= 1 && val <= totalPages && val !== currentPage) fetchThreads(val);
+                  else e.currentTarget.value = currentPage;
+                }}
+                className="w-12 py-0.5 text-center border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span>/ {totalPages}</span>
+            </div>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => fetchThreads(currentPage + 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang sau
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DETAIL MODAL (MESSAGES VIEWER) */}
       {showDetailModal && selectedThread && (

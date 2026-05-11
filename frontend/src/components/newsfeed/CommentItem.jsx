@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, Send, Flag, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry } from 'lucide-react';
+import { MoreHorizontal, Send, Flag, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import ReportModal from '../common/ReportModal';
 import ReactionModal from '../common/ReactionModal';
 import { getCurrentUser, resolveUrl } from '../../services/auth';
 import { postsApi } from '../../services/posts';
 
-const CommentItem = ({ comment }) => {
+const CommentItem = ({ comment, postOwnerId, onDelete }) => {
   const { t } = useLanguage();
   const [react, setReact] = useState(comment.currentUserReaction?.toUpperCase() || null);
   const [reactCount, setReactCount] = useState(comment.reacts || 0);
@@ -59,6 +60,18 @@ const CommentItem = ({ comment }) => {
     }
   };
 
+  const handleDelete = async () => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa bình luận này?")) {
+      try {
+        await postsApi.deleteComment(comment.id);
+        onDelete?.(comment.id);
+      } catch (err) {
+        console.error('Failed to delete comment', err);
+        alert('Lỗi khi xóa bình luận');
+      }
+    }
+  };
+
   const allReactors = [
     ...(comment.reactors || []),
     ...(react ? [{ name: t('react.you'), react }] : []),
@@ -72,17 +85,25 @@ const CommentItem = ({ comment }) => {
 
   return (
     <div className="flex items-start gap-2.5 group/comment">
-      {comment.user.avatarUrl ? (
-        <img src={resolveUrl(comment.user.avatarUrl)} alt={comment.user.name} className="h-7 w-7 rounded-full object-cover flex-shrink-0" />
-      ) : (
-        <div className={`w-7 h-7 rounded-full flex-shrink-0 ${comment.user.avatar} flex items-center justify-center text-[10px] font-bold text-white`}>{(comment.user.name || 'U').charAt(0).toUpperCase()}</div>
-      )}
+      <Link to={`/profile/${comment.user.id}`} className="flex-shrink-0 transition-transform active:scale-95">
+        {comment.user.avatarUrl ? (
+          <img 
+            src={`${resolveUrl(comment.user.avatarUrl)}${String(comment.user.avatarUrl).includes('?') ? '&' : '?'}t=${comment.original?.user?.updatedAt || Date.now()}`} 
+            alt={comment.user.name} 
+            className="h-7 w-7 rounded-full object-cover" 
+          />
+        ) : (
+          <div className={`w-7 h-7 rounded-full ${comment.user.avatar} flex items-center justify-center text-[10px] font-bold text-white`}>{(comment.user.name || 'U').charAt(0).toUpperCase()}</div>
+        )}
+      </Link>
       <div className="flex-1 min-w-0">
 
         <div className="flex items-center gap-2">
           <div className="relative inline-block max-w-full">
             <div className="bg-gray-100 dark:bg-gray-800/70 rounded-2xl px-3 py-2 flex flex-col">
-              <span className="text-[13px] font-semibold">{comment.user.name}</span>
+              <Link to={`/profile/${comment.user.id}`} className="text-[13px] font-semibold hover:text-primary-500 transition-colors">
+                {comment.user.name}
+              </Link>
               <span className="text-[13px] leading-snug">{comment.text}</span>
             </div>
           </div>
@@ -96,14 +117,28 @@ const CommentItem = ({ comment }) => {
               <MoreHorizontal size={16} />
             </button>
             {showMenu && (
-              <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 min-w-[140px]">
-                <button
-                  onClick={() => { setShowMenu(false); setIsReportModalOpen(true); }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-xs text-rose-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
-                >
-                  <Flag size={12} />
-                  {t('comment.report')}
-                </button>
+              <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 min-w-[140px] p-1">
+                {/* Delete option: if I wrote it OR I own the post */}
+                {(currentUser?.id === comment.user.id || currentUser?.id === postOwnerId) && (
+                  <button
+                    onClick={() => { setShowMenu(false); handleDelete(); }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition-colors font-medium"
+                  >
+                    <Trash2 size={12} />
+                    Xóa bình luận
+                  </button>
+                )}
+
+                {/* Report option: if it is NOT my comment */}
+                {currentUser?.id !== comment.user.id && (
+                  <button
+                    onClick={() => { setShowMenu(false); setIsReportModalOpen(true); }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition-colors font-medium"
+                  >
+                    <Flag size={12} />
+                    {t('comment.report')}
+                  </button>
+                )}
               </div>
             )}
           </div>

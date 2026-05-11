@@ -55,6 +55,11 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadCredentialsException("Incorrect email or password"));
 
+        if (user.getStatus().equals(UserStatus.DELETED))
+        {
+            throw new AppException(ErrorCode.USER_DELETED);
+        }
+
         if (user.getStatus().equals(UserStatus.BANNED))
         {
             throw new AppException(ErrorCode.USER_BANNED);

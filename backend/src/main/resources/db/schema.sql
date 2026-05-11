@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS reactions (
   user_id       BIGINT NOT NULL,
   target_type   ENUM('POST','COMMENT') NOT NULL,
   target_id     BIGINT NOT NULL,
-  reaction_type ENUM('LIKE','HEART','FIRE','LAUGH','WOW','SAD') NOT NULL,
+  reaction_type ENUM('LIKE','HEART','FIRE','HAHA', 'WOW','SAD','ANGRY') NOT NULL,
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT uq_reaction_once UNIQUE (user_id, target_type, target_id),
   INDEX idx_reactions_target (target_type, target_id),

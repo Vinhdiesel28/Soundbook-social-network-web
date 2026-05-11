@@ -58,6 +58,9 @@ export const getPostReactions = (id) =>
 export const getCommentReactions = (postId, commentId) => 
     request(`/admin/posts/${postId}/comments/${commentId}/reactions`, { method: 'GET', auth: true });
 
+export const deleteComment = (postId, commentId) => 
+    request(`/admin/posts/${postId}/comments/${commentId}`, { method: 'DELETE', auth: true });
+
 // ---------------------------------------------------------
 // Rooms
 // ---------------------------------------------------------

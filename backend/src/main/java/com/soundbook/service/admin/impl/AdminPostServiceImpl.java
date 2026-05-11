@@ -13,9 +13,11 @@ import com.soundbook.entity.Comment;
 import com.soundbook.entity.Post;
 import com.soundbook.entity.PostMedia;
 import com.soundbook.entity.Reaction;
+import com.soundbook.entity.enums.CommentStatus;
 import com.soundbook.entity.enums.PostStatus;
 import com.soundbook.entity.enums.ReactionType;
 import com.soundbook.entity.enums.TargetType;
+import com.soundbook.exception.ResourceNotFoundException;
 import com.soundbook.repository.CommentRepository;
 import com.soundbook.repository.PostRepository;
 import com.soundbook.repository.ReactionRepository;
@@ -158,10 +160,22 @@ public class AdminPostServiceImpl implements AdminPostService
                 .authorId(comment.getUser().getId())
                 .authorName(comment.getUser().getDisplayName())
                 .content(comment.getContent())
+                .status(comment.getStatus())
                 .createdAt(comment.getCreatedAt())
                 .build());
 
         return PageMapper.toPageResponse(responsePage);
+    }
+
+    @Override
+    @Transactional
+    public void deleteComment(Long id)
+    {
+        Comment comment = commentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy comment"));
+
+        comment.setStatus(CommentStatus.DELETED);
+        commentRepository.save(comment);
     }
 
     private AdminPostResponse mapToAdminPostResponse(Post post)

@@ -70,4 +70,10 @@ export const postsApi = {
       method: 'GET',
       auth: true,
     })),
+    
+  getComments: async (postId, page = 0, size = 50) => 
+    unwrap(await request(`/posts/${encodeURIComponent(postId)}/comments?page=${page}&size=${size}`, {
+      method: 'GET',
+      auth: true,
+    })),
 };

@@ -9,11 +9,13 @@ const PostHeaderBar = ({ post }) => {
 
   return (
     <div className="flex items-center gap-3">
-      {post.user.avatarUrl ? (
-        <img src={resolveUrl(post.user.avatarUrl)} alt={post.user.name} className="h-10 w-10 rounded-full object-cover" />
-      ) : (
-        <div className={`w-10 h-10 rounded-full ${post.user.avatar} flex items-center justify-center text-xs font-bold text-white`}>{(post.user.name || 'U').charAt(0).toUpperCase()}</div>
-      )}
+      <Link to={`/profile/${post.user.id}`} className="transition-transform active:scale-95">
+        {post.user.avatarUrl ? (
+          <img src={resolveUrl(post.user.avatarUrl)} alt={post.user.name} className="h-10 w-10 rounded-full object-cover shadow-sm" />
+        ) : (
+          <div className={`w-10 h-10 rounded-full ${post.user.avatar} flex items-center justify-center text-xs font-bold text-white shadow-sm`}>{(post.user.name || 'U').charAt(0).toUpperCase()}</div>
+        )}
+      </Link>
       <div>
         <div className="flex items-center gap-1.5 flex-wrap">
           <Link to={`/profile/${post.user.id}`} className="font-semibold text-sm hover:underline">{post.user.name}</Link>

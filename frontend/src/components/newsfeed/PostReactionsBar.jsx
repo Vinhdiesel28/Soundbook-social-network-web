@@ -43,7 +43,7 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReacti
   return (
     <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
-        <button 
+        <button
           onClick={onViewReactions}
           className="flex items-center gap-1.5 hover:underline decoration-dotted"
         >
@@ -52,7 +52,7 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReacti
               const Icon = item.icon;
               return (
                 <span key={item.key} className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-700 ${item.color}`}>
-                  <Icon size={12} fill={item.key === 'heart' ? 'currentColor' : 'none'} />
+                  <Icon size={12} fill={(item.key === 'like' || item.key === 'heart' || item.key === 'fire') ? 'currentColor' : 'none'} />
                 </span>
               );
             })}
@@ -85,7 +85,7 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReacti
                     title={item.label}
                     className={`flex h-10 w-10 items-center justify-center rounded-full transition-all hover:-translate-y-1 hover:scale-110 ${item.color} ${item.bg} ${selected ? 'bg-gray-100 ring-2 ring-primary-500 dark:bg-gray-800' : ''}`}
                   >
-                    <Icon size={22} fill={item.key === 'heart' ? 'currentColor' : 'none'} />
+                    <Icon size={22} fill={(selected && (item.key === 'like' || item.key === 'heart' || item.key === 'fire')) ? 'currentColor' : 'none'} />
                   </button>
                 );
               })}
@@ -97,7 +97,7 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReacti
             onClick={() => onReact?.(active?.api || 'LIKE')}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${active ? active.color : 'text-text-muted'} hover:bg-gray-100 dark:hover:bg-gray-800`}
           >
-            <MainIcon size={16} fill={activeKey === 'heart' ? 'currentColor' : 'none'} />
+            <MainIcon size={16} fill={(active && (active.key === 'like' || active.key === 'heart' || active.key === 'fire')) ? 'currentColor' : 'none'} />
             <span>{mainLabel}</span>
           </button>
         </div>
@@ -114,7 +114,7 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReacti
 
         {active ? (
           <span className={`ml-auto hidden text-xs font-semibold sm:inline-flex ${active.color}`}>
-            <MainIcon size={14} className="mr-1" fill={activeKey === 'heart' ? 'currentColor' : 'none'} /> Bạn đã {mainLabel.toLowerCase()}
+            <MainIcon size={14} className="mr-1" fill={(active.key === 'like' || active.key === 'heart' || active.key === 'fire') ? 'currentColor' : 'none'} /> Bạn đã {mainLabel.toLowerCase()}
           </span>
         ) : null}
       </div>

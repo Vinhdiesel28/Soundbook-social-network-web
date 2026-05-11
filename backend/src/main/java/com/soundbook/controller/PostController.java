@@ -58,6 +58,15 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.success(postService.comment(authentication.getName(), postId, request)));
     }
 
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<ApiResponse<com.soundbook.dto.common.response.PageResponse<FeedCommentResponse>>> getPostComments(
+            Authentication authentication,
+            @PathVariable Long postId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(ApiResponse.success(postService.getPostComments(authentication.getName(), postId, page, size)));
+    }
+
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<ApiResponse<Void>> deleteComment(Authentication authentication, @PathVariable Long commentId) {
         postService.deleteComment(authentication.getName(), commentId);

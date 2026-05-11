@@ -10,6 +10,7 @@ import AdminMessages from '../components/admin/AdminMessages';
 import AdminRooms from '../components/admin/AdminRooms';
 import AdminReports from '../components/admin/AdminReports';
 import AdminProfile from '../components/admin/AdminProfile';
+import { getDashboardStats } from '../services/adminApi';
 
 const AdminDashboard = () => {
   const { t, language, toggleLanguage } = useLanguage();
@@ -22,6 +23,7 @@ const AdminDashboard = () => {
   const [currentUser, setCurrentUser] = useState(getCurrentUser());
   const [isVerifying, setIsVerifying] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
 
   useEffect(() => {
     const verifyAuth = async () => {
@@ -42,6 +44,16 @@ const AdminDashboard = () => {
         if (!latestUser || !isAdminRole(latestUser.role)) {
           console.log("Access Denied condition met! isAdminRole:", latestUser ? isAdminRole(latestUser.role) : 'N/A');
           setAccessDenied(true);
+        } else {
+          // Fetch pending reports count
+          try {
+            const statsRes = await getDashboardStats();
+            if (statsRes && statsRes.data) {
+              setPendingReportsCount(statsRes.data.pendingReports || 0);
+            }
+          } catch (e) {
+            console.error("Failed to fetch stats for sidebar:", e);
+          }
         }
       } catch (error) {
         console.error("Auth verification failed", error);
@@ -158,7 +170,12 @@ const AdminDashboard = () => {
             className={`w-full flex items-center ${isSidebarOpen ? 'gap-3 px-4' : 'justify-center px-0'} py-3 rounded-xl transition-colors font-medium text-sm ${activeTab === 'reports' ? 'bg-primary-500/10 text-primary-500' : 'text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800'}`}
             title={!isSidebarOpen ? t('admin.nav.reports') : ''}
           >
-            <ShieldAlert size={18} className="shrink-0" />
+            <div className="relative">
+              <ShieldAlert size={18} className="shrink-0" />
+              {pendingReportsCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+              )}
+            </div>
             {isSidebarOpen && <span className="whitespace-nowrap">{t('admin.nav.reports')}</span>}
           </button>
         </div>
@@ -223,7 +240,7 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 bg-gray-50/50 dark:bg-black/10">
+        <main className="flex-1 overflow-y-scroll p-6 lg:p-8 space-y-8 bg-gray-50/50 dark:bg-black/10">
 
           {activeTab === 'overview' && <AdminOverview t={t} onNavigate={handleTabChange} />}
           {activeTab === 'users' && <AdminUsers t={t} initialSearchQuery={tabParams.users?.searchQuery} />}
