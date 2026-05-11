@@ -13,9 +13,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class FeedCommentResponse {
     private Long id;
+    private Long parentId;
     private FeedUserResponse user;
     private String text;
     private LocalDateTime createdAt;
     private long reactsCount;
+    private long replyCount;
     private String currentUserReaction;
 }

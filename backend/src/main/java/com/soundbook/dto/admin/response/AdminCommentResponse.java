@@ -16,6 +16,8 @@ public class AdminCommentResponse
     private String authorName;
     private String authorAvatar;
     private String content;
+    private Long parentId;
+    private Long replyCount;
     private CommentStatus status;
     private LocalDateTime createdAt;
 }

@@ -67,6 +67,14 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.success(postService.getPostComments(authentication.getName(), postId, page, size)));
     }
 
+    @GetMapping("/{postId}/comments/{commentId}/replies")
+    public ResponseEntity<ApiResponse<java.util.List<FeedCommentResponse>>> getCommentReplies(
+            Authentication authentication,
+            @PathVariable Long postId,
+            @PathVariable Long commentId) {
+        return ResponseEntity.ok(ApiResponse.success(postService.getCommentReplies(authentication.getName(), commentId)));
+    }
+
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<ApiResponse<Void>> deleteComment(Authentication authentication, @PathVariable Long commentId) {
         postService.deleteComment(authentication.getName(), commentId);

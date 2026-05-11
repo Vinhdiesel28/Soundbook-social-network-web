@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Edit, Eye, Trash2, X } from 'lucide-react';
 import { getUsers, getUserById, createUser, updateUser, deleteUser } from '../../services/adminApi';
+import { resolveUrl } from '../../services/auth';
+import { fallbackAvatar } from '../../utils/feedNormalizers';
 
 const AdminUsers = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
@@ -176,8 +178,12 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
             {loading ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">Loading...</td></tr> : users.length === 0 ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">No users found</td></tr> : users.map(user => (
               <tr key={user.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                 <td className="px-6 py-4 font-medium text-sm flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary-500 overflow-hidden flex items-center justify-center shrink-0">
-                    {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-xs font-bold">{user.displayName?.[0] || 'U'}</span>}
+                  <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 ${!(user.avatarUrl || user.avatar || user.avatar_url || user.avatarPath || user.profilePicture || user.image || user.picture || user.authorAvatar) ? fallbackAvatar(user.id || user.userId) : 'bg-primary-500'}`}>
+                    {(user.avatarUrl || user.avatar || user.avatar_url || user.avatarPath || user.profilePicture || user.image || user.picture || user.authorAvatar) ? (
+                      <img src={resolveUrl(user.avatarUrl || user.avatar || user.avatar_url || user.avatarPath || user.profilePicture || user.image || user.picture || user.authorAvatar)} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white text-xs font-bold">{user.displayName?.[0] || 'U'}</span>
+                    )}
                   </div>
                   {user.displayName}
                 </td>
@@ -365,8 +371,8 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
             </div>
             
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-primary-500 overflow-hidden shrink-0 shadow-sm border-2 border-white dark:border-gray-800">
-                {detailUser.avatarUrl ? <img src={detailUser.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="w-full h-full flex items-center justify-center text-white text-xl font-bold">{detailUser.displayName?.[0] || 'U'}</span>}
+              <div className={`w-16 h-16 rounded-full overflow-hidden shrink-0 shadow-sm border-2 border-white dark:border-gray-800 flex items-center justify-center ${!detailUser.avatarUrl ? fallbackAvatar(detailUser.id) : 'bg-primary-500'}`}>
+                {detailUser.avatarUrl ? <img src={resolveUrl(detailUser.avatarUrl)} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-xl font-bold">{detailUser.displayName?.[0] || 'U'}</span>}
               </div>
               <div>
                 <h4 className="font-bold text-lg">{detailUser.displayName}</h4>

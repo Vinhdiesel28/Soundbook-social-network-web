@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Flame, ShieldAlert, ArrowRight, Heart, MessageCircle, Music, BookOpen, ExternalLink, ShieldCheck, XCircle } from 'lucide-react';
 import { getDashboardStats, getTrendingPosts, getReports, resolveReport, rejectReport } from '../../services/adminApi';
+import { resolveUrl } from '../../services/auth';
+import { fallbackAvatar } from '../../utils/feedNormalizers';
 
 const AdminOverview = ({ t, onNavigate }) => {
   const [stats, setStats] = useState({ users: 0, rooms: 0, posts: 0, reports: 0 });
@@ -122,8 +124,8 @@ const AdminOverview = ({ t, onNavigate }) => {
                 <span className={`text-base font-black w-5 shrink-0 text-center ${i === 0 ? 'text-orange-500' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-600' : 'text-gray-300 dark:text-gray-600'}`}>
                   {i + 1}
                 </span>
-                <div className={`w-8 h-8 rounded-full shrink-0 bg-primary-500 flex items-center justify-center overflow-hidden`}>
-                  {post.authorAvatar ? <img src={post.authorAvatar} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-xs font-bold">{post.authorName?.[0] || 'U'}</span>}
+                <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center overflow-hidden ${!post.authorAvatar ? fallbackAvatar(post.authorId) : 'bg-primary-500'}`}>
+                  {post.authorAvatar ? <img src={resolveUrl(post.authorAvatar)} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-xs font-bold">{post.authorName?.[0] || 'U'}</span>}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-semibold text-text-muted">{post.authorName || 'Unknown'}</p>

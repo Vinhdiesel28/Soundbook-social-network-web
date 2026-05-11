@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Key, X } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { getAdminProfile, updateAdminProfile, updateAdminAvatar, changeAdminPassword } from '../../services/adminApi';
+import { resolveUrl } from '../../services/auth';
+import { fallbackAvatar } from '../../utils/feedNormalizers';
 
 const AdminProfile = ({ t }) => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -125,9 +127,9 @@ const AdminProfile = ({ t }) => {
           {/* Avatar */}
           <div className="flex flex-col items-center gap-4 shrink-0">
             <div className="relative group">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-400 to-blue-500 border-4 border-surface-color shadow-lg overflow-hidden flex items-center justify-center">
+              <div className={`w-32 h-32 rounded-full border-4 border-surface-color shadow-lg overflow-hidden flex items-center justify-center ${!profile.avatarUrl ? fallbackAvatar(profile.id) : 'bg-gradient-to-br from-green-400 to-blue-500'}`}>
                 {profile.avatarUrl ? (
-                  <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  <img src={resolveUrl(profile.avatarUrl)} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-4xl text-white font-bold">{profile.displayName?.[0] || 'A'}</span>
                 )}

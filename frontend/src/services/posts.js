@@ -31,10 +31,10 @@ export const postsApi = {
     body: JSON.stringify({ reactionType }),
   })),
 
-  comment: async (postId, content) => unwrap(await request(`/posts/${encodeURIComponent(postId)}/comments`, {
+  comment: async (postId, content, parentId = null) => unwrap(await request(`/posts/${encodeURIComponent(postId)}/comments`, {
     method: 'POST',
     auth: true,
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, parentId }),
   })),
 
   deleteComment: async (commentId) => unwrap(await request(`/posts/comments/${encodeURIComponent(commentId)}`, {
@@ -73,6 +73,12 @@ export const postsApi = {
     
   getComments: async (postId, page = 0, size = 50) => 
     unwrap(await request(`/posts/${encodeURIComponent(postId)}/comments?page=${page}&size=${size}`, {
+      method: 'GET',
+      auth: true,
+    })),
+    
+  getCommentReplies: async (postId, commentId) =>
+    unwrap(await request(`/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/replies`, {
       method: 'GET',
       auth: true,
     })),

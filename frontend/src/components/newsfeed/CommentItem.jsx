@@ -1,24 +1,72 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, Send, Flag, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Send, Flag, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry, Trash2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import ReportModal from '../common/ReportModal';
 import ReactionModal from '../common/ReactionModal';
 import { getCurrentUser, resolveUrl } from '../../services/auth';
 import { postsApi } from '../../services/posts';
+import { normalizeComment } from '../../utils/feedNormalizers';
 
-const CommentItem = ({ comment, postOwnerId, onDelete }) => {
+const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
   const { t } = useLanguage();
   const [react, setReact] = useState(comment.currentUserReaction?.toUpperCase() || null);
   const [reactCount, setReactCount] = useState(comment.reacts || 0);
   const [showReacts, setShowReacts] = useState(false);
   const [replying, setReplying] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [showReactors, setShowReactors] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const reactTimeout = useRef(null);
+
+  // Nested Replies State
+  const [showReplies, setShowReplies] = useState(false);
+  const [replies, setReplies] = useState([]);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+
+  const fetchReplies = async () => {
+    if (loadingReplies) return;
+    try {
+      setLoadingReplies(true);
+      const data = await postsApi.getCommentReplies(postId, comment.id);
+      console.log('API Replies for comment', comment.id, ':', data);
+      const normalized = data.map(normalizeComment);
+      console.log('Normalized replies:', normalized);
+      setReplies(normalized);
+      setShowReplies(true);
+    } catch (err) {
+      console.error('Failed to fetch replies', err);
+    } finally {
+      setLoadingReplies(false);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      const res = await onReply?.(replyText);
+      if (res) {
+        // If it was a success, manually add to local replies if visible
+        if (showReplies) {
+          setReplies(prev => [...prev, normalizeComment(res)]);
+        } else if (comment.replyCount === 0) {
+          // If first reply, just show it
+          setReplies([normalizeComment(res)]);
+          setShowReplies(true);
+        }
+      }
+      setReplyText('');
+      setReplying(false);
+    } catch (err) {
+      console.error('Failed to reply', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const handleUserUpdate = () => setCurrentUser(getCurrentUser());
@@ -178,7 +226,10 @@ const CommentItem = ({ comment, postOwnerId, onDelete }) => {
 
           {/* Reply */}
           <button
-            onClick={() => setReplying(r => !r)}
+            onClick={() => {
+              setReplying(true);
+              setReplyText(`@${comment.user.name} `);
+            }}
             className="text-[11px] font-semibold text-text-muted hover:text-primary-500 transition-colors"
           >
             {t('comment.reply')}
@@ -237,17 +288,59 @@ const CommentItem = ({ comment, postOwnerId, onDelete }) => {
                 type="text"
                 value={replyText}
                 onChange={e => setReplyText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSendReply(); }}
                 placeholder={t('comment.reply_placeholder').replace('{name}', comment.user.name)}
                 className="flex-1 bg-transparent text-xs outline-none text-text-color placeholder:text-text-muted"
               />
               <button
-                onClick={() => { setReplying(false); setReplyText(''); }}
-                className={`text-primary-500 transition-opacity ${replyText ? 'opacity-100' : 'opacity-30'}`}
-                disabled={!replyText}
+                onClick={handleSendReply}
+                className={`text-primary-500 transition-opacity ${replyText && !isSubmitting ? 'opacity-100' : 'opacity-30'}`}
+                disabled={!replyText || isSubmitting}
               >
-                <Send size={12} />
+                <Send size={12} className={isSubmitting ? 'animate-pulse' : ''} />
               </button>
             </div>
+          </div>
+        )}
+
+        {/* View Replies Button */}
+        {comment.replyCount > 0 && !showReplies && (
+          <div className="ml-8 mt-2">
+            <button 
+              onClick={fetchReplies}
+              className="flex items-center gap-2 text-[11px] font-bold text-primary-500 hover:text-primary-600 transition-colors py-1"
+            >
+              <div className="w-8 border-t-2 border-primary-500/30" />
+              {loadingReplies ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                `Xem ${comment.replyCount} câu trả lời`
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Recursive Replies */}
+        {showReplies && (
+          <div className="ml-8 mt-3 space-y-3 border-l-2 border-gray-100 dark:border-gray-800 pl-4">
+            {replies.length === 0 && <p className="text-[10px] text-text-muted italic">Đang tải hoặc không có phản hồi...</p>}
+            {replies.map(reply => (
+              <CommentItem 
+                key={reply.id} 
+                postId={postId}
+                comment={reply} 
+                postOwnerId={postOwnerId} 
+                onDelete={onDelete}
+                onReply={onReply}
+              />
+            ))}
+            {/* Option to hide */}
+            <button 
+              onClick={() => setShowReplies(false)}
+              className="text-[10px] font-bold text-text-muted hover:text-primary-500 transition-colors"
+            >
+              Ẩn câu trả lời
+            </button>
           </div>
         )}
       </div>

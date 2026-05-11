@@ -105,8 +105,8 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
     if (result) setUpdatedPost(result);
   };
 
-  const handleComment = async (content) => {
-    const result = await runAction(() => postsApi.comment(livePost.id, content), { keepMenu: true });
+  const handleComment = async (content, parentId = null) => {
+    const result = await runAction(() => postsApi.comment(livePost.id, content, parentId), { keepMenu: true });
     if (!result) return;
     const newComment = normalizeComment(result);
     setLivePost(prev => ({
@@ -118,6 +118,7 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
       },
     }));
     onChanged?.(newComment, { action: 'comment', postId: livePost.id });
+    return result;
   };
 
   const handleDeleteComment = (commentId) => {

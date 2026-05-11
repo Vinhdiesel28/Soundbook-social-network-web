@@ -24,6 +24,7 @@ const safeLower = (value) => (value ? String(value).toLowerCase() : null);
 
 export const normalizeComment = (comment = {}) => ({
   id: comment.id,
+  parentId: comment.parentId,
   user: {
     id: comment.user?.userId,
     name: comment.user?.displayName || 'Soundbook user',
@@ -34,6 +35,7 @@ export const normalizeComment = (comment = {}) => ({
   text: comment.text || comment.content || '',
   time: formatTime(comment.createdAt),
   reacts: comment.reactsCount || comment.reacts || 0,
+  replyCount: comment.replyCount || 0,
   currentUserReaction: comment.currentUserReaction ? comment.currentUserReaction.toLowerCase() : null,
   original: comment,
 });

@@ -60,10 +60,10 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
     }
   };
 
-  const handleComment = async (content) => {
+  const handleComment = async (content, parentId = null) => {
     try {
       setBusy(true);
-      const result = await postsApi.comment(livePost.id, content);
+      const result = await postsApi.comment(livePost.id, content, parentId);
       if (result) {
         const newComment = normalizeComment(result);
         const updatedPost = {
@@ -76,6 +76,7 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
         };
         setLivePost(updatedPost);
         onChanged?.(updatedPost, { action: 'comment', postId: livePost.id });
+        return result;
       }
     } finally {
       setBusy(false);

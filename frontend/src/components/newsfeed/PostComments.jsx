@@ -65,7 +65,8 @@ const PostComments = ({ postId, postOwnerId, comments = [], enabled = true, onSu
     }
   }, [focusSignal]);
 
-  const visibleComments = showAllComments ? localComments : localComments.slice(0, 2);
+  const rootComments = localComments.filter(c => !c.parentId);
+  const visibleComments = showAllComments ? rootComments : rootComments.slice(0, 2);
 
   const submit = async () => {
     const text = commentInput.trim();
@@ -96,10 +97,17 @@ const PostComments = ({ postId, postOwnerId, comments = [], enabled = true, onSu
         </button>
       )}
 
-      {localComments.length > 0 && (
+      {rootComments.length > 0 && (
         <div className="space-y-3">
-          {(showAllComments ? localComments : localComments.slice(0, 2)).map(comment => (
-            <CommentItem key={comment.id} comment={comment} postOwnerId={postOwnerId} onDelete={onDeleteComment} />
+          {visibleComments.map(comment => (
+            <CommentItem 
+              key={comment.id} 
+              postId={postId}
+              comment={comment} 
+              postOwnerId={postOwnerId} 
+              onDelete={onDeleteComment}
+              onReply={(text) => onSubmitComment?.(text, comment.id)}
+            />
           ))}
         </div>
       )}

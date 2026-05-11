@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Trash2, Eye, EyeOff, X, MessageCircle, Heart, ChevronDown, ChevronUp } from 'lucide-react';
-import { getPosts, getPostById, deletePost, hidePost, unhidePost, getPostComments, getPostReactions, getCommentReactions, deleteComment } from '../../services/adminApi';
+import { getPosts, getPostById, deletePost, hidePost, unhidePost, getPostComments, getPostReactions, getCommentReactions, deleteComment, getCommentReplies } from '../../services/adminApi';
 import PostMediaCard from '../newsfeed/PostMediaCard';
 import { normalizePost } from '../../utils/feedNormalizers';
 
@@ -25,6 +25,10 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
   const [expandedCommentId, setExpandedCommentId] = useState(null);
   const [currentCommentReactions, setCurrentCommentReactions] = useState([]);
   const [loadingCommentReactions, setLoadingCommentReactions] = useState(false);
+  
+  // Nested replies in admin
+  const [expandedReplies, setExpandedReplies] = useState({}); // {commentId: replies[]}
+  const [loadingReplies, setLoadingReplies] = useState({}); // {commentId: boolean}
   const isFirstMount = useRef(true);
 
   useEffect(() => {
@@ -137,6 +141,25 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
       console.error("Failed to load comment reactions", err);
     } finally {
       setLoadingCommentReactions(false);
+    }
+  };
+
+  const handleToggleReplies = async (commentId) => {
+    if (expandedReplies[commentId]) {
+      const newExpanded = { ...expandedReplies };
+      delete newExpanded[commentId];
+      setExpandedReplies(newExpanded);
+      return;
+    }
+
+    try {
+      setLoadingReplies(prev => ({ ...prev, [commentId]: true }));
+      const res = await getCommentReplies(detailPost.id, commentId);
+      setExpandedReplies(prev => ({ ...prev, [commentId]: res.data || [] }));
+    } catch (err) {
+      console.error("Failed to load replies", err);
+    } finally {
+      setLoadingReplies(prev => ({ ...prev, [commentId]: false }));
     }
   };
 
@@ -378,7 +401,7 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                         </div>
                         <p className="text-sm pl-8 mb-2">{comment.content}</p>
                         
-                        <div className="pl-8">
+                        <div className="pl-8 flex items-center gap-4">
                           <button 
                             onClick={() => handleViewCommentReactions(comment.id)} 
                             className="flex items-center gap-1 text-xs font-semibold text-primary-500 hover:text-primary-600 transition-colors"
@@ -386,28 +409,100 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                             {expandedCommentId === comment.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             {expandedCommentId === comment.id ? 'Ẩn tương tác' : 'Xem tương tác'}
                           </button>
-                          
-                          {expandedCommentId === comment.id && (
-                            <div className="mt-3 pl-3 border-l-2 border-gray-200 dark:border-gray-700 space-y-2">
-                              {loadingCommentReactions ? (
-                                <p className="text-xs text-gray-500 italic">Đang tải...</p>
-                              ) : currentCommentReactions.length === 0 ? (
-                                <p className="text-xs text-gray-500 italic">Chưa có tương tác nào</p>
-                              ) : (
-                                currentCommentReactions.map(rxn => (
-                                  <div key={rxn.id} className="flex items-center justify-between text-xs py-1 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-md px-2 -ml-2 transition-colors">
-                                    <div className="flex items-center gap-2">
-                                      <Heart size={12} className="text-red-500 fill-current"/>
-                                      <span className="font-medium text-text-color">{rxn.userName || 'Người dùng'}</span>
-                                      <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold text-text-muted">{rxn.type}</span>
-                                    </div>
-                                    <span className="text-[10px] text-gray-400">{new Date(rxn.createdAt).toLocaleDateString()}</span>
-                                  </div>
-                                ))
-                              )}
-                            </div>
+
+                          {comment.replyCount > 0 && (
+                            <button 
+                              onClick={() => handleToggleReplies(comment.id)} 
+                              className="flex items-center gap-1 text-xs font-semibold text-blue-500 hover:text-blue-600 transition-colors"
+                            >
+                              {loadingReplies[comment.id] ? 'Đang tải...' : (expandedReplies[comment.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                              {expandedReplies[comment.id] ? 'Ẩn phản hồi' : `Xem ${comment.replyCount} phản hồi`}
+                            </button>
                           )}
                         </div>
+                        
+                        {expandedCommentId === comment.id && (
+                          <div className="mt-3 pl-11 border-l-2 border-gray-200 dark:border-gray-700 space-y-2">
+                            {loadingCommentReactions ? (
+                              <p className="text-xs text-gray-500 italic">Đang tải...</p>
+                            ) : currentCommentReactions.length === 0 ? (
+                              <p className="text-xs text-gray-500 italic">Chưa có tương tác nào</p>
+                            ) : (
+                              currentCommentReactions.map(rxn => (
+                                <div key={rxn.id} className="flex items-center justify-between text-xs py-1 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-md px-2 -ml-2 transition-colors">
+                                  <div className="flex items-center gap-2">
+                                    <Heart size={12} className="text-red-500 fill-current"/>
+                                    <span className="font-medium text-text-color">{rxn.userName || 'Người dùng'}</span>
+                                    <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold text-text-muted">{rxn.type}</span>
+                                  </div>
+                                  <span className="text-[10px] text-gray-400">{new Date(rxn.createdAt).toLocaleDateString()}</span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+
+                        {expandedReplies[comment.id] && (
+                          <div className="mt-3 pl-8 space-y-3">
+                            {expandedReplies[comment.id].map(reply => (
+                              <div key={reply.id} className="p-3 border border-gray-100 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900/50">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-5 h-5 rounded-full bg-blue-500 overflow-hidden flex items-center justify-center shrink-0">
+                                      {reply.authorAvatar ? <img src={reply.authorAvatar} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-[8px] font-bold">{reply.authorName?.[0] || 'U'}</span>}
+                                    </div>
+                                    <p className="text-xs font-bold">{reply.authorName}</p>
+                                    <span className="px-1.5 py-0.2 bg-gray-100 dark:bg-gray-800 rounded text-[9px] font-bold text-text-muted">PHẢN HỒI</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-text-muted">{new Date(reply.createdAt).toLocaleString()}</span>
+                                    {reply.status !== 'DELETED' && (
+                                      <div className="flex items-center gap-1">
+                                        <button 
+                                          onClick={() => handleViewCommentReactions(reply.id)}
+                                          className="p-1 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
+                                          title="Xem tương tác"
+                                        >
+                                          <Heart size={12} fill={expandedCommentId === reply.id ? "currentColor" : "none"} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteComment(reply.id)}
+                                          className="p-1 text-text-muted hover:text-red-500 transition-colors"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-xs pl-7 text-text-muted italic mb-1">Phản hồi bình luận #{comment.id}</p>
+                                <p className="text-sm pl-7">{reply.content}</p>
+
+                                {/* Reply Reactions */}
+                                {expandedCommentId === reply.id && (
+                                  <div className="mt-2 pl-7 border-l border-gray-200 dark:border-gray-700 space-y-1.5 animate-in slide-in-from-top-1 duration-200">
+                                    {loadingCommentReactions ? (
+                                      <p className="text-[10px] text-gray-500 italic">Đang tải tương tác...</p>
+                                    ) : currentCommentReactions.length === 0 ? (
+                                      <p className="text-[10px] text-gray-500 italic">Chưa có tương tác nào</p>
+                                    ) : (
+                                      currentCommentReactions.map(rxn => (
+                                        <div key={rxn.id} className="flex items-center justify-between text-[10px] py-0.5 px-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
+                                          <div className="flex items-center gap-1.5">
+                                            <Heart size={10} className="text-red-500 fill-current"/>
+                                            <span className="font-medium">{rxn.userName || 'Người dùng'}</span>
+                                            <span className="px-1 bg-gray-100 dark:bg-gray-800 rounded font-bold text-[9px]">{rxn.type}</span>
+                                          </div>
+                                          <span className="text-gray-400">{new Date(rxn.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))
                   )}

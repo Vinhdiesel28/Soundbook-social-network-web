@@ -129,4 +129,16 @@ public class AdminPostController
                 .data(data)
                 .build());
     }
+
+    @GetMapping("/{postId}/comments/{commentId}/replies")
+    public ResponseEntity<ApiResponse<java.util.List<AdminCommentResponse>>> getCommentReplies(
+            @PathVariable Long postId,
+            @PathVariable Long commentId)
+    {
+        java.util.List<AdminCommentResponse> data = adminPostService.getCommentReplies(commentId);
+        return ResponseEntity.ok(ApiResponse.<java.util.List<AdminCommentResponse>>builder()
+                .message("Lấy danh sách phản hồi thành công")
+                .data(data)
+                .build());
+    }
 }
