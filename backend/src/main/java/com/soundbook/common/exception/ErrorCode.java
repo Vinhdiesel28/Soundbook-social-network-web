@@ -51,7 +51,8 @@ public enum ErrorCode {
     MESSAGE_NOT_FOUND(404, "Không tìm thấy tin nhắn", HttpStatus.NOT_FOUND),
 
     ALREADY_REPORTED(400, "Bạn đã báo cáo nội dung này rồi. Vui lòng chờ quản trị viên xử lý!", HttpStatus.BAD_REQUEST),
-    REPORT_NOT_FOUND(404, "Không tìm thấy báo cáo", HttpStatus.NOT_FOUND);
+    REPORT_NOT_FOUND(404, "Không tìm thấy báo cáo", HttpStatus.NOT_FOUND),
+    COMMENT_NOT_FOUND(404, "Không tìm thấy comment", HttpStatus.NOT_FOUND);
 
 
     ErrorCode(int code, String message, HttpStatus statusCode) {

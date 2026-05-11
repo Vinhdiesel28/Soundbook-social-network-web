@@ -82,4 +82,10 @@ export const postsApi = {
       method: 'GET',
       auth: true,
     })),
+
+  getPostById: async (postId) =>
+    unwrap(await request(`/posts/${encodeURIComponent(postId)}`, {
+      method: 'GET',
+      auth: true,
+    })),
 };

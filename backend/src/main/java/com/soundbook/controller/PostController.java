@@ -27,6 +27,11 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.success(url));
     }
 
+    @GetMapping("/{postId}")
+    public ResponseEntity<ApiResponse<FeedPostResponse>> getPost(Authentication authentication, @PathVariable Long postId) {
+        return ResponseEntity.ok(ApiResponse.success(postService.getPostDetail(authentication.getName(), postId)));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<FeedPostResponse>> createPost(Authentication authentication, @RequestBody PostMutationRequest request) {
         return ResponseEntity.ok(ApiResponse.success(postService.createPost(authentication.getName(), request)));

@@ -34,7 +34,9 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReacti
     }, 500);
   };
 
-  const pickReaction = (item) => {
+  const pickReaction = (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setPickerOpen(false);
     onReact?.(item.api);
@@ -81,7 +83,7 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReacti
                   <button
                     key={item.key}
                     type="button"
-                    onClick={() => pickReaction(item)}
+                    onClick={(e) => pickReaction(e, item)}
                     title={item.label}
                     className={`flex h-10 w-10 items-center justify-center rounded-full transition-all hover:-translate-y-1 hover:scale-110 ${item.color} ${item.bg} ${selected ? 'bg-gray-100 ring-2 ring-primary-500 dark:bg-gray-800' : ''}`}
                   >

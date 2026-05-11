@@ -35,6 +35,10 @@ public class PostService {
     private final FeedService feedService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    public FeedPostResponse getPostDetail(String email, Long postId) {
+        return feedService.getPost(email, postId);
+    }
+
     @Transactional
     public FeedPostResponse createPost(String email, PostMutationRequest request) {
         User user = currentUser(email);

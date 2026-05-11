@@ -27,7 +27,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     org.springframework.data.domain.Page<Comment> findByPostIdAndParentIsNullOrderByCreatedAtDesc(@Param("postId") Long postId, org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT c FROM Comment c WHERE c.post.id = :postId AND c.parent IS NULL AND c.status <> com.soundbook.entity.enums.CommentStatus.DELETED ORDER BY c.createdAt DESC")
-    List<Comment> findByPostIdAndParentIsNullOrderByCreatedAtDesc(@Param("postId") Long postId);
+    List<Comment> findByPostIdAndParentIsNullOrderByCreatedAtDescList(@Param("postId") Long postId);
 
     @Query(value = "SELECT c FROM Comment c WHERE c.post.id = :postId AND c.parent IS NULL ORDER BY c.createdAt DESC",
            countQuery = "SELECT COUNT(c) FROM Comment c WHERE c.post.id = :postId AND c.parent IS NULL")

@@ -251,7 +251,7 @@ public class FeedService {
     }
 
     private List<FeedCommentResponse> buildComments(Long postId, User currentUser) {
-        List<Comment> comments = commentRepository.findByPostIdAndParentIsNullOrderByCreatedAtDesc(postId);
+        List<Comment> comments = commentRepository.findByPostIdAndParentIsNullOrderByCreatedAtDescList(postId);
         Collections.reverse(comments);
         return comments.stream()
                     .map(comment -> FeedCommentResponse.builder()

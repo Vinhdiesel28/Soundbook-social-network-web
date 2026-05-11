@@ -1,12 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, Send, Flag, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry, Trash2, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Send, Smile, Flag, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry, Trash2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import ReportModal from '../common/ReportModal';
 import ReactionModal from '../common/ReactionModal';
 import { getCurrentUser, resolveUrl } from '../../services/auth';
 import { postsApi } from '../../services/posts';
+import { interactionsApi } from '../../services/interactionsApi';
 import { normalizeComment } from '../../utils/feedNormalizers';
+
+const REACTS = [
+  { key: 'like', api: 'LIKE', icon: ThumbsUp, label: 'Thích', color: 'text-blue-500', bg: 'bg-blue-500' },
+  { key: 'heart', api: 'HEART', icon: Heart, label: 'Yêu thích', color: 'text-rose-500', bg: 'bg-rose-500' },
+  { key: 'fire', api: 'FIRE', icon: Flame, label: 'Nhiệt', color: 'text-orange-500', bg: 'bg-orange-500' },
+  { key: 'haha', api: 'HAHA', icon: Laugh, label: 'Haha', color: 'text-yellow-500', bg: 'bg-yellow-500', noFill: true },
+  { key: 'wow', api: 'WOW', icon: Ghost, label: 'Wow', color: 'text-purple-500', bg: 'bg-purple-500', noFill: true },
+  { key: 'sad', api: 'SAD', icon: Frown, label: 'Buồn', color: 'text-indigo-400', bg: 'bg-indigo-400', noFill: true },
+  { key: 'angry', api: 'ANGRY', icon: Angry, label: 'Phẫn nộ', color: 'text-red-500', bg: 'bg-red-500', noFill: true },
+];
 
 const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
   const { t } = useLanguage();
@@ -16,16 +27,25 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
   const [replying, setReplying] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [showReactors, setShowReactors] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const [topReacts, setTopReacts] = useState(() => {
+    const reactorTypes = comment.reactors ? [...new Set(comment.reactors.map(r => r.reactionType?.toUpperCase()))] : [];
+    if (reactorTypes.length > 0) {
+      return REACTS.filter(r => reactorTypes.includes(r.api)).slice(0, 3);
+    }
+    return comment.reacts > 0 ? [REACTS[0]] : [];
+  });
   const reactTimeout = useRef(null);
 
   // Nested Replies State
   const [showReplies, setShowReplies] = useState(false);
   const [replies, setReplies] = useState([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
+  const replyInputRef = useRef(null);
 
   const fetchReplies = async () => {
     if (loadingReplies) return;
@@ -69,20 +89,54 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
   };
 
   useEffect(() => {
+    const handleNewComment = (e) => {
+      const { comment: newComment, postId: eventPostId } = e.detail;
+      if (eventPostId === postId && newComment.parentId === comment.id) {
+        // If replies are already shown, add the new one
+        if (showReplies) {
+          setReplies(prev => {
+            if (prev.some(r => r.id === newComment.id)) return prev;
+            return [...prev, newComment];
+          });
+        }
+      }
+    };
+
+    window.addEventListener('soundbook_new_comment', handleNewComment);
+    return () => window.removeEventListener('soundbook_new_comment', handleNewComment);
+  }, [postId, comment.id, showReplies]);
+
+  // Sync props to local state ONLY when props change
+  useEffect(() => {
+    setReactCount(comment.reacts || 0);
+    setReact(comment.currentUserReaction?.toUpperCase() || null);
+  }, [comment.id, comment.reacts, comment.currentUserReaction]);
+
+  // Update topReacts based on reactors list AND current user reaction
+  useEffect(() => {
+    const reactorTypes = (comment.reactors || []).map(r => r.reactionType?.toUpperCase());
+    const myType = String(react || '').toUpperCase();
+    
+    // Combine them and remove nulls/empty
+    const combinedTypes = [...new Set([...reactorTypes, myType])].filter(Boolean);
+    
+    if (combinedTypes.length > 0) {
+      const objects = REACTS.filter(r => combinedTypes.includes(r.api)).slice(0, 3);
+      setTopReacts(objects);
+    } else if (reactCount > 0) {
+      setTopReacts([REACTS[0]]);
+    } else {
+      setTopReacts([]);
+    }
+  }, [comment.reactors, react, reactCount]);
+
+  useEffect(() => {
     const handleUserUpdate = () => setCurrentUser(getCurrentUser());
     window.addEventListener('soundbook_user_updated', handleUserUpdate);
     return () => window.removeEventListener('soundbook_user_updated', handleUserUpdate);
   }, []);
 
-  const REACTS = [
-    { key: 'like', api: 'LIKE', icon: ThumbsUp, label: t('react.like'), color: 'text-blue-500', bg: 'bg-blue-500' },
-    { key: 'heart', api: 'HEART', icon: Heart, label: t('react.heart'), color: 'text-rose-500', bg: 'bg-rose-500' },
-    { key: 'fire', api: 'FIRE', icon: Flame, label: t('react.fire'), color: 'text-orange-500', bg: 'bg-orange-500' },
-    { key: 'haha', api: 'HAHA', icon: Laugh, label: t('react.haha'), color: 'text-yellow-500', bg: 'bg-yellow-500', noFill: true },
-    { key: 'wow', api: 'WOW', icon: Ghost, label: t('react.wow'), color: 'text-purple-500', bg: 'bg-purple-500', noFill: true },
-    { key: 'sad', api: 'SAD', icon: Frown, label: t('react.sad'), color: 'text-indigo-400', bg: 'bg-indigo-400', noFill: true },
-    { key: 'angry', api: 'ANGRY', icon: Angry, label: t('react.angry'), color: 'text-red-500', bg: 'bg-red-500', noFill: true },
-  ];
+
 
   const currentReact = REACTS.find(r => r.api === react);
 
@@ -98,20 +152,27 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
   const handleReact = async (rawType) => {
     const type = rawType.toUpperCase();
     const isRemoving = react === type;
+    
+    // Optimistic update
     setReact(isRemoving ? null : type);
     setReactCount(c => isRemoving ? c - 1 : (react ? c : c + 1));
     setShowReacts(false);
+    
     try {
-      await postsApi.reactComment(comment.id, type);
+      await interactionsApi.reactToComment(comment.id, type);
+      // The socket will eventually broadcast the total count update
     } catch (err) {
       console.error('Failed to react to comment', err);
+      // Rollback optimistic update on error
+      setReact(comment.currentUserReaction?.toUpperCase() || null);
+      setReactCount(comment.reacts || 0);
     }
   };
 
   const handleDelete = async () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa bình luận này?")) {
       try {
-        await postsApi.deleteComment(comment.id);
+        await interactionsApi.deleteComment(comment.id);
         onDelete?.(comment.id);
       } catch (err) {
         console.error('Failed to delete comment', err);
@@ -129,7 +190,7 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
     users: allReactors.filter(u => u.react === r.api).map(u => u.name),
   })).filter(r => r.users.length > 0);
 
-  const topReacts = REACTS.filter(r => allReactors.some(u => u.react === r.api)).slice(0, 3);
+
 
   return (
     <div className="flex items-start gap-2.5 group/comment">
@@ -243,15 +304,22 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
               >
                 <span className="text-text-muted font-medium mr-1.5">{reactCount}</span>
                 <div className="flex -space-x-1">
-                  {topReacts.map((r, i) => (
-                    <div key={i} style={{ zIndex: 3 - i }} className={`p-0.5 bg-white dark:bg-gray-800 rounded-full ring-[1.5px] ring-white dark:ring-gray-800`}>
-                      <r.icon
-                        size={14}
-                        fill={r.noFill ? "none" : "currentColor"}
-                        className={r.color}
-                      />
+                  {topReacts.length > 0 ? (
+                    topReacts.map((r, i) => (
+                      <div key={i} style={{ zIndex: 3 - i }} className={`p-0.5 bg-white dark:bg-gray-800 rounded-full ring-[1.5px] ring-white dark:ring-gray-800`}>
+                        <r.icon
+                          size={14}
+                          fill={r.noFill ? "none" : "currentColor"}
+                          className={r.color}
+                        />
+                      </div>
+                    ))
+                  ) : (
+                    /* Fallback to default like icon if we have count but no specific reactor data yet */
+                    <div className="p-0.5 bg-white dark:bg-gray-800 rounded-full ring-[1.5px] ring-white dark:ring-gray-800">
+                      <ThumbsUp size={14} fill="currentColor" className="text-blue-500" />
                     </div>
-                  ))}
+                  )}
                 </div>
               </button>
 
@@ -284,6 +352,7 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
             </div>
             <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-800/70 rounded-full px-3 py-1 gap-2">
               <input
+                ref={replyInputRef}
                 autoFocus
                 type="text"
                 value={replyText}
@@ -292,6 +361,56 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
                 placeholder={t('comment.reply_placeholder').replace('{name}', comment.user.name)}
                 className="flex-1 bg-transparent text-xs outline-none text-text-color placeholder:text-text-muted"
               />
+              
+              <div className="relative">
+                <button 
+                  type="button" 
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={`transition-colors shrink-0 ${showEmojiPicker ? 'text-primary-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                >
+                  <Smile size={14} />
+                </button>
+
+                {showEmojiPicker && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowEmojiPicker(false)}
+                    />
+                    <div className="absolute bottom-full right-0 mb-3 p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-64 z-20 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar grid grid-cols-6 gap-1 p-1">
+                        {[
+                          '😀', '😂', '🤣', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '🤨', '🧐',
+                          '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️',
+                          '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯',
+                          '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫',
+                          '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱',
+                          '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕',
+                          '👍', '👎', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+                          '👇', '✋', '🤚', '🖐️', '🖖', '👋', '💪', '🙏', '🤲', '👐', '🙌', '👏',
+                          '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓',
+                          '💗', '💖', '💘', '💝', '💟', '🔥', '✨', '🌟', '⭐', '🌈', '☁️', '❄️'
+                        ].map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setReplyText(prev => prev + emoji);
+                              setShowEmojiPicker(false);
+                              replyInputRef.current?.focus();
+                            }}
+                            className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-lg"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="absolute bottom-[-6px] right-3 w-3 h-3 bg-white dark:bg-gray-900 border-r border-b border-gray-100 dark:border-gray-800 rotate-45" />
+                    </div>
+                  </>
+                )}
+              </div>
+
               <button
                 onClick={handleSendReply}
                 className={`text-primary-500 transition-opacity ${replyText && !isSubmitting ? 'opacity-100' : 'opacity-30'}`}

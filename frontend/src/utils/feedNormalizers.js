@@ -22,9 +22,12 @@ export const formatTime = (value) => {
 
 const safeLower = (value) => (value ? String(value).toLowerCase() : null);
 
-export const normalizeComment = (comment = {}) => ({
-  id: comment.id,
-  parentId: comment.parentId,
+export const normalizeComment = (comment = {}) => {
+  const pid = comment.parentId || comment.parent_id || comment.original?.parentId || comment.original?.parent_id;
+  
+  return {
+    id: comment.id,
+    parentId: pid,
   user: {
     id: comment.user?.userId,
     name: comment.user?.displayName || 'Soundbook user',
@@ -37,8 +40,9 @@ export const normalizeComment = (comment = {}) => ({
   reacts: comment.reactsCount || comment.reacts || 0,
   replyCount: comment.replyCount || 0,
   currentUserReaction: comment.currentUserReaction ? comment.currentUserReaction.toLowerCase() : null,
-  original: comment,
-});
+    original: comment,
+  };
+};
 
 export const normalizePost = (post = {}) => {
   const ref = (() => {

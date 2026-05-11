@@ -4,6 +4,7 @@ import PostMediaCard from './PostMediaCard';
 import PostReactionsBar from './PostReactionsBar';
 import PostComments from './PostComments';
 import { postsApi } from '../../services/posts';
+import { interactionsApi } from '../../services/interactionsApi';
 import ModalShell from '../common/ModalShell';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ReportModal from '../common/ReportModal';
@@ -101,12 +102,20 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
   };
 
   const handleReact = async (reactionType) => {
-    const result = await runAction(() => postsApi.react(livePost.id, reactionType));
-    if (result) setUpdatedPost(result);
+    // Ensure uppercase for backend
+    const apiType = String(reactionType).toUpperCase();
+    await runAction(async () => {
+      await interactionsApi.reactToPost(livePost.id, apiType);
+      
+      // Since interactionsApi returns void, we refresh the post info to get new counts
+      // We can use postsApi.getPostById which we just added
+      const updated = await postsApi.getPostById(livePost.id);
+      if (updated) setUpdatedPost(updated);
+    });
   };
 
   const handleComment = async (content, parentId = null) => {
-    const result = await runAction(() => postsApi.comment(livePost.id, content, parentId), { keepMenu: true });
+    const result = await runAction(() => interactionsApi.addComment(livePost.id, content, parentId), { keepMenu: true });
     if (!result) return;
     const newComment = normalizeComment(result);
     setLivePost(prev => ({
@@ -346,19 +355,9 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
 
       {livePost.commentsEnabled === false ? <div className="mb-2 mt-3 flex items-center gap-2 text-xs text-text-muted"><Lock size={13} /> Bình luận đang đóng</div> : null}
 
-      <PostReactionsBar post={livePost} onReact={handleReact} onFocusComment={() => setCommentFocusTick(tick => tick + 1)} onShare={() => setShareOpen(true)} onViewReactions={() => setIsReactionModalOpen(true)} />
+      <PostReactionsBar post={livePost} onReact={handleReact} onFocusComment={() => setIsDetailOpen(true)} onShare={() => setShareOpen(true)} onViewReactions={() => setIsReactionModalOpen(true)} />
 
-      <PostComments 
-        postId={livePost.id}
-        postOwnerId={livePost.user?.userId || livePost.user?.id}
-        comments={livePost.comments || []} 
-        enabled={livePost.commentsEnabled !== false} 
-        onSubmitComment={handleComment} 
-        onDeleteComment={handleDeleteComment}
-        focusSignal={commentFocusTick} 
-        totalComments={livePost.reactions?.comments || 0}
-        onViewAll={() => setIsDetailOpen(true)}
-      />
+
 
       <ModalShell
         open={shareOpen}
