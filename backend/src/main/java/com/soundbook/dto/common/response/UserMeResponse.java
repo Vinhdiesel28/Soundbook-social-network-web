@@ -1,4 +1,4 @@
-package com.soundbook.dto.response;
+package com.soundbook.dto.common.response;
 
 import lombok.Builder;
 import lombok.Data;

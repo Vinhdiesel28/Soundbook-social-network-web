@@ -1,7 +1,7 @@
 package com.soundbook.service;
 
-import com.soundbook.dto.request.UpdateProfileRequest;
-import com.soundbook.dto.response.UserMeResponse;
+import com.soundbook.dto.common.request.UpdateProfileRequest;
+import com.soundbook.dto.common.response.UserMeResponse;
 import com.soundbook.entity.User;
 import com.soundbook.entity.UserProfile;
 import com.soundbook.repository.UserOnboardingRepository;

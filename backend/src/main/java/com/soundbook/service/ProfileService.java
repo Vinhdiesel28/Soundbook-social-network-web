@@ -11,9 +11,13 @@ import com.soundbook.dto.taste.MatchUserResponse;
 import com.soundbook.entity.*;
 import com.soundbook.entity.enums.Visibility;
 import com.soundbook.repository.*;
+import com.soundbook.service.admin.FileUploadService;
+import io.jsonwebtoken.io.IOException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -34,6 +38,7 @@ public class ProfileService {
     private final TasteDnaService tasteDnaService;
     private final FriendService friendService;
     private final FeedService feedService;
+    private final FileUploadService cloudinaryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional(readOnly = true)
@@ -173,6 +178,28 @@ public class ProfileService {
             return friendshipRepository.existsById(new FriendshipId(owner.getId(), requester.getId()));
         }
         return false;
+    }
+
+    public void updateAvatar(Long userId, MultipartFile file) throws java.io.IOException
+    {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        String avatarUrl = cloudinaryService.uploadFile(file, "soundbook/avatars");
+
+        user.getProfile().setAvatarUrl(avatarUrl);
+        userRepository.save(user);
+    }
+
+    public void updateCover(Long userId, MultipartFile file) throws java.io.IOException
+    {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        String avatarUrl = cloudinaryService.uploadFile(file, "soundbook/avatars");
+
+        user.getProfile().setCoverUrl(avatarUrl);
+        userRepository.save(user);
     }
 
     private String visibilityName(Visibility visibility) {

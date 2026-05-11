@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Play, Pause, SkipForward, SkipBack, Volume2, Maximize2, Users, MessageSquare, Heart, Settings, Plus, List, MoreHorizontal } from 'lucide-react';
 import RoomHeader from '../components/livesync/RoomHeader';
 import VisualizerCover from '../components/livesync/VisualizerCover';
@@ -13,9 +13,11 @@ import { getCurrentUser } from '../services/auth';
 import { getRoomDetail, getRoomQueue, joinRoom, leaveRoom } from '../services/room';
 import { publishMessage } from '../lib/realtime';
 import { useRoomSession } from '../context/RoomSessionContext';
+import { useToast } from '../context/ToastContext';
 
 const LiveSyncRoom = () => {
   const { id: roomIdParam } = useParams();
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const currentUser = getCurrentUser();
   const [roomId, setRoomId] = useState(null);
@@ -24,6 +26,9 @@ const LiveSyncRoom = () => {
   const [room, setRoom] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [volume, setVolume] = useState(100);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const { showToast } = useToast();
   
   const lastSyncRef = useRef(Date.now());
   const { session, joinSession, leaveSession, updateMembers, setLocalPlayback } = useRoomSession();
@@ -185,6 +190,14 @@ const LiveSyncRoom = () => {
     // Context already receives STOMP updates — just keep local UI state in sync
   }, [playbackState, room, queue]);
 
+  // Handle room end signal
+  useEffect(() => {
+    if (session?.ended && roomIdParam) {
+      showToast('Phòng đã kết thúc bởi quản trị viên hoặc chủ phòng.', 'info');
+      navigate('/feed', { replace: true });
+    }
+  }, [session?.ended, roomIdParam, navigate, showToast]);
+
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !roomId || !currentUser?.id || isSendingMessage) return;
 
@@ -343,15 +356,26 @@ const LiveSyncRoom = () => {
       <div className="flex-1 lg:w-[65%] flex flex-col gap-6 h-full">
 
         {/* Main */}
-        <div className="flex-1 bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col relative">
-
+        <div 
+          className="flex-1 bg-black rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden relative group"
+          onMouseMove={() => {
+             if (window.uiTimeout) clearTimeout(window.uiTimeout);
+             setControlsVisible(true);
+             window.uiTimeout = setTimeout(() => setControlsVisible(false), 3000);
+          }}
+          onMouseLeave={() => {
+             if (window.uiTimeout) clearTimeout(window.uiTimeout);
+             setControlsVisible(false);
+          }}
+        >
           <RoomHeader
             membersCount={members.length}
             roomName={room?.name}
             roomId={room?.roomId || roomId}
+            visible={controlsVisible}
           />
 
-          <div className="flex-1 overflow-hidden p-4">
+          <div className="w-full h-full">
             <YouTubePlayer
               videoId={playbackState?.trackId || (queue.length > 0 ? queue[0].trackId : null)}
               isPlaying={isPlaying}
@@ -364,8 +388,10 @@ const LiveSyncRoom = () => {
               onSeek={handleExplicitSeek}
               onEnded={handleEnded}
               onSkip={handleEnded}
-              volume={100}
+              volume={volume}
+              onVolumeChange={setVolume}
               onAddSongRequest={() => setActiveRightPanel('queue')}
+              forceShowControls={controlsVisible}
             />
           </div>
         </div>

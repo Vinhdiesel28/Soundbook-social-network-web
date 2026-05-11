@@ -42,9 +42,32 @@ export const postsApi = {
     auth: true,
   })),
 
+  reactComment: async (commentId, reactionType) => unwrap(await request(`/posts/comments/${encodeURIComponent(commentId)}/reaction`, {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify({ reactionType }),
+  })),
+
   share: async (postId, payload = {}) => unwrap(await request(`/posts/${encodeURIComponent(postId)}/share`, {
     method: 'POST',
     auth: true,
     body: JSON.stringify(payload),
   })),
+
+  uploadMedia: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return unwrap(await request('/posts/media', {
+      method: 'POST',
+      auth: true,
+      body: formData,
+      // Note: request helper should NOT set Content-Type to application/json for FormData
+    }));
+  },
+  
+  getReactions: async (targetId, targetType = 'POST', page = 0, size = 20) => 
+    unwrap(await request(`/posts/${encodeURIComponent(targetId)}/reactions?targetType=${targetType}&page=${page}&size=${size}`, {
+      method: 'GET',
+      auth: true,
+    })),
 };

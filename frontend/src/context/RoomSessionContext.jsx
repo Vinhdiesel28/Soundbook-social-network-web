@@ -208,6 +208,7 @@ export const RoomSessionProvider = ({ children }) => {
               chatMessages: [...prev.chatMessages, {
                 id: msg.messageId,
                 user: msg.senderDisplayName,
+                avatar: msg.senderAvatarUrl,
                 text: msg.contentText,
               }],
             };

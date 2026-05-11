@@ -1,43 +1,54 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Compass, Music2, Sparkles, Users } from 'lucide-react';
+import { BookOpen, Compass, Music2, Sparkles, Users, Flag } from 'lucide-react';
 import { tasteApi } from '../services/taste';
+import ReportModal from '../components/common/ReportModal';
 
-const MatchCard = ({ match }) => (
-  <Link to={`/profile/${match.userId}`} className="block rounded-2xl border border-gray-200 bg-surface-color p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800">
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-purple-500 text-lg font-black text-white">
-          {(match.displayName || 'U').charAt(0).toUpperCase()}
+const MatchCard = ({ match, onReport }) => (
+  <div className="group relative">
+    <Link to={`/profile/${match.userId}`} className="block rounded-2xl border border-gray-200 bg-surface-color p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-purple-500 text-lg font-black text-white">
+            {(match.displayName || 'U').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h3 className="font-bold">{match.displayName || 'Soundbook user'}</h3>
+            <p className="text-xs text-text-muted">@{match.username || `user_${match.userId}`}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-bold">{match.displayName || 'Soundbook user'}</h3>
-          <p className="text-xs text-text-muted">@{match.username || `user_${match.userId}`}</p>
+        <div className="text-right">
+          <div className="text-2xl font-black text-primary-500">{Math.round(match.finalMatch || 0)}%</div>
+          <div className="text-xs text-text-muted">Match</div>
         </div>
       </div>
-      <div className="text-right">
-        <div className="text-2xl font-black text-primary-500">{Math.round(match.finalMatch || 0)}%</div>
-        <div className="text-xs text-text-muted">Match</div>
-      </div>
-    </div>
 
-    <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-      <div className="rounded-xl bg-blue-50 p-3 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">
-        Music: <strong>{Math.round(match.musicSimilarity || 0)}%</strong>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-xl bg-blue-50 p-3 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">
+          Music: <strong>{Math.round(match.musicSimilarity || 0)}%</strong>
+        </div>
+        <div className="rounded-xl bg-orange-50 p-3 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300">
+          Book: <strong>{Math.round(match.bookSimilarity || 0)}%</strong>
+        </div>
       </div>
-      <div className="rounded-xl bg-orange-50 p-3 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300">
-        Book: <strong>{Math.round(match.bookSimilarity || 0)}%</strong>
-      </div>
-    </div>
 
-    {match.sharedFeatures?.length ? (
-      <div className="mt-4 flex flex-wrap gap-2">
-        {match.sharedFeatures.slice(0, 5).map(feature => (
-          <span key={feature} className="rounded-full bg-primary-500/10 px-3 py-1 text-xs font-semibold text-primary-500">{feature}</span>
-        ))}
-      </div>
-    ) : null}
-  </Link>
+      {match.sharedFeatures?.length ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {match.sharedFeatures.slice(0, 5).map(feature => (
+            <span key={feature} className="rounded-full bg-primary-500/10 px-3 py-1 text-xs font-semibold text-primary-500">{feature}</span>
+          ))}
+        </div>
+      ) : null}
+    </Link>
+    
+    <button 
+      onClick={(e) => { e.preventDefault(); onReport(match); }}
+      className="absolute top-3 right-12 p-2 rounded-full bg-white/50 dark:bg-gray-800/50 text-text-muted hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all z-10"
+      title="Báo cáo"
+    >
+      <Flag size={14} />
+    </button>
+  </div>
 );
 
 const DiscoverItem = ({ item }) => (
@@ -59,6 +70,7 @@ const Discovery = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reportTarget, setReportTarget] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -117,7 +129,7 @@ const Discovery = () => {
             </div>
             {matches.length ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {matches.map(match => <MatchCard key={match.userId} match={match} />)}
+                {matches.map(match => <MatchCard key={match.userId} match={match} onReport={setReportTarget} />)}
               </div>
             ) : (
               <div className="rounded-2xl border border-gray-200 bg-surface-color p-6 text-sm text-text-muted dark:border-gray-800">
@@ -143,6 +155,13 @@ const Discovery = () => {
           </section>
         </>
       )}
+
+      <ReportModal
+        isOpen={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        type="USER"
+        targetId={reportTarget?.userId || reportTarget?.id}
+      />
     </div>
   );
 };

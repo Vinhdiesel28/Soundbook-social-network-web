@@ -43,13 +43,16 @@ const RequireAdmin = () => {
   return <Outlet />;
 };
 
+import { ToastProvider } from './context/ToastContext';
+
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ThemeProvider>
         <LanguageProvider>
-          {/* RoomSessionProvider at root: one STOMP connection, survives navigation */}
-          <RoomSessionProvider>
+          <ToastProvider>
+            {/* RoomSessionProvider at root: one STOMP connection, survives navigation */}
+            <RoomSessionProvider>
             <Router>
               <Routes>
                 <Route element={<PublicOnlyRoute />}>
@@ -79,9 +82,10 @@ function App() {
               </Routes>
             </Router>
           </RoomSessionProvider>
-        </LanguageProvider>
-      </ThemeProvider>
-    </GoogleOAuthProvider>
+        </ToastProvider>
+      </LanguageProvider>
+    </ThemeProvider>
+  </GoogleOAuthProvider>
   );
 }
 

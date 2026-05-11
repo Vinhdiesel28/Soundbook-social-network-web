@@ -1,4 +1,4 @@
-package com.soundbook.dto.request;
+package com.soundbook.dto.common.request;
 
 import com.soundbook.entity.enums.ThemeMode;
 import lombok.Data;

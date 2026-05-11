@@ -1,4 +1,4 @@
-package com.soundbook.dto.request;
+package com.soundbook.dto.common.request;
 import lombok.Data;
 
 @Data

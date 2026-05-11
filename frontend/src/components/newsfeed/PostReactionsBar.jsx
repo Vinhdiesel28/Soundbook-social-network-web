@@ -1,26 +1,41 @@
-import React, { useState } from 'react';
-import { MessageCircle, Share2, Heart, ThumbsUp, Flame, Laugh, Frown, Sparkles } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { MessageCircle, Share2, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 const REACTS = [
   { key: 'like', api: 'LIKE', icon: ThumbsUp, label: 'Thích', color: 'text-blue-500', bg: 'hover:bg-blue-50 dark:hover:bg-blue-950/40' },
   { key: 'heart', api: 'HEART', icon: Heart, label: 'Yêu thích', color: 'text-rose-500', bg: 'hover:bg-rose-50 dark:hover:bg-rose-950/40' },
-  { key: 'fire', api: 'FIRE', icon: Flame, label: 'Cuốn', color: 'text-orange-500', bg: 'hover:bg-orange-50 dark:hover:bg-orange-950/40' },
-  { key: 'laugh', api: 'LAUGH', icon: Laugh, label: 'Haha', color: 'text-yellow-500', bg: 'hover:bg-yellow-50 dark:hover:bg-yellow-950/40' },
-  { key: 'wow', api: 'WOW', icon: Sparkles, label: 'Wow', color: 'text-purple-500', bg: 'hover:bg-purple-50 dark:hover:bg-purple-950/40' },
+  { key: 'fire', api: 'FIRE', icon: Flame, label: 'Nhiệt', color: 'text-orange-500', bg: 'hover:bg-orange-50 dark:hover:bg-orange-950/40' },
+  { key: 'haha', api: 'HAHA', icon: Laugh, label: 'Haha', color: 'text-yellow-500', bg: 'hover:bg-yellow-50 dark:hover:bg-yellow-950/40' },
+  { key: 'wow', api: 'WOW', icon: Ghost, label: 'Wow', color: 'text-purple-500', bg: 'hover:bg-purple-50 dark:hover:bg-purple-950/40' },
   { key: 'sad', api: 'SAD', icon: Frown, label: 'Buồn', color: 'text-sky-500', bg: 'hover:bg-sky-50 dark:hover:bg-sky-950/40' },
+  { key: 'angry', api: 'ANGRY', icon: Angry, label: 'Phẫn nộ', color: 'text-red-500', bg: 'hover:bg-red-50 dark:hover:bg-red-950/40' },
 ];
 
-const PostReactionsBar = ({ post, onReact, onFocusComment, onShare }) => {
+const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReactions }) => {
   const { t } = useLanguage();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const timeoutRef = useRef(null);
+
   const total = REACTS.reduce((sum, item) => sum + (post.reactions?.[item.key] || 0), 0);
-  const activeKey = post.currentUserReaction;
-  const active = REACTS.find(item => item.key === activeKey);
+  const activeKey = post.currentUserReaction?.toLowerCase();
+  const active = REACTS.find(item => item.api === post.currentUserReaction?.toUpperCase());
   const MainIcon = active?.icon || ThumbsUp;
   const mainLabel = active?.label || 'Thích';
 
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setPickerOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setPickerOpen(false);
+    }, 500);
+  };
+
   const pickReaction = (item) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setPickerOpen(false);
     onReact?.(item.api);
   };
@@ -28,28 +43,33 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare }) => {
   return (
     <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
-        <div className="flex items-center gap-1.5">
-          {REACTS.filter(item => post.reactions?.[item.key]).slice(0, 4).map(item => {
-            const Icon = item.icon;
-            return (
-              <span key={item.key} className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-700 ${item.color}`}>
-                <Icon size={12} fill={item.key === 'heart' ? 'currentColor' : 'none'} />
-              </span>
-            );
-          })}
-          <span>{total ? `${total} cảm xúc` : 'Hãy là người đầu tiên bày tỏ cảm xúc'}</span>
-        </div>
+        <button 
+          onClick={onViewReactions}
+          className="flex items-center gap-1.5 hover:underline decoration-dotted"
+        >
+          <div className="flex items-center gap-1.5">
+            {REACTS.filter(item => post.reactions?.[item.key]).slice(0, 4).map(item => {
+              const Icon = item.icon;
+              return (
+                <span key={item.key} className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-700 ${item.color}`}>
+                  <Icon size={12} fill={item.key === 'heart' ? 'currentColor' : 'none'} />
+                </span>
+              );
+            })}
+            <span>{total ? `${total} cảm xúc` : 'Hãy là người đầu tiên bày tỏ cảm xúc'}</span>
+          </div>
+        </button>
         <span>{post.reactions?.comments || 0} bình luận · {post.reactions?.shares || 0} chia sẻ</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <div
           className="relative"
-          onMouseEnter={() => setPickerOpen(true)}
-          onMouseLeave={() => setPickerOpen(false)}
-          onFocus={() => setPickerOpen(true)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onFocus={handleMouseEnter}
           onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setPickerOpen(false);
+            if (!event.currentTarget.contains(event.relatedTarget)) handleMouseLeave();
           }}
         >
           {pickerOpen ? (

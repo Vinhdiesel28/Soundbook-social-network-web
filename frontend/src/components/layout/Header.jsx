@@ -14,12 +14,12 @@ import {
   FileText,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCurrentUser, logout, resolveHomePath } from '../../services/auth';
+import { getCurrentUser, logout, resolveHomePath, resolveUrl } from '../../services/auth';
 import { searchApi } from '../../services/search';
 
 const ResultAvatar = ({ user }) => {
   if (user?.avatarUrl) {
-    return <img src={user.avatarUrl} alt={user.displayName || 'avatar'} className="h-8 w-8 rounded-full object-cover" />;
+    return <img src={resolveUrl(user.avatarUrl)} alt={user.displayName || 'avatar'} className="h-8 w-8 rounded-full object-cover" />;
   }
   return <div className="h-8 w-8 rounded-full bg-primary-500 text-white flex items-center justify-center text-xs font-bold">{(user?.displayName || 'U').charAt(0).toUpperCase()}</div>;
 };
@@ -35,7 +35,7 @@ const Header = ({ unreadMessages = 0 }) => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [currentUser] = useState(() => getCurrentUser());
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
 
   const searchRef = useRef(null);
   const notificationsRef = useRef(null);
@@ -67,12 +67,18 @@ const Header = ({ unreadMessages = 0 }) => {
       }
     };
 
+    const handleUserUpdate = () => {
+      setCurrentUser(getCurrentUser());
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('soundbook_user_updated', handleUserUpdate);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('soundbook_user_updated', handleUserUpdate);
     };
   }, []);
 
@@ -301,7 +307,15 @@ const Header = ({ unreadMessages = 0 }) => {
               <div ref={profileMenuRef} className="relative">
                 <button type="button" onClick={handleToggleProfileMenu} className="flex items-center gap-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500" aria-haspopup="menu" aria-expanded={showProfileMenu}>
                   <div className="w-9 h-9 rounded-full bg-primary-500 text-white flex items-center justify-center font-semibold overflow-hidden">
-                    {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt={userName} className="w-full h-full object-cover" /> : <span>{userName.charAt(0).toUpperCase()}</span>}
+                    {currentUser?.avatarUrl ? (
+                      <img 
+                        src={`${resolveUrl(currentUser.avatarUrl)}${String(currentUser.avatarUrl).includes('?') ? '&' : '?'}t=${currentUser.updatedAt || 'initial'}`} 
+                        alt={userName} 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <span>{userName.charAt(0).toUpperCase()}</span>
+                    )}
                   </div>
                 </button>
 

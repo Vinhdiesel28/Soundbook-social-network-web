@@ -1,13 +1,12 @@
 package com.soundbook.controller;
 
 import com.soundbook.common.dto.ApiResponse;
+import com.soundbook.dto.common.response.PageResponse;
 import com.soundbook.dto.feed.FeedCommentResponse;
 import com.soundbook.dto.feed.FeedPostResponse;
-import com.soundbook.dto.socialcontent.PostCommentRequest;
-import com.soundbook.dto.socialcontent.PostMutationRequest;
-import com.soundbook.dto.socialcontent.PostReactionRequest;
-import com.soundbook.dto.socialcontent.PostShareRequest;
+import com.soundbook.dto.socialcontent.*;
 import com.soundbook.service.PostService;
+import com.soundbook.service.ReactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,6 +18,14 @@ import org.springframework.web.bind.annotation.*;
 public class PostController {
 
     private final PostService postService;
+    private final ReactionService reactionService;
+    private final com.soundbook.service.admin.FileUploadService fileUploadService;
+
+    @PostMapping(value = "/media", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<String>> uploadMedia(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        String url = fileUploadService.uploadFile(file, "posts");
+        return ResponseEntity.ok(ApiResponse.success(url));
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<FeedPostResponse>> createPost(Authentication authentication, @RequestBody PostMutationRequest request) {
@@ -57,8 +64,29 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.success());
     }
 
+    @PostMapping("/comments/{commentId}/reaction")
+    public ResponseEntity<ApiResponse<Void>> reactComment(Authentication authentication, @PathVariable Long commentId, @RequestBody PostReactionRequest request) {
+        postService.reactComment(authentication.getName(), commentId, request);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
     @PostMapping("/{postId}/share")
     public ResponseEntity<ApiResponse<FeedPostResponse>> share(Authentication authentication, @PathVariable Long postId, @RequestBody(required = false) PostShareRequest request) {
         return ResponseEntity.ok(ApiResponse.success(postService.share(authentication.getName(), postId, request)));
+    }
+
+    @GetMapping("/{targetId}/reactions")
+    public ResponseEntity<ApiResponse<PageResponse<ReactionResponse>>> getTargetReactions(
+            @PathVariable Long targetId,
+            @RequestParam(name = "targetType", defaultValue = "POST") com.soundbook.entity.enums.TargetType targetType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size)
+    {
+        PageResponse<ReactionResponse> reactions = reactionService.getReactionsByTargetId(targetId, targetType, page, size);
+
+        return ResponseEntity.ok(ApiResponse.<PageResponse<ReactionResponse>>builder()
+                .message("Lấy danh sách reaction thành công")
+                .data(reactions)
+                .build());
     }
 }

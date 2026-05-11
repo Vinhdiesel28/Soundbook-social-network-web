@@ -1,4 +1,4 @@
-package com.soundbook.dto.response;
+package com.soundbook.dto.common.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,5 +19,6 @@ public class AuthResponse {
     private String email;
     private String displayName;
     private String role;
+    private String avatarUrl;
     private Boolean onboardingCompleted;
 }

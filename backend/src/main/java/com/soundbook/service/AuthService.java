@@ -6,9 +6,9 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
-import com.soundbook.dto.request.LoginRequest;
-import com.soundbook.dto.request.RegisterRequest;
-import com.soundbook.dto.response.AuthResponse;
+import com.soundbook.dto.common.request.LoginRequest;
+import com.soundbook.dto.common.request.RegisterRequest;
+import com.soundbook.dto.common.response.AuthResponse;
 import com.soundbook.entity.User;
 import com.soundbook.entity.UserOnboarding;
 import com.soundbook.entity.UserProfile;
@@ -31,9 +31,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -56,6 +54,13 @@ public class AuthService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadCredentialsException("Incorrect email or password"));
+
+        if (user.getStatus().equals(UserStatus.BANNED))
+        {
+            throw new AppException(ErrorCode.USER_BANNED);
+        }
+
+        System.out.println(user.getRole());
 
         if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
             throw new AppException(ErrorCode.USER_MOVED);
@@ -185,6 +190,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .displayName(user.getDisplayName())
                 .role(user.getRole().name())
+                .avatarUrl(userProfileRepository.findById(user.getId())
+                        .map(UserProfile::getAvatarUrl)
+                        .orElse(null))
                 .onboardingCompleted(userOnboardingRepository.findById(user.getId())
                         .map(onboarding -> Boolean.TRUE.equals(onboarding.getTasteDnaReady()))
                         .orElse(false))

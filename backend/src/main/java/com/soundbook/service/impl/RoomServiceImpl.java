@@ -287,6 +287,9 @@ public class RoomServiceImpl implements RoomService {
                 .roomId(savedMessage.getRoom().getId())
                 .senderUserId(savedMessage.getSender().getId())
                 .senderDisplayName(savedMessage.getSender().getDisplayName())
+                .senderAvatarUrl(userProfileRepository.findById(savedMessage.getSender().getId())
+                        .map(UserProfile::getAvatarUrl)
+                        .orElse(null))
                 .contentText(savedMessage.getContentText())
                 .createdAt(savedMessage.getCreatedAt())
                 .build();

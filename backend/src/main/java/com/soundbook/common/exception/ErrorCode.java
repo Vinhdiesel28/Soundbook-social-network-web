@@ -30,6 +30,7 @@ public enum ErrorCode {
     UNAUTHENTICATED(401, "Unauthenticated", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(403, "You do not have permission", HttpStatus.FORBIDDEN),
     BAD_CREDENTIALS(401, "Incorrect email or password", HttpStatus.UNAUTHORIZED),
+    USER_BANNED(403, "Tài khoản của bạn đã bị cấm truy cập. Vui lòng liên hệ quản trị viên.", HttpStatus.FORBIDDEN),
     USER_MOVED(401, "User exists but please log in via Google", HttpStatus.UNAUTHORIZED),
 
     // Lỗi Xung đột dữ liệu / Logic (409/400)
@@ -40,7 +41,17 @@ public enum ErrorCode {
     SPOTIFY_ACCOUNT_ALREADY_LINKED(409, "This Spotify account is already linked to another user", HttpStatus.CONFLICT),
     INVALID_CURSOR(400, "Invalid cursor", HttpStatus.BAD_REQUEST),
     INVALID_DELETE_MODE(400, "Invalid delete mode", HttpStatus.BAD_REQUEST),
-    DM_DELETE_FORBIDDEN(403, "You cannot delete this message for everyone", HttpStatus.FORBIDDEN);
+    DM_DELETE_FORBIDDEN(403, "You cannot delete this message for everyone", HttpStatus.FORBIDDEN),
+
+    OLD_PASSWORD_INCORRECT(400, "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
+    PASSWORD_NOT_MATCHED(400, "Xác nhận mật khẩu không khớp với mật khẩu mới", HttpStatus.BAD_REQUEST),
+
+    THREAD_NOT_FOUND(404, "Không tìm thấy cuộc hội thoại", HttpStatus.NOT_FOUND),
+    MESSAGE_NOT_FOUND(404, "Không tìm thấy tin nhắn", HttpStatus.NOT_FOUND),
+
+    ALREADY_REPORTED(400, "Bạn đã báo cáo nội dung này rồi. Vui lòng chờ quản trị viên xử lý!", HttpStatus.BAD_REQUEST),
+    REPORT_NOT_FOUND(404, "Không tìm thấy báo cáo", HttpStatus.NOT_FOUND);
+
 
     ErrorCode(int code, String message, HttpStatus statusCode) {
         this.code = code;

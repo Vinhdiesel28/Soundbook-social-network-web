@@ -52,4 +52,9 @@ public class User {
     @Builder.Default
     private UserRole role = UserRole.USER;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserProfile profile;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserOnboarding onboarding;
 }

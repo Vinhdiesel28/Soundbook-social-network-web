@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Disc3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import { GoogleLogin } from '@react-oauth/google';
 import { isGoogleAuthConfigured } from '../config/env';
 import {
   canSwitchAccount,
   getCurrentUser,
   getStoredAuth,
+  isAdminRole,
   login,
   loginWithGoogle,
   register,
@@ -20,6 +22,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
+  const { showToast } = useToast();
 
   const currentSession = useMemo(() => getStoredAuth(), []);
   const currentUser = currentSession?.user || getCurrentUser();
@@ -33,12 +36,12 @@ const Login = () => {
 
   const handleGoogleLogin = async (idToken) => {
     if (!idToken) {
-      alert('Google không trả về ID token hợp lệ. Vui lòng thử lại.');
+      showToast('Google không trả về ID token hợp lệ. Vui lòng thử lại.', 'error');
       return;
     }
 
     if (sessionLocked) {
-      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      showToast(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`, 'warning');
       return;
     }
 
@@ -46,10 +49,12 @@ const Login = () => {
 
     try {
       const result = await loginWithGoogle(idToken);
-      navigate(result?.data?.onboardingCompleted ? resolveHomePath(result?.data?.role) : '/onboarding', { replace: true });
+      const userRole = result?.data?.role;
+      const shouldGoHome = isAdminRole(userRole) || result?.data?.onboardingCompleted;
+      navigate(shouldGoHome ? resolveHomePath(userRole) : '/onboarding', { replace: true });
     } catch (error) {
       console.error('Lỗi đăng nhập Google:', error);
-      alert(error.message || 'Đăng nhập Google thất bại.');
+      showToast(error.message || 'Đăng nhập Google thất bại.', 'error');
     } finally {
       setLoading(false);
     }
@@ -57,7 +62,7 @@ const Login = () => {
 
   const handleToggle = () => {
     if (sessionLocked) {
-      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      showToast(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`, 'warning');
       return;
     }
 
@@ -69,7 +74,7 @@ const Login = () => {
     e.preventDefault();
 
     if (sessionLocked) {
-      alert(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`);
+      showToast(`Bạn đang đăng nhập bằng ${currentUser?.displayName || currentUser?.email}. Hãy logout trước khi đăng nhập tài khoản khác.`, 'warning');
       return;
     }
 
@@ -87,14 +92,16 @@ const Login = () => {
             displayName: formData.displayName || formData.username,
           });
 
-      navigate(result?.data?.onboardingCompleted ? resolveHomePath(result?.data?.role) : '/onboarding', { replace: true });
+      const userRole = result?.data?.role;
+      const shouldGoHome = isAdminRole(userRole) || result?.data?.onboardingCompleted;
+      navigate(shouldGoHome ? resolveHomePath(userRole) : '/onboarding', { replace: true });
     } catch (error) {
       if (!isLogin && error?.status === 400 && String(error.message || '').toLowerCase().includes('email')) {
         setIsLogin(true);
-        alert('Email này đã tồn tại. Mình đã chuyển sang chế độ đăng nhập, bạn hãy nhập mật khẩu để đăng nhập.');
+        showToast('Email này đã tồn tại. Mình đã chuyển sang chế độ đăng nhập, bạn hãy nhập mật khẩu để đăng nhập.', 'info');
       } else {
         console.error('Lỗi kết nối:', error);
-        alert(error.message || 'Thao tác thất bại. Vui lòng kiểm tra lại.');
+        showToast(error.message || 'Thao tác thất bại. Vui lòng kiểm tra lại.', 'error');
       }
     } finally {
       setLoading(false);
@@ -198,7 +205,7 @@ const Login = () => {
                   disabled={loading || sessionLocked}
                   className={`w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4 ${(loading || sessionLocked) ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                {loading ? '...' : (isLogin ? t('login.signin_btn') : t('login.register_btn'))}
+                {isLogin ? t('login.signin_btn') : t('login.register_btn')}
                 <ArrowRight size={18} />
               </button>
             </form>
@@ -217,7 +224,7 @@ const Login = () => {
                         handleGoogleLogin(credentialResponse?.credential);
                       }}
                       onError={() => {
-                        alert('Đăng nhập Google thất bại. Vui lòng thử lại.');
+                        showToast('Đăng nhập Google thất bại. Vui lòng thử lại.', 'error');
                       }}
                       type="standard"
                       shape="pill"

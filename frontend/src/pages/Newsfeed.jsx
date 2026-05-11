@@ -9,9 +9,12 @@ import NewsfeedSidebar from '../components/newsfeed/NewsfeedSidebar';
 import { feedApi } from '../services/feed';
 import { getActiveRooms } from '../services/room';
 import { normalizePost, normalizeSuggestion, normalizeTrending } from '../utils/feedNormalizers';
+import { useRef } from 'react';
+import YouTube from 'react-youtube';
 
 const Newsfeed = () => {
   const { t } = useLanguage();
+  const playerRef = useRef(null);
   const [activeTab, setActiveTab] = useState('following');
   const [playingId, setPlayingId] = useState(null);
   const [payload, setPayload] = useState({ posts: [], friendSuggestions: [], trending: [] });
@@ -84,8 +87,54 @@ const Newsfeed = () => {
   const suggestions = useMemo(() => payload.friendSuggestions.map(normalizeSuggestion), [payload.friendSuggestions]);
   const trending = useMemo(() => payload.trending.map(normalizeTrending), [payload.trending]);
 
+  // Extract videoId from a normalized post
+  const getPostVideoId = (p) => {
+    if (!p) return null;
+    if (p.media?.id) return p.media.id;
+    const ref = p.media?.ref || {};
+    if (ref.id) return ref.id;
+    if (ref.videoId) return ref.videoId;
+    if (ref.itemId) return ref.itemId;
+    // Extract from YouTube thumbnail URL: ytimg.com/vi/{VIDEO_ID}/...
+    const thumb = ref.thumbnail || p.media?.coverUrl || '';
+    const thumbMatch = thumb.match(/\/vi\/([a-zA-Z0-9_-]{11})\//); 
+    if (thumbMatch) return thumbMatch[1];
+    // Parse raw refJson
+    try {
+      const raw = p.original?.refJson;
+      if (raw) {
+        const parsed = typeof raw === 'object' ? raw : JSON.parse(raw);
+        const vid = parsed?.id || parsed?.videoId || parsed?.itemId;
+        if (vid) return vid;
+        // Also try thumbnail in raw refJson
+        const rawThumb = parsed?.thumbnail || '';
+        const rawMatch = rawThumb.match(/\/vi\/([a-zA-Z0-9_-]{11})\//); 
+        if (rawMatch) return rawMatch[1];
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  };
+
   const togglePlay = (id) => {
-    setPlayingId(playingId === id ? null : id);
+    if (playingId === id) {
+      // Pause currently playing
+      try { playerRef.current?.pauseVideo?.(); } catch (e) { /* ignore */ }
+      setPlayingId(null);
+    } else {
+      // Start new video - call loadVideoById DIRECTLY in click handler
+      const targetPost = posts.find(p => p.id === id);
+      const videoId = getPostVideoId(targetPost);
+      if (videoId && playerRef.current) {
+        try {
+          playerRef.current.unMute?.();
+          playerRef.current.setVolume?.(100);
+          playerRef.current.loadVideoById(videoId);
+        } catch (e) {
+          console.error('loadVideoById error:', e);
+        }
+      }
+      setPlayingId(id);
+    }
   };
 
   const prependPost = (rawPost) => {
@@ -103,8 +152,66 @@ const Newsfeed = () => {
     }));
   };
 
+  const playingPost = useMemo(() => posts.find(p => p.id === playingId), [posts, playingId]);
+  const playingVideoId = useMemo(() => {
+    if (!playingPost) return null;
+    if (playingPost.media?.id) return playingPost.media.id;
+    const ref = playingPost.media?.ref || {};
+    if (ref.id) return ref.id;
+    if (ref.videoId) return ref.videoId;
+    if (ref.itemId) return ref.itemId;
+    try {
+      const raw = playingPost.original?.refJson;
+      if (raw) {
+        const parsed = typeof raw === 'object' ? raw : JSON.parse(raw);
+        const vid = parsed?.id || parsed?.videoId || parsed?.itemId;
+        if (vid) return vid;
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  }, [playingPost]);
+
+  // When playingVideoId changes, load it into the already-mounted player
+  useEffect(() => {
+    if (!playerRef.current) return;
+    if (playingVideoId) {
+      try {
+        playerRef.current.loadVideoById(playingVideoId);
+      } catch (e) {
+        console.error('loadVideoById error:', e);
+      }
+    } else {
+      try {
+        playerRef.current.stopVideo?.();
+      } catch (e) { /* ignore */ }
+    }
+  }, [playingVideoId]);
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
+    <div className="flex flex-col lg:flex-row gap-6 relative">
+      {/* Global Newsfeed Player - Always Mounted */}
+      <div className="fixed opacity-0 pointer-events-none" style={{ width: 1, height: 1, bottom: 0, left: 0 }}>
+        <YouTube
+          videoId="dQw4w9WgXcQ"
+          opts={{
+            playerVars: {
+              autoplay: 0,
+              controls: 0,
+              modestbranding: 1,
+              rel: 0,
+              origin: window.location.origin,
+            }
+          }}
+          onReady={(e) => {
+            playerRef.current = e.target;
+            e.target.unMute();
+            e.target.setVolume(100);
+          }}
+          onEnd={() => setPlayingId(null)}
+          onError={() => setPlayingId(null)}
+        />
+      </div>
+
       <div className="flex-1 lg:w-[70%] space-y-6 overflow-hidden">
         <LiveRadar
           rooms={activeRooms}

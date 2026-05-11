@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FeedMediaResponse {
+    private String id;
     private String mediaType;
     private String url;
     private String title;

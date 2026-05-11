@@ -104,7 +104,8 @@ INSERT INTO users (id,email,password_hash,google_sub,display_name,role,status,cr
 (57,'user57@soundbook.vn','$2a$10$iVgcZu6nM0VNIiC4LAfRt.ucNQwaelD7wg/ImFXivPlv8kllwiVqK',NULL,'Phương Nam','USER','ACTIVE',NOW() - INTERVAL 107 DAY,NOW() - INTERVAL 2 DAY),
 (58,'user58@soundbook.vn','$2a$10$iVgcZu6nM0VNIiC4LAfRt.ucNQwaelD7wg/ImFXivPlv8kllwiVqK',NULL,'Ngân Hà','USER','ACTIVE',NOW() - INTERVAL 61 DAY,NOW() - INTERVAL 1 DAY),
 (59,'user59@soundbook.vn','$2a$10$iVgcZu6nM0VNIiC4LAfRt.ucNQwaelD7wg/ImFXivPlv8kllwiVqK',NULL,'Tuấn Minh','USER','ACTIVE',NOW() - INTERVAL 135 DAY,NOW() - INTERVAL 3 DAY),
-(60,'user60@soundbook.vn','$2a$10$iVgcZu6nM0VNIiC4LAfRt.ucNQwaelD7wg/ImFXivPlv8kllwiVqK',NULL,'Thành Đạt','USER','ACTIVE',NOW() - INTERVAL 28 DAY,NOW());
+(60,'user60@soundbook.vn','$2a$10$iVgcZu6nM0VNIiC4LAfRt.ucNQwaelD7wg/ImFXivPlv8kllwiVqK',NULL,'Thành Đạt','USER','ACTIVE',NOW() - INTERVAL 28 DAY,NOW()),
+(61,'admin@soundbook.io','$2a$10$iVgcZu6nM0VNIiC4LAfRt.ucNQwaelD7wg/ImFXivPlv8kllwiVqK',NULL,'Dat','ADMIN','ACTIVE',NOW() - INTERVAL 168 DAY,NOW());
 
 INSERT INTO user_profiles (user_id,username,avatar_url,cover_url,bio,theme_mode,pinned_track_id,allow_preview_player,created_at,updated_at) VALUES
 (1,'thien1','https://api.dicebear.com/8.x/avataaars/svg?seed=soundbook1','https://picsum.photos/seed/soundbook-cover-1/1200/360','Gu của mình: Ballad Trinh thám · thích kết nối với người cùng gu nhạc và sách.','AUTO',NULL,1,NOW() - INTERVAL 33 DAY,NOW() - INTERVAL 1 DAY),
