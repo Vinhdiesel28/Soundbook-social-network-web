@@ -14,4 +14,6 @@ public class FeedUserResponse {
     private String displayName;
     private String username;
     private String avatarUrl;
+    private boolean following;
+    private boolean self;
 }

@@ -190,7 +190,7 @@ public class FeedService {
                 .contentRich(post.getContentRich())
                 .moodTag(post.getMoodTag())
                 .refJson(post.getRefJson())
-                .user(buildUserResponse(post.getUser()))
+                .user(buildUserResponse(post.getUser(), currentUser))
                 .media(buildMediaResponse(post))
                 .reactions(reactions)
                 .comments(buildComments(post.getId(), currentUser))
@@ -205,13 +205,17 @@ public class FeedService {
                 .build();
     }
 
-    private FeedUserResponse buildUserResponse(User user) {
+    private FeedUserResponse buildUserResponse(User user, User currentUser) {
         UserProfile profile = userProfileRepository.findById(user.getId()).orElse(null);
+        boolean self = currentUser != null && Objects.equals(user.getId(), currentUser.getId());
+        boolean following = !self && currentUser != null && followRepository.existsByIdFollowerIdAndIdFolloweeId(currentUser.getId(), user.getId());
         return FeedUserResponse.builder()
                 .userId(user.getId())
                 .displayName(user.getDisplayName())
                 .username(profile == null ? null : profile.getUsername())
                 .avatarUrl(profile == null ? null : profile.getAvatarUrl())
+                .following(following)
+                .self(self)
                 .build();
     }
 
@@ -255,7 +259,7 @@ public class FeedService {
         return comments.stream()
                     .map(comment -> FeedCommentResponse.builder()
                         .id(comment.getId())
-                        .user(buildUserResponse(comment.getUser()))
+                        .user(buildUserResponse(comment.getUser(), currentUser))
                         .text(comment.getContent())
                         .createdAt(comment.getCreatedAt())
                         .reactsCount(reactionRepository.countByTargetIdAndTargetType(comment.getId(), TargetType.COMMENT))
