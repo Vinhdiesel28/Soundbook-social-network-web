@@ -67,9 +67,15 @@ const ProfileShelves = ({ t, shelves, isGuest = false, onAddItem, onEditItem, on
               ))}
 
               {!shelf.items.length ? (
-                <button onClick={() => onAddItem?.(shelf.id)} className="rounded-2xl border border-dashed border-gray-300 px-6 py-10 text-sm font-semibold text-text-muted hover:border-primary-500 hover:text-primary-500 dark:border-gray-700">
-                  <Plus className="mx-auto mb-2" size={22} /> Thêm mục đầu tiên
-                </button>
+                isGuest ? (
+                  <div className="rounded-2xl border border-dashed border-gray-300 px-6 py-10 text-center text-sm font-semibold text-text-muted dark:border-gray-700">
+                    Chưa có mục nào
+                  </div>
+                ) : (
+                  <button onClick={() => onAddItem?.(shelf.id)} className="rounded-2xl border border-dashed border-gray-300 px-6 py-10 text-sm font-semibold text-text-muted hover:border-primary-500 hover:text-primary-500 dark:border-gray-700">
+                    <Plus className="mx-auto mb-2" size={22} /> Thêm mục đầu tiên
+                  </button>
+                )
               ) : null}
             </div>
 

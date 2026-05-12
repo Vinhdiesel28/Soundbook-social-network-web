@@ -30,6 +30,8 @@ export const normalizeComment = (comment = {}) => ({
     username: comment.user?.username,
     avatarUrl: comment.user?.avatarUrl,
     avatar: fallbackAvatar(comment.user?.userId),
+    following: Boolean(comment.user?.following),
+    self: Boolean(comment.user?.self),
   },
   text: comment.text || comment.content || '',
   time: formatTime(comment.createdAt),
@@ -75,6 +77,8 @@ export const normalizePost = (post = {}) => {
       avatarUrl: post.user?.avatarUrl,
       avatar: fallbackAvatar(post.user?.userId),
       time: formatTime(post.createdAt),
+      following: Boolean(post.user?.following),
+      self: Boolean(post.user?.self),
     },
     media: (() => {
       const thumb = ref?.thumbnail || post.media?.coverUrl || post.media?.url || '';
