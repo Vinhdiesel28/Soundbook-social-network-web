@@ -503,12 +503,34 @@ const Profile = () => {
     }
   };
 
-  const selectPinnedTrack = (video) => {
-    setFormData(prev => ({ ...prev, pinnedTrack: video.videoId }));
+  const selectPinnedTrack = async (video) => {
+    if (!video?.videoId) return;
+    const selectedVideoId = extractYouTubeId(video.videoId);
+    setFormData(prev => ({ ...prev, pinnedTrack: selectedVideoId }));
     setPinnedVideoDetails(video);
-    setPinnedModal({ open: false, query: '', loading: false, results: [], error: '' });
-    showNotice('info', 'Đã chọn nhạc ghim. Bấm Lưu trong Thông tin cá nhân để cập nhật.');
-    setIsEditingInfo(true);
+    setPinnedModal(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      setBusy(true);
+      const data = await profileApi.updateProfile({
+        username: formData.username,
+        bio: formData.bio,
+        publicInfo: formData.publicInfo,
+        bioVisibility: formData.bioVisibility,
+        publicInfoVisibility: formData.publicInfoVisibility,
+        pinnedTrackId: selectedVideoId,
+        pinnedTrackVisibility: formData.pinnedTrackVisibility,
+        allowPreviewPlayer: formData.allowPreview,
+      });
+      replaceProfile(data, 'Đã đổi nhạc ghim trên profile.');
+      setPinnedModal({ open: false, query: '', loading: false, results: [], error: '' });
+      setIsEditingInfo(false);
+    } catch (err) {
+      setPinnedModal(prev => ({ ...prev, loading: false, error: err?.message || 'Không thể lưu nhạc ghim.' }));
+      showNotice('error', err?.message || 'Không thể lưu nhạc ghim.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handlePasswordInputChange = (e) => {
@@ -758,7 +780,7 @@ const Profile = () => {
       <ModalShell
         open={pinnedModal.open}
         title="Chọn nhạc ghim từ YouTube"
-        description="Tìm bài hát, chọn bài rồi bấm Lưu trong phần Thông tin cá nhân."
+        description="Tìm bài hát rồi chọn để lưu trực tiếp làm nhạc ghim trên profile."
         onClose={() => setPinnedModal({ open: false, query: '', loading: false, results: [], error: '' })}
       >
         <div className="space-y-4">
@@ -771,7 +793,7 @@ const Profile = () => {
               className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
             />
             <button type="button" onClick={searchPinnedTrack} disabled={pinnedModal.loading} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60">
-              {pinnedModal.loading ? 'Đang tìm...' : 'Tìm'}
+              {pinnedModal.loading ? 'Đang xử lý...' : 'Tìm'}
             </button>
           </div>
           {pinnedModal.error ? <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-300">{pinnedModal.error}</div> : null}
@@ -788,7 +810,7 @@ const Profile = () => {
                   <p className="truncate text-sm font-semibold">{video.title}</p>
                   <p className="truncate text-xs text-text-muted">{video.channelTitle}</p>
                 </div>
-                <span className="rounded-full bg-primary-500 px-3 py-1 text-xs font-semibold text-white">Chọn</span>
+                <span className="rounded-full bg-primary-500 px-3 py-1 text-xs font-semibold text-white">Chọn & lưu</span>
               </button>
             ))}
           </div>
