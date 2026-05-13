@@ -93,6 +93,7 @@ public class RoomServiceImpl implements RoomService {
                     .hostDisplayName(room.getHost().getDisplayName())
                     .hostAvatarUrl(hostProfile != null ? hostProfile.getAvatarUrl() : null)
                     .listenersCount(listeners)
+                    .status(room.getStatus().name())
                     .createdAt(room.getCreatedAt())
                     .state(toStateResponse(state))
                     .build();
@@ -104,8 +105,9 @@ public class RoomServiceImpl implements RoomService {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
         if (room.getStatus() == RoomStatus.ENDED) {
-            // Allow host to reopen the room if they accidentally left
-            if (room.getHost().getId().equals(userId)) {
+            // Allow host to reopen the room if they accidentally left,
+            // but ONLY if it wasn't forcibly closed by an admin.
+            if (room.getHost().getId().equals(userId) && !Boolean.TRUE.equals(room.getIsClosedByAdmin())) {
                 room.setStatus(RoomStatus.LIVE);
                 room.setEndedAt(null);
                 roomRepository.save(room);

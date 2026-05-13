@@ -301,6 +301,7 @@ CREATE TABLE IF NOT EXISTS rooms (
   status       ENUM('LIVE','ENDED') NOT NULL DEFAULT 'LIVE',
   created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   ended_at     DATETIME NULL,
+  is_closed_by_admin TINYINT(1) NOT NULL DEFAULT 0,
   INDEX idx_rooms_status_created (status, created_at),
   CONSTRAINT fk_rooms_host
     FOREIGN KEY (host_user_id) REFERENCES users(id)

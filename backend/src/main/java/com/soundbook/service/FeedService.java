@@ -219,6 +219,16 @@ public class FeedService {
                 .build();
     }
 
+    private FeedUserResponse buildUserResponse(User user) {
+        UserProfile profile = userProfileRepository.findById(user.getId()).orElse(null);
+        return FeedUserResponse.builder()
+                .userId(user.getId())
+                .displayName(user.getDisplayName())
+                .username(profile == null ? null : profile.getUsername())
+                .avatarUrl(profile == null ? null : profile.getAvatarUrl())
+                .build();
+    }
+
     private FeedMediaResponse buildMediaResponse(Post post) {
         Optional<PostMedia> media = postMediaRepository.findFirstByPost_IdOrderByIdAsc(post.getId());
         RefPayload refPayload = parseRefPayload(post.getRefJson());

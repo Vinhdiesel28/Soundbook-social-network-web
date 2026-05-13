@@ -45,4 +45,8 @@ public class Room {
 
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
+
+    @Column(name = "is_closed_by_admin")
+    @Builder.Default
+    private Boolean isClosedByAdmin = false;
 }

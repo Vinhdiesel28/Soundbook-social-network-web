@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Plus, Users, Disc3 } from 'lucide-react';
+import { Search, Users, Disc3 } from 'lucide-react';
 
 const ChatList = ({ t, chats, activeChat, setActiveChat }) => {
   return (
@@ -8,9 +8,6 @@ const ChatList = ({ t, chats, activeChat, setActiveChat }) => {
       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-xl">{t('chat.title')}</h2>
-          <button className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-text-muted hover:text-text-color hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors">
-            <Plus size={18} />
-          </button>
         </div>
         <div className="relative">
           <Search size={16} className="absolute left-3 top-2.5 text-gray-500" />
@@ -31,9 +28,17 @@ const ChatList = ({ t, chats, activeChat, setActiveChat }) => {
             className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${activeChat === chat.id ? 'bg-primary-500/10 dark:bg-primary-900/20 shadow-sm' : 'hover:bg-white dark:hover:bg-gray-800'}`}
           >
             <div className="relative">
-              {chat.avatarUrl ? <img src={chat.avatarUrl} alt={chat.name} className={`w-12 h-12 rounded-full ${chat.type === 'group' && 'rounded-xl'} flex-shrink-0 object-cover shadow-inner`} /> : <div className={`w-12 h-12 rounded-full ${chat.avatar} ${chat.type === 'group' && 'rounded-xl'} flex-shrink-0 flex items-center justify-center shadow-inner`}>
-                {chat.type === 'group' && <Users size={20} className="text-white opacity-50" />}
-              </div>}
+              {chat.avatarUrl ? (
+                <img src={chat.avatarUrl} alt={chat.name} className={`w-12 h-12 rounded-full ${chat.type === 'group' && 'rounded-xl'} flex-shrink-0 object-cover shadow-inner`} />
+              ) : (
+                <div className={`w-12 h-12 rounded-full ${chat.avatar} ${chat.type === 'group' && 'rounded-xl'} flex-shrink-0 flex items-center justify-center shadow-inner`}>
+                  {chat.type === 'group' ? (
+                    <Users size={20} className="text-white opacity-50" />
+                  ) : (
+                    <span className="text-white font-bold">{chat.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+              )}
               {chat.isLive && (
                 <div className="absolute -bottom-1 -right-1 bg-surface-color rounded-full p-0.5 shadow-sm">
                   <div className="w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center animate-pulse">

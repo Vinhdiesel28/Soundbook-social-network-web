@@ -2,6 +2,8 @@ package com.soundbook.service;
 
 import com.soundbook.dto.dm.*;
 
+import java.util.List;
+
 public interface DmService {
     DmThreadResponse upsertThread(DmThreadUpsertRequest request);
 

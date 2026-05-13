@@ -66,10 +66,11 @@ public class AdminRoomServiceImpl implements AdminRoomService
     public void endRoom(Long id)
     {
         Room room = roomRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
 
         room.setStatus(RoomStatus.ENDED);
         room.setEndedAt(LocalDateTime.now());
+        room.setIsClosedByAdmin(true);
         roomRepository.save(room);
 
         roomMemberRepository.updateLeaveTimeForAllMembers(id, LocalDateTime.now());

@@ -117,12 +117,17 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
         break;
       case 'REACT_COMMENT':
         const { commentId, total, types } = event.payload;
+        // Dispatch event so nested reply CommentItems can also update
+        window.dispatchEvent(new CustomEvent('soundbook_react_comment', {
+          detail: { commentId, total, types }
+        }));
         setLivePost(prev => ({
           ...prev,
           comments: (prev.comments || []).map(c =>
             c.id === commentId ? {
               ...c,
               reacts: total,
+              // Preserve currentUserReaction — socket doesn't return it
               reactors: (types || []).map(t => ({ reactionType: t.toLowerCase() }))
             } : c
           )
@@ -156,13 +161,18 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
     }
     try {
       setLoadingComments(true);
-      console.log(`Fetching comments for post ${post.id}...`);
       const res = await postsApi.getComments(post.id, 0, 100);
       if (res?.data?.content) {
         const normalized = res.data.content.map(normalizeComment);
+        const rootCount = normalized.filter(c => !c.parentId).length;
         setLivePost(prev => ({
           ...prev,
-          comments: normalized
+          comments: normalized,
+          reactions: {
+            ...(prev.reactions || {}),
+            // Use actual fetched count if larger (real total may include all nested)
+            comments: Math.max(prev.reactions?.comments || 0, res.data.totalElements ?? rootCount)
+          }
         }));
       }
     } catch (err) {
@@ -195,11 +205,10 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
       const result = await interactionsApi.addComment(livePost.id, content, parentId);
       if (result) {
         const newComment = normalizeComment(result);
-        
-        // Dispatch event for manual comments to update nested replies instantly
-        window.dispatchEvent(new CustomEvent('soundbook_new_comment', {
-          detail: { comment: newComment, postId: post.id }
-        }));
+
+        // NOTE: Do NOT dispatch soundbook_new_comment here.
+        // The WebSocket will broadcast NEW_COMMENT and handleSocketEvent will
+        // dispatch it — dispatching twice causes duplicate comments.
 
         setLivePost(prev => {
           if (prev.comments?.some(c => c.id === newComment.id)) return prev;
@@ -238,10 +247,21 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
   };
 
   const handleDeleteComment = async (commentId) => {
+    // Optimistically remove from UI immediately
+    setLivePost(prev => ({
+      ...prev,
+      comments: (prev.comments || []).filter(c => c.id !== commentId),
+      reactions: {
+        ...(prev.reactions || {}),
+        comments: Math.max(0, (prev.reactions?.comments || 0) - 1)
+      }
+    }));
     try {
       await interactionsApi.deleteComment(commentId);
     } catch (err) {
       console.error('Failed to delete comment', err);
+      // Re-fetch to restore state on error
+      fetchFullComments();
     }
   };
 
@@ -272,12 +292,7 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-base leading-none">Bài viết của <Link to={`/profile/${livePost.user?.id}`} className="hover:text-primary-500 transition-colors">{livePost.user?.name}</Link></h3>
-                {livePost.reason && (
-                  <div className="inline-flex items-center gap-1 rounded-full bg-primary-500/10 px-2 py-0.5 text-[9px] font-bold text-primary-500">
-                    <Sparkles size={9} />
-                    <span>AI Pick</span>
-                  </div>
-                )}
+
               </div>
               <p className="text-[11px] text-text-muted font-medium mt-1">{livePost.user?.time || 'Vừa xong'}</p>
             </div>

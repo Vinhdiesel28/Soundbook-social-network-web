@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Info, MoreVertical, Disc3, Plus, Image, Smile, Send, MessageSquare, Flag } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import ReportModal from '../common/ReportModal';
@@ -18,6 +19,7 @@ const ChatWindow = ({
   const messagesContainerRef = useRef(null);
   const [showMenu, setShowMenu] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -38,16 +40,23 @@ const ChatWindow = ({
           {/* Window */}
           <div className="h-16 border-b border-gray-200 dark:border-gray-800 px-6 flex items-center justify-between bg-surface-color shadow-sm z-10">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full ${activeData.avatar} ${activeData.type === 'group' && 'rounded-xl'}`}></div>
+              <Link to={`/profile/${activeData.userId}`} className="relative hover:opacity-80 transition-opacity">
+                {activeData.avatarUrl ? (
+                  <img 
+                    src={activeData.avatarUrl} 
+                    alt={activeData.name} 
+                    className={`w-10 h-10 rounded-full ${activeData.type === 'group' && 'rounded-xl'} object-cover shadow-sm`} 
+                  />
+                ) : (
+                  <div className={`w-10 h-10 rounded-full ${activeData.avatar} ${activeData.type === 'group' && 'rounded-xl'} flex items-center justify-center text-white font-bold shadow-sm`}>
+                    {activeData.type === 'group' ? <Users size={20} className="opacity-50" /> : activeData.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </Link>
               <div>
-                <h3 className="font-bold">{activeData.name}</h3>
-                <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                  {activeData.isLive ? (
-                    <span className="text-red-500 font-medium flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> {t('chat.live_now')}</span>
-                  ) : (
-                    <span className="text-green-500 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t('chat.online')}</span>
-                  )}
-                </div>
+                <Link to={`/profile/${activeData.userId}`} className="font-bold hover:text-primary-500 transition-colors block">
+                  {activeData.name}
+                </Link>
               </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-4 text-text-muted">
@@ -107,12 +116,6 @@ const ChatWindow = ({
           {/* Input */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-surface-color">
             <div className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 rounded-2xl p-2 pb-2">
-              <button className="p-2 text-gray-500 hover:text-primary-500 transition-colors shrink-0">
-                <Plus size={20} />
-              </button>
-              <button className="p-2 text-gray-500 hover:text-primary-500 transition-colors shrink-0">
-                <Image size={20} />
-              </button>
               <textarea
                 rows="1"
                 value={draftMessage}
@@ -124,11 +127,53 @@ const ChatWindow = ({
                   }
                 }}
                 placeholder={`${t('chat.message_placeholder')} ${activeData.name}...`}
-                className="w-full bg-transparent border-none outline-none resize-none py-2 text-sm text-text-color custom-scrollbar max-h-32"
+                className="w-full bg-transparent border-none outline-none resize-none py-2 pl-3 text-sm text-text-color custom-scrollbar max-h-32"
               />
-              <button className="p-2 text-gray-500 hover:text-primary-500 transition-colors shrink-0">
-                <Smile size={20} />
-              </button>
+              
+              <div className="relative">
+                <button 
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={`p-2 transition-colors shrink-0 ${showEmojiPicker ? 'text-primary-500' : 'text-gray-500 hover:text-primary-500'}`}
+                >
+                  <Smile size={20} />
+                </button>
+                
+                {showEmojiPicker && (
+                  <>
+                    <div className="fixed inset-0 z-[60]" onClick={() => setShowEmojiPicker(false)} />
+                    <div className="absolute bottom-full right-0 mb-4 p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-72 z-[70] animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200">
+                      <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar grid grid-cols-7 gap-1 p-1">
+                        {[
+                          '😀', '😂', '🤣', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '🤨', '🧐',
+                          '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️',
+                          '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯',
+                          '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫',
+                          '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱',
+                          '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕',
+                          '👍', '👎', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+                          '👇', '✋', '🤚', '🖐️', '🖖', '👋', '💪', '🙏', '🤲', '👐', '🙌', '👏',
+                          '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓',
+                          '💗', '💖', '💘', '💝', '💟', '🔥', '✨', '🌟', '⭐', '🌈', '☁️', '❄️'
+                        ].map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setDraftMessage(prev => prev + emoji);
+                              setShowEmojiPicker(false);
+                            }}
+                            className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-lg"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-white dark:bg-gray-900 border-r border-b border-gray-100 dark:border-gray-800 rotate-45" />
+                    </div>
+                  </>
+                )}
+              </div>
+
               <button
                 onClick={onSendMessage}
                 disabled={isSending || !draftMessage.trim()}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Disc3, BookOpen, Pause, Play, Flag } from 'lucide-react';
 import ReportModal from '../common/ReportModal';
 import { useLanguage } from '../../context/LanguageContext';
@@ -9,23 +10,26 @@ const ChatMessage = ({ msg, playingId, setPlayingId, isUserOnline = false }) => 
   return (
     <div className={`flex gap-3 max-w-[85%] sm:max-w-[70%] ${msg.isMe ? 'ml-auto flex-row-reverse' : ''}`}>
       {!msg.isMe && (
-        <div className={`w-8 h-8 rounded-full flex-shrink-0 ${msg.avatar} shadow-sm self-end relative overflow-hidden`}>
-          <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-gray-900 transition-colors ${
-            isUserOnline ? 'bg-green-500' : 'bg-gray-400'
-          }`} />
-        </div>
+        <Link to={`/profile/${msg.userId}`} className="w-8 h-8 rounded-full flex-shrink-0 shadow-sm self-end relative hover:opacity-80 transition-opacity">
+          {msg.avatarUrl ? (
+            <img 
+              src={msg.avatarUrl} 
+              alt={msg.user} 
+              className="w-full h-full rounded-full object-cover" 
+            />
+          ) : (
+            <div className={`w-full h-full rounded-full ${msg.avatar} flex items-center justify-center text-[10px] text-white font-bold`}>
+              {msg.user.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </Link>
       )}
       <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'}`}>
         {!msg.isMe && (
           <div className="flex items-center gap-2 ml-1 mb-1">
-            <span className="text-[10px] text-text-muted">{msg.user}</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-              isUserOnline 
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-            }`}>
-              {isUserOnline ? t('common.online') : t('common.offline')}
-            </span>
+            <Link to={`/profile/${msg.userId}`} className="text-[10px] text-text-muted hover:text-primary-500 transition-colors font-medium">
+              {msg.user}
+            </Link>
           </div>
         )}
 

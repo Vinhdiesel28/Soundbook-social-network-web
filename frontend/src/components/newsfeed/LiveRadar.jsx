@@ -324,7 +324,9 @@ const LiveRadar = ({ rooms = [], loading = false, error = '', onRefresh }) => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [modalMode, setModalMode] = useState('menu');
 
-  const normalizedRooms = useMemo(() => rooms.map(normalizeRoom).filter(room => room.id), [rooms]);
+  const normalizedRooms = useMemo(() => 
+    rooms.map(normalizeRoom).filter(room => room.id && room.raw?.status === 'LIVE'), 
+  [rooms]);
 
   const openCreateModal = () => {
     setSelectedRoom(null);

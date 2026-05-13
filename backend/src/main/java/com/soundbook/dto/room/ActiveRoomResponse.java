@@ -15,6 +15,7 @@ public class ActiveRoomResponse {
     private String hostDisplayName;
     private String hostAvatarUrl;
     private Long listenersCount;
+    private String status;
     private LocalDateTime createdAt;
     private RoomPlaybackStateResponse state;
 }

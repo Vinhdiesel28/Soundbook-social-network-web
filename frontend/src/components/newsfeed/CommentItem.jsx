@@ -106,11 +106,36 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
     return () => window.removeEventListener('soundbook_new_comment', handleNewComment);
   }, [postId, comment.id, showReplies]);
 
-  // Sync props to local state ONLY when props change
+  // Listen for REACT_COMMENT socket events to update nested reply reactions
+  useEffect(() => {
+    const handleReactComment = (e) => {
+      const { commentId, total, types } = e.detail;
+      setReplies(prev => prev.map(r =>
+        r.id === commentId ? {
+          ...r,
+          reacts: total,
+          reactors: (types || []).map(t => ({ reactionType: t.toLowerCase() }))
+        } : r
+      ));
+    };
+    window.addEventListener('soundbook_react_comment', handleReactComment);
+    return () => window.removeEventListener('soundbook_react_comment', handleReactComment);
+  }, []);
+
+  // Sync react state from props ONLY on initial mount or comment switch (not on every socket update)
+  // If we sync on every `comment.currentUserReaction` change, REACT_COMMENT socket (which doesn't
+  // include currentUserReaction) resets our optimistic react state back to null.
   useEffect(() => {
     setReactCount(comment.reacts || 0);
+    // Only reset react state from props when switching to a different comment
     setReact(comment.currentUserReaction?.toUpperCase() || null);
-  }, [comment.id, comment.reacts, comment.currentUserReaction]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comment.id]);
+
+  // Sync reactCount (only) when the server pushes a new total via socket
+  useEffect(() => {
+    setReactCount(comment.reacts || 0);
+  }, [comment.reacts]);
 
   // Update topReacts based on reactors list AND current user reaction
   useEffect(() => {
@@ -172,8 +197,8 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
   const handleDelete = async () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa bình luận này?")) {
       try {
-        await interactionsApi.deleteComment(comment.id);
-        onDelete?.(comment.id);
+        // onDelete handles both the API call and state update
+        await onDelete?.(comment.id);
       } catch (err) {
         console.error('Failed to delete comment', err);
         alert('Lỗi khi xóa bình luận');
@@ -288,8 +313,12 @@ const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
           {/* Reply */}
           <button
             onClick={() => {
-              setReplying(true);
-              setReplyText(`@${comment.user.name} `);
+              if (replying) {
+                setReplying(false);
+              } else {
+                setReplying(true);
+                setReplyText(`@${comment.user.name} `);
+              }
             }}
             className="text-[11px] font-semibold text-text-muted hover:text-primary-500 transition-colors"
           >
