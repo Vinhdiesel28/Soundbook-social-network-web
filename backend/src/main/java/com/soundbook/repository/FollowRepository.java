@@ -11,9 +11,15 @@ import java.util.List;
 public interface FollowRepository extends JpaRepository<Follow, FollowId> {
     List<Follow> findByIdFollowerId(Long followerId);
 
+    List<Follow> findByIdFolloweeId(Long followeeId);
+
     boolean existsByIdFollowerIdAndIdFolloweeId(Long followerId, Long followeeId);
 
     long countByIdFollowerId(Long followerId);
 
     long countByIdFolloweeId(Long followeeId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT f FROM Follow f JOIN User u ON f.id.followerId = u.id " +
+            "WHERE f.id.followeeId = :followeeId AND (LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<Follow> searchFollowers(@org.springframework.data.repository.query.Param("followeeId") Long followeeId, @org.springframework.data.repository.query.Param("query") String query);
 }

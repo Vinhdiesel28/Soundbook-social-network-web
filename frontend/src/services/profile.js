@@ -8,6 +8,21 @@ export const profileApi = {
     auth: true,
   })),
 
+  getFollowers: async (userId) => unwrap(await request(`/profiles/${encodeURIComponent(userId)}/followers`, {
+    method: 'GET',
+    auth: true,
+  })),
+
+  searchFollowers: async (userId, query) => unwrap(await request(`/profiles/${encodeURIComponent(userId)}/followers/search?query=${encodeURIComponent(query)}`, {
+    method: 'GET',
+    auth: true,
+  })),
+
+  getFriends: async (userId) => unwrap(await request(`/profiles/${encodeURIComponent(userId)}/friends`, {
+    method: 'GET',
+    auth: true,
+  })),
+
   updateProfile: async (payload) => unwrap(await request('/profiles/me', {
     method: 'PUT',
     auth: true,

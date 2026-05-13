@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Heart, MessageCircle, Share2, MoreHorizontal, Send, Sparkles, ThumbsUp, Loader2 } from 'lucide-react';
+import { X, Heart, MessageCircle, Share2, MoreHorizontal, Send, Sparkles, ThumbsUp, Loader2, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PostHeaderBar from './PostHeaderBar';
 import PostMediaCard from './PostMediaCard';
@@ -9,7 +9,7 @@ import ReactionModal from '../common/ReactionModal';
 import { postsApi } from '../../services/posts';
 import { interactionsApi } from '../../services/interactionsApi';
 import { resolveUrl, getCurrentUser } from '../../services/auth';
-import { normalizeComment, normalizePost } from '../../utils/feedNormalizers';
+import { normalizeComment, normalizePost, fallbackAvatar } from '../../utils/feedNormalizers';
 import { useLanguage } from '../../context/LanguageContext';
 import { subscribeTopic } from '../../lib/realtime';
 
@@ -317,9 +317,55 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
             )}
 
             {/* Media Section */}
-            {livePost.media && (
+            {livePost.media && !livePost.sharedPost && (
               <div className="w-full bg-black flex items-center justify-center min-h-[300px] max-h-[600px]">
                 <PostMediaCard post={livePost} isPlaying={isPlaying} onTogglePlay={onTogglePlay} />
+              </div>
+            )}
+
+            {/* Shared Post Section */}
+            {livePost.sharedPost && (
+              <div className="px-6 mb-4">
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] text-white font-bold overflow-hidden ${fallbackAvatar(livePost.sharedPost.id)}`}>
+                        {livePost.sharedPost.authorAvatar ? (
+                          <img src={livePost.sharedPost.authorAvatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{livePost.sharedPost.authorName?.[0]}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold truncate">{livePost.sharedPost.authorName}</div>
+                        <div className="text-[10px] text-text-muted">
+                          {livePost.sharedPost.time || 'Vừa xong'}
+                        </div>
+                      </div>
+                    </div>
+                    {livePost.sharedPost.caption && (
+                      <p className="text-xs mb-3 line-clamp-3 leading-relaxed text-text-color">
+                        {livePost.sharedPost.caption}
+                      </p>
+                    )}
+                    {livePost.sharedPost.thumbnail && (
+                      <div className="rounded-xl overflow-hidden aspect-video bg-black border border-gray-100 dark:border-gray-700">
+                        {livePost.sharedPost.mediaType === 'VIDEO' ? (
+                          <div className="w-full h-full relative">
+                            <img src={livePost.sharedPost.thumbnail} alt="" className="w-full h-full object-cover opacity-60" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                                <Play size={20} className="text-white ml-0.5" fill="currentColor" />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <img src={livePost.sharedPost.thumbnail} alt="" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

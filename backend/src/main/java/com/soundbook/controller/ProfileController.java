@@ -35,6 +35,21 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.success(profileService.getProfile(authentication.getName(), userId)));
     }
 
+    @GetMapping("/{userId}/followers")
+    public ResponseEntity<ApiResponse<java.util.List<com.soundbook.dto.social.FriendUserResponse>>> getFollowers(Authentication authentication, @PathVariable String userId) {
+        return ResponseEntity.ok(ApiResponse.success(profileService.getFollowers(authentication.getName(), userId)));
+    }
+
+    @GetMapping("/{userId}/followers/search")
+    public ResponseEntity<ApiResponse<java.util.List<com.soundbook.dto.social.FriendUserResponse>>> searchFollowers(Authentication authentication, @PathVariable String userId, @RequestParam String query) {
+        return ResponseEntity.ok(ApiResponse.success(profileService.searchFollowers(authentication.getName(), userId, query)));
+    }
+
+    @GetMapping("/{userId}/friends")
+    public ResponseEntity<ApiResponse<java.util.List<com.soundbook.dto.social.FriendUserResponse>>> getFriends(Authentication authentication, @PathVariable String userId) {
+        return ResponseEntity.ok(ApiResponse.success(profileService.getFriends(authentication.getName(), userId)));
+    }
+
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<ProfileResponse>> updateMyProfile(Authentication authentication, @RequestBody ProfileUpdateRequest request) {
         return ResponseEntity.ok(ApiResponse.success(profileMutationService.updateProfile(authentication.getName(), request)));

@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Clock, MessageCircle, Search, UserPlus, X, Flag } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { friendsApi } from '../services/friends';
+import { profileApi } from '../services/profile';
+import { getCurrentUser } from '../services/auth';
 import ReportModal from '../components/common/ReportModal';
 
 const AVATAR_CLASSES = ['bg-blue-500', 'bg-pink-500', 'bg-green-500', 'bg-purple-500', 'bg-yellow-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500', 'bg-orange-500'];
@@ -31,13 +33,27 @@ const FriendsPage = () => {
     try {
       setLoading(true);
       setError('');
-      const hub = await friendsApi.getFriendHub();
-      setData({
-        friends: hub?.friends || [],
-        incomingRequests: hub?.incomingRequests || [],
-        outgoingRequests: hub?.outgoingRequests || [],
-        suggestions: hub?.suggestions || [],
-      });
+      const currentUser = getCurrentUser();
+      const isMe = !id || id === 'me' || String(id) === String(currentUser?.id);
+
+      if (isMe) {
+        const hub = await friendsApi.getFriendHub();
+        setData({
+          friends: hub?.friends || [],
+          incomingRequests: hub?.incomingRequests || [],
+          outgoingRequests: hub?.outgoingRequests || [],
+          suggestions: hub?.suggestions || [],
+        });
+      } else {
+        const otherFriends = await profileApi.getFriends(id);
+        setData({
+          friends: otherFriends || [],
+          incomingRequests: [],
+          outgoingRequests: [],
+          suggestions: [],
+        });
+        setTab('friends');
+      }
     } catch (err) {
       setError(err?.message || 'Không thể tải danh sách bạn bè.');
     } finally {
@@ -45,7 +61,7 @@ const FriendsPage = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [id]);
 
   const filtered = useMemo(() => {
     const lists = {
@@ -99,11 +115,15 @@ const FriendsPage = () => {
     );
   };
 
-  const tabs = [
+  const isMe = !id || id === 'me' || String(id) === String(getCurrentUser()?.id);
+
+  const tabs = isMe ? [
     ['friends', `Bạn bè (${data.friends.length})`],
     ['incoming', `Lời mời đến (${data.incomingRequests.length})`],
     ['outgoing', `Đã gửi (${data.outgoingRequests.length})`],
     ['suggestions', `Gợi ý (${data.suggestions.length})`],
+  ] : [
+    ['friends', `Bạn bè (${data.friends.length})`],
   ];
 
   return (

@@ -98,6 +98,44 @@ public class ProfileService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public List<FriendUserResponse> getFollowers(String requesterEmail, String rawUserId) {
+        User requester = userRepository.findByEmail(requesterEmail).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User targetUser = resolveProfileUser(requester, rawUserId);
+
+        return followRepository.findByIdFolloweeId(targetUser.getId()).stream()
+                .map(follow -> {
+                    User follower = userRepository.findById(follow.getId().getFollowerId()).orElse(null);
+                    return follower != null ? friendService.buildFriendUser(requesterEmail, follower) : null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<FriendUserResponse> searchFollowers(String requesterEmail, String rawUserId, String query) {
+        User requester = userRepository.findByEmail(requesterEmail).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User targetUser = resolveProfileUser(requester, rawUserId);
+
+        return followRepository.searchFollowers(targetUser.getId(), query).stream()
+                .map(follow -> {
+                    User follower = userRepository.findById(follow.getId().getFollowerId()).orElse(null);
+                    return follower != null ? friendService.buildFriendUser(requesterEmail, follower) : null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<FriendUserResponse> getFriends(String requesterEmail, String rawUserId) {
+        User requester = userRepository.findByEmail(requesterEmail).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User targetUser = resolveProfileUser(requester, rawUserId);
+
+        return friendshipRepository.findByIdUserIdOrderByCreatedAtDesc(targetUser.getId()).stream()
+                .map(friendship -> friendService.buildFriendUser(requesterEmail, friendship.getFriend()))
+                .collect(Collectors.toList());
+    }
+
     private User resolveProfileUser(User requester, String rawUserId) {
         if (rawUserId == null || rawUserId.isBlank() || "me".equalsIgnoreCase(rawUserId)) {
             return requester;

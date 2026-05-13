@@ -61,7 +61,13 @@ const PostReactionsBar = ({ post, onReact, onFocusComment, onShare, onViewReacti
             <span>{total ? `${total} cảm xúc` : 'Hãy là người đầu tiên bày tỏ cảm xúc'}</span>
           </div>
         </button>
-        <span>{post.reactions?.comments || 0} bình luận · {post.reactions?.shares || 0} chia sẻ</span>
+        <div className="flex items-center gap-1">
+          <button onClick={onFocusComment} className="hover:underline decoration-dotted">
+            {post.reactions?.comments || 0} {t('post.comment_count', { defaultValue: 'bình luận' })}
+          </button>
+          <span>·</span>
+          <span>{post.reactions?.shares || 0} {t('post.share_count', { defaultValue: 'chia sẻ' })}</span>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

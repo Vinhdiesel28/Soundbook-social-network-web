@@ -110,6 +110,18 @@ export const normalizePost = (post = {}) => {
         ref: { ...(ref || {}), id: videoId },
       };
     })(),
+    sharedPost: ref?.sharedPostId ? {
+      id: ref.sharedPostId,
+      authorName: ref.sharedAuthor,
+      authorUsername: ref.sharedAuthorUsername,
+      authorAvatar: ref.sharedAuthorAvatar,
+      caption: ref.sharedCaption,
+      createdAt: ref.sharedCreatedAt,
+      time: formatTime(ref.sharedCreatedAt),
+      type: ref.sharedType?.toLowerCase(),
+      thumbnail: ref.thumbnail,
+      mediaType: ref.mediaType,
+    } : null,
     reactions: {
       like: post.reactions?.like || 0,
       heart: post.reactions?.heart || 0,

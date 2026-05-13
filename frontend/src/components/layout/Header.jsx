@@ -3,7 +3,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   Search,
-  Bell,
   Sun,
   Moon,
   MessageCircle,
@@ -33,16 +32,14 @@ const Header = ({ unreadMessages = 0 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState({ users: [], posts: [], music: [], books: [] });
   const [searchLoading, setSearchLoading] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
 
   const searchRef = useRef(null);
-  const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
 
   const userName = currentUser?.displayName || 'Soundbook User';
-  const userUsername = currentUser?.username || (currentUser?.email ? `@${currentUser.email.split('@')[0]}` : '@soundbook');
+  const userUsername = currentUser?.username ? `@${currentUser.username}` : '';
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -50,9 +47,7 @@ const Header = ({ unreadMessages = 0 }) => {
         setIsSearchFocused(false);
       }
 
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
+
 
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setShowProfileMenu(false);
@@ -62,7 +57,6 @@ const Header = ({ unreadMessages = 0 }) => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setIsSearchFocused(false);
-        setShowNotifications(false);
         setShowProfileMenu(false);
       }
     };
@@ -118,14 +112,10 @@ const Header = ({ unreadMessages = 0 }) => {
     };
   }, [searchQuery]);
 
-  const handleToggleNotifications = () => {
-    setShowNotifications((prev) => !prev);
-    setShowProfileMenu(false);
-  };
+
 
   const handleToggleProfileMenu = () => {
     setShowProfileMenu((prev) => !prev);
-    setShowNotifications(false);
   };
 
   const handleLogout = async () => {
@@ -288,21 +278,7 @@ const Header = ({ unreadMessages = 0 }) => {
                 )}
               </Link>
 
-              <div ref={notificationsRef} className="relative">
-                <button type="button" onClick={handleToggleNotifications} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 relative transition-colors focus-visible:ring-2 focus-visible:ring-primary-500" aria-label={t('header.notifications')} aria-haspopup="menu" aria-expanded={showNotifications}>
-                  <Bell size={20} />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border border-white dark:border-gray-900" />
-                </button>
 
-                {showNotifications && (
-                    <div role="menu" className="absolute top-12 right-0 w-80 max-w-[calc(100vw-2rem)] bg-surface-color rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden transform opacity-100 scale-100 transition-all duration-200 origin-top-right">
-                      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <h3 className="font-semibold text-md">{t('header.notifications')}</h3>
-                        <button type="button" className="text-xs text-primary-500 hover:underline">{t('header.mark_all_read')}</button>
-                      </div>
-                    </div>
-                )}
-              </div>
 
               <div ref={profileMenuRef} className="relative">
                 <button type="button" onClick={handleToggleProfileMenu} className="flex items-center gap-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500" aria-haspopup="menu" aria-expanded={showProfileMenu}>
@@ -322,9 +298,8 @@ const Header = ({ unreadMessages = 0 }) => {
                 {showProfileMenu && (
                     <div role="menu" className="absolute top-12 right-0 w-72 max-w-[calc(100vw-2rem)] bg-surface-color rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden transform opacity-100 scale-100 transition-all duration-200 origin-top-right">
                       <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-                        <div className="font-semibold">{userName}</div>
-                        <div className="text-sm text-text-muted">{userUsername}</div>
-                        <div className="text-xs mt-1 uppercase tracking-wide text-primary-500">{currentUser?.role || 'USER'}</div>
+                        <div className="font-semibold text-sm">{userName}</div>
+                        {userUsername && <div className="text-xs text-text-muted">{userUsername}</div>}
                       </div>
 
                       <div className="p-2">

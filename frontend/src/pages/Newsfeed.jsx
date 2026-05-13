@@ -8,6 +8,7 @@ import FeedPost from '../components/newsfeed/FeedPost';
 import NewsfeedSidebar from '../components/newsfeed/NewsfeedSidebar';
 import { feedApi } from '../services/feed';
 import { getActiveRooms } from '../services/room';
+import { friendsApi } from '../services/friends';
 import { normalizePost, normalizeSuggestion, normalizeTrending } from '../utils/feedNormalizers';
 import { useRef } from 'react';
 import YouTube from 'react-youtube';
@@ -17,7 +18,7 @@ const Newsfeed = () => {
   const playerRef = useRef(null);
   const [activeTab, setActiveTab] = useState('following');
   const [playingId, setPlayingId] = useState(null);
-  const [payload, setPayload] = useState({ posts: [], friendSuggestions: [], trending: [] });
+  const [payload, setPayload] = useState({ posts: [], friendSuggestions: [], trending: [], incomingRequests: [] });
   const [activeRooms, setActiveRooms] = useState([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [roomsError, setRoomsError] = useState('');
@@ -43,11 +44,12 @@ const Newsfeed = () => {
     setError('');
     try {
       const data = await feedApi.getFeed({ tab: tab === 'foryou' ? 'discover' : 'following', limit: 20 });
-      setPayload({
+      setPayload(prev => ({
+        ...prev,
         posts: data?.posts || [],
         friendSuggestions: data?.friendSuggestions || [],
         trending: data?.trending || [],
-      });
+      }));
     } catch (err) {
       setError(err?.message || 'Không thể tải bảng tin.');
     } finally {
@@ -63,11 +65,12 @@ const Newsfeed = () => {
       try {
         const data = await feedApi.getFeed({ tab: activeTab === 'foryou' ? 'discover' : 'following', limit: 20 });
         if (mounted) {
-          setPayload({
+          setPayload(prev => ({
+            ...prev,
             posts: data?.posts || [],
             friendSuggestions: data?.friendSuggestions || [],
             trending: data?.trending || [],
-          });
+          }));
         }
       } catch (err) {
         if (mounted) setError(err?.message || 'Không thể tải bảng tin.');
@@ -80,12 +83,25 @@ const Newsfeed = () => {
   }, [activeTab]);
 
   useEffect(() => {
+    const loadRequests = async () => {
+      try {
+        const hub = await friendsApi.getFriendHub();
+        setPayload(prev => ({ ...prev, incomingRequests: hub?.incomingRequests || [] }));
+      } catch (e) {
+        console.error('Failed to load friend requests:', e);
+      }
+    };
+    loadRequests();
+  }, []);
+
+  useEffect(() => {
     loadActiveRooms();
   }, [loadActiveRooms]);
 
   const posts = useMemo(() => payload.posts.map(normalizePost), [payload.posts]);
   const suggestions = useMemo(() => payload.friendSuggestions.map(normalizeSuggestion), [payload.friendSuggestions]);
   const trending = useMemo(() => payload.trending.map(normalizeTrending), [payload.trending]);
+  const incomingRequests = payload.incomingRequests;
 
   // Extract videoId from a normalized post
   const getPostVideoId = (p) => {
@@ -278,7 +294,9 @@ const Newsfeed = () => {
         )}
       </div>
 
-      <NewsfeedSidebar suggestions={suggestions} trending={trending} />
+      <NewsfeedSidebar suggestions={suggestions} trending={trending} requests={incomingRequests} onRefreshRequests={() => {
+        friendsApi.getFriendHub().then(hub => setPayload(prev => ({ ...prev, incomingRequests: hub?.incomingRequests || [] })));
+      }} />
     </div>
   );
 };

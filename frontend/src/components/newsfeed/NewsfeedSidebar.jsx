@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, Clock, MessageCircle, Music, Book, UserPlus } from 'lucide-react';
+import { Check, Clock, MessageCircle, Music, Book, UserPlus, X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { friendsApi } from '../../services/friends';
 
 const Avatar = ({ user, size = 'w-10 h-10' }) => {
-  if (user?.avatarUrl) {
-    return <img src={user.avatarUrl} alt={user.name || 'avatar'} className={`${size} rounded-full object-cover`} />;
+  const url = user?.avatarUrl || user?.profilePic;
+  if (url) {
+    return <img src={url} alt={user.name || user.displayName || 'avatar'} className={`${size} rounded-full object-cover`} />;
   }
-  return <div className={`${size} rounded-full ${user?.avatar || 'bg-primary-500'} flex items-center justify-center text-xs font-bold text-white`}>{(user?.name || 'U').charAt(0).toUpperCase()}</div>;
+  return <div className={`${size} rounded-full ${user?.avatar || 'bg-primary-500'} flex items-center justify-center text-xs font-bold text-white`}>{(user?.name || user?.displayName || 'U').charAt(0).toUpperCase()}</div>;
 };
 
-const NewsfeedSidebar = ({ suggestions = [], trending = [] }) => {
+const NewsfeedSidebar = ({ suggestions = [], trending = [], requests = [], onRefreshRequests }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [statuses, setStatuses] = useState({});
@@ -24,6 +25,26 @@ const NewsfeedSidebar = ({ suggestions = [], trending = [] }) => {
       setBusyUserId(user.id);
       const result = await friendsApi.sendRequest(user.id);
       setStatuses((prev) => ({ ...prev, [user.id]: result }));
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
+  const handleAccept = async (requestId) => {
+    try {
+      setBusyUserId(`req-${requestId}`);
+      await friendsApi.acceptRequest(requestId);
+      onRefreshRequests?.();
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
+  const handleDecline = async (requestId) => {
+    try {
+      setBusyUserId(`req-${requestId}`);
+      await friendsApi.declineRequest(requestId);
+      onRefreshRequests?.();
     } finally {
       setBusyUserId(null);
     }
@@ -66,6 +87,7 @@ const NewsfeedSidebar = ({ suggestions = [], trending = [] }) => {
   return (
     <div className="hidden lg:block lg:w-[30%] space-y-6">
 
+      {/* Friend Suggestions */}
       <div className="bg-surface-color rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800">
         <h3 className="font-bold text-sm mb-4 uppercase tracking-wider text-text-muted">{t('feed.friend_suggestions')}</h3>
         <div className="space-y-4">
@@ -91,6 +113,7 @@ const NewsfeedSidebar = ({ suggestions = [], trending = [] }) => {
         </div>
       </div>
 
+      {/* Trending Now */}
       <div className="bg-surface-color rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800">
         <h3 className="font-bold text-sm mb-4 uppercase tracking-wider text-text-muted">{t('feed.trending_now')}</h3>
         <div className="space-y-4">
@@ -109,6 +132,44 @@ const NewsfeedSidebar = ({ suggestions = [], trending = [] }) => {
           )) : (
             <div className="rounded-xl bg-gray-50 p-3 text-xs text-text-muted dark:bg-gray-800/60">
               Chưa có nội dung nổi bật.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Incoming Requests */}
+      <div className="bg-surface-color rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800">
+        <h3 className="font-bold text-sm mb-4 uppercase tracking-wider text-text-muted">Lời mời kết bạn</h3>
+        <div className="space-y-4">
+          {requests.length ? requests.map(req => (
+            <div key={req.requestId} className="flex items-center justify-between gap-2 group">
+              <Link to={`/profile/${req.userId}`} className="flex min-w-0 items-center gap-3">
+                <Avatar user={req} />
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-sm group-hover:underline cursor-pointer">{req.displayName}</p>
+                  <p className="text-xs text-primary-500 font-medium">{Math.round(req.matchScore || 0)}% Match</p>
+                </div>
+              </Link>
+              <div className="flex gap-1">
+                <button 
+                  onClick={() => handleAccept(req.requestId)}
+                  disabled={busyUserId === `req-${req.requestId}`}
+                  className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-600 hover:bg-green-500 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  <Check size={14} />
+                </button>
+                <button 
+                  onClick={() => handleDecline(req.requestId)}
+                  disabled={busyUserId === `req-${req.requestId}`}
+                  className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )) : (
+            <div className="rounded-xl bg-gray-50 p-3 text-xs text-text-muted dark:bg-gray-800/60 text-center">
+              Chưa có lời mời đến.
             </div>
           )}
         </div>

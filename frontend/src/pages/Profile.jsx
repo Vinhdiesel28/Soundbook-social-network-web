@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { AlertCircle, Grid3X3, List, Save, X, Camera } from 'lucide-react';
+import { AlertCircle, Grid3X3, List, Save, X, Camera, Search } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { useLanguage } from '../context/LanguageContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 
 import ProfileHeader from '../components/profile/ProfileHeader';
 import PersonalInfo from '../components/profile/PersonalInfo';
 import AccountInfo from '../components/profile/AccountInfo';
 import FriendsList from '../components/profile/FriendsList';
+import FollowersList from '../components/profile/FollowersList';
 import TasteSummaryCard from '../components/taste/TasteSummaryCard';
 import ProfileShelves from '../components/profile/ProfileShelves';
 import ProfilePosts from '../components/profile/ProfilePosts';
@@ -15,7 +16,7 @@ import ModalShell from '../components/common/ModalShell';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import ToastMessage from '../components/common/ToastMessage';
 import ReportModal from '../components/common/ReportModal';
-import { getCurrentUser, updateStoredUser } from '../services/auth';
+import { getCurrentUser, logout, resolveHomePath, resolveUrl, updateStoredUser } from '../services/auth';
 import { profileApi } from '../services/profile';
 import { searchYouTubeVideos, getYouTubeVideoDetails } from '../services/youtube';
 import { searchGoogleBooks, normalizeBook } from '../services/books';
@@ -69,6 +70,9 @@ const Profile = () => {
   const [pinnedModal, setPinnedModal] = useState({ open: false, query: '', loading: false, results: [], error: '' });
   const [shelfSearch, setShelfSearch] = useState({ query: '', loading: false, results: [], error: '' });
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [followers, setFollowers] = useState([]);
+  const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false);
+  const [followerSearch, setFollowerSearch] = useState({ query: '', loading: false, results: [] });
 
   const targetId = id || 'me';
   const isGuest = Boolean(profile && currentUser?.id && String(profile.userId) !== String(currentUser.id));
@@ -81,14 +85,47 @@ const Profile = () => {
     return data;
   }, [targetId]);
 
+  const fetchFollowers = async () => {
+    try {
+      const data = await profileApi.getFollowers(targetId);
+      setFollowers(data);
+      setFollowerSearch(prev => ({ ...prev, results: data }));
+    } catch (err) {
+      console.error('Failed to load followers:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!isFollowersModalOpen) {
+      setFollowerSearch({ query: '', loading: false, results: [] });
+      return;
+    }
+
+    if (!followerSearch.query.trim()) {
+      setFollowerSearch(prev => ({ ...prev, results: followers }));
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      setFollowerSearch(prev => ({ ...prev, loading: true }));
+      try {
+        const results = await profileApi.searchFollowers(targetId, followerSearch.query);
+        setFollowerSearch(prev => ({ ...prev, results, loading: false }));
+      } catch (err) {
+        setFollowerSearch(prev => ({ ...prev, loading: false }));
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [followerSearch.query, isFollowersModalOpen, followers, targetId]);
+
   useEffect(() => {
     let mounted = true;
     const run = async () => {
       try {
         setIsLoading(true);
         setError('');
-        const data = await profileApi.getProfile(targetId);
-        if (mounted) setProfile(data);
+        await Promise.all([loadProfile(), fetchFollowers()]);
       } catch (err) {
         if (mounted) setError(err?.message || 'Không thể tải trang cá nhân.');
       } finally {
@@ -97,7 +134,7 @@ const Profile = () => {
     };
     run();
     return () => { mounted = false; };
-  }, [targetId]);
+  }, [targetId, loadProfile]);
 
   const [formData, setFormData] = useState({ username: '', bio: '', publicInfo: '', bioVisibility: 'PUBLIC', publicInfoVisibility: 'PUBLIC', pinnedTrack: '', pinnedTrackVisibility: 'PUBLIC', allowPreview: true });
   const [accountData, setAccountData] = useState({ email: '', displayName: '', googleSub: '' });
@@ -186,6 +223,14 @@ const Profile = () => {
 
   const replaceProfile = (data, successMessage) => {
     setProfile(data);
+    if (!isGuest && data) {
+      updateStoredUser({
+        displayName: data.displayName,
+        username: data.username,
+        avatarUrl: data.avatarUrl,
+        avatar: data.avatarUrl
+      });
+    }
     if (successMessage) showNotice('success', successMessage);
   };
 
@@ -657,7 +702,10 @@ const Profile = () => {
             <PersonalInfo t={t} isGuest={isGuest} profileData={profileData} isEditingInfo={isEditingInfo} setIsEditingInfo={setIsEditingInfo} formData={formData} handleInputChange={handleInputChange} handleTogglePreview={handleTogglePreview} handleSaveInfo={handleSaveInfo} lastUpdate={lastUpdate} onOpenPinnedTrackSearch={() => setPinnedModal({ open: true, query: '', loading: false, results: [], error: '' })} />
             <AccountInfo t={t} isGuest={isGuest} isEditingAccount={isEditingAccount} setIsEditingAccount={setIsEditingAccount} accountData={accountData} handleAccountInputChange={handleAccountInputChange} handleSaveAccountInfo={handleSaveAccountInfo} isChangingPassword={isChangingPassword} setIsChangingPassword={setIsChangingPassword} passwordData={passwordData} handlePasswordInputChange={handlePasswordInputChange} handleSavePassword={handleSavePassword} lastUpdate={lastUpdate} />
             <FriendsList t={t} friends={friends} />
-            {!isGuest ? <TasteSummaryCard /> : null}
+            <FollowersList t={t} followers={followers} onViewAll={() => setIsFollowersModalOpen(true)} />
+            {!isGuest && (
+              <TasteSummaryCard />
+            )}
           </div>
 
           <div className="flex-1 w-full lg:w-[70%] space-y-16">
@@ -680,6 +728,61 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      <ModalShell
+        open={isFollowersModalOpen}
+        title="Người theo dõi"
+        description={`Danh sách những người đang theo dõi ${isGuest ? profileData.name : 'bạn'}.`}
+        onClose={() => setIsFollowersModalOpen(false)}
+      >
+        <div className="space-y-4">
+          <div className="relative">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={followerSearch.query}
+              onChange={(e) => setFollowerSearch(prev => ({ ...prev, query: e.target.value }))}
+              placeholder="Tìm kiếm người theo dõi..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 border border-transparent focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none text-sm transition-all"
+            />
+            {followerSearch.loading && (
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-primary-500/20 border-t-primary-500 rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+            {followerSearch.results.map(follower => (
+              <div key={follower.userId} className="flex items-center justify-between gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              <Link to={`/profile/${follower.userId}`} onClick={() => setIsFollowersModalOpen(false)} className="flex items-center gap-3 min-w-0">
+                <div className="relative shrink-0">
+                  {follower.avatarUrl ? (
+                    <img src={follower.avatarUrl} alt={follower.displayName} className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-800" />
+                  ) : (
+                    <div className={`w-12 h-12 rounded-full ${fallbackAvatar(follower.userId)} flex items-center justify-center text-white text-sm font-bold`}>
+                      {follower.displayName?.[0]?.toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-sm truncate">{follower.displayName}</p>
+                  <p className="text-xs text-text-muted truncate">@{follower.username || `user${follower.userId}`}</p>
+                </div>
+              </Link>
+              <Link to={`/profile/${follower.userId}`} onClick={() => setIsFollowersModalOpen(false)} className="px-4 py-1.5 bg-primary-500 hover:bg-primary-600 text-white text-xs font-bold rounded-xl transition-all active:scale-95">
+                Xem hồ sơ
+              </Link>
+            </div>
+          ))}
+          {followerSearch.results.length === 0 && !followerSearch.loading && (
+            <div className="py-10 text-center text-text-muted italic">
+              {followerSearch.query ? 'Không tìm thấy người theo dõi nào phù hợp.' : 'Chưa có người theo dõi nào.'}
+            </div>
+          )}
+        </div>
+      </div>
+    </ModalShell>
 
       <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
 

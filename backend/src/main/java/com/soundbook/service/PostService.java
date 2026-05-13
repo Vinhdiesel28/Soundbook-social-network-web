@@ -312,7 +312,8 @@ public class PostService {
         original.setShareCount((original.getShareCount() == null ? 0L : original.getShareCount()) + 1L);
         postRepository.save(original);
         String shareCaption = blankToNull(request == null ? null : request.getCaption());
-        String refJson = buildSharedRefJson(original);
+        PostMedia originalMedia = postMediaRepository.findFirstByPost_IdOrderByIdAsc(original.getId()).orElse(null);
+        String refJson = buildSharedRefJson(original, originalMedia);
         Post share = postRepository.save(Post.builder()
                 .user(user)
                 .type(PostType.BLOG)
@@ -326,12 +327,28 @@ public class PostService {
     }
 
 
-    private String buildSharedRefJson(Post original) {
+    private String buildSharedRefJson(Post original, PostMedia media) {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("sharedPostId", original.getId());
             payload.put("sharedAuthor", original.getUser().getDisplayName());
+            payload.put("sharedAuthorUsername", original.getUser().getProfile() != null ? original.getUser().getProfile().getUsername() : null);
+            
+            String avatarUrl = null;
+            if (original.getUser().getProfile() != null) {
+                avatarUrl = original.getUser().getProfile().getAvatarUrl();
+            }
+            payload.put("sharedAuthorAvatar", avatarUrl);
+            
             payload.put("sharedCaption", original.getCaption());
+            payload.put("sharedCreatedAt", original.getCreatedAt().toString());
+            payload.put("sharedType", original.getType().name());
+
+            if (media != null) {
+                payload.put("thumbnail", media.getUrl());
+                payload.put("mediaType", media.getMediaType().name());
+            }
+            
             return objectMapper.writeValueAsString(payload);
         } catch (Exception exception) {
             throw new AppException(ErrorCode.INVALID_REQUEST);

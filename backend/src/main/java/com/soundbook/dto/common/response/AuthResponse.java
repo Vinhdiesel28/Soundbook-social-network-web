@@ -20,5 +20,6 @@ public class AuthResponse {
     private String displayName;
     private String role;
     private String avatarUrl;
+    private String username;
     private Boolean onboardingCompleted;
 }

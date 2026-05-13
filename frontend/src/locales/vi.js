@@ -57,6 +57,8 @@ export const vi = {
   'post.block_user': 'Chặn người dùng',
   'post.unblock_user': 'Bỏ chặn người dùng',
   'post.report': 'Báo cáo bài đăng',
+  'post.comment_count': 'bình luận',
+  'post.share_count': 'chia sẻ',
   'post.reported': 'Đã báo cáo bài đăng',
   'post.view_all_comments': 'Xem tất cả {count} bình luận',
 
@@ -99,6 +101,7 @@ export const vi = {
   'profile.shelf.library': 'Thư viện',
   'profile.posts_title': 'Bài viết',
   'profile.friends': 'Bạn bè',
+  'profile.followers': 'Người theo dõi',
   'profile.view_all_friends': 'Xem tất cả bạn bè',
   'profile.view': 'Xem trang cá nhân',
   'profile.connected_accounts': 'Tài khoản liên kết',
