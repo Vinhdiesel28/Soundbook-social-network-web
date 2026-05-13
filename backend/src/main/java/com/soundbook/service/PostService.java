@@ -331,6 +331,7 @@ public class PostService {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("sharedPostId", original.getId());
+            payload.put("sharedAuthorId", original.getUser().getId());
             payload.put("sharedAuthor", original.getUser().getDisplayName());
             payload.put("sharedAuthorUsername", original.getUser().getProfile() != null ? original.getUser().getProfile().getUsername() : null);
             
@@ -343,6 +344,14 @@ public class PostService {
             payload.put("sharedCaption", original.getCaption());
             payload.put("sharedCreatedAt", original.getCreatedAt().toString());
             payload.put("sharedType", original.getType().name());
+
+            // Copy original refJson data if it exists
+            if (original.getRefJson() != null && !original.getRefJson().isBlank()) {
+                try {
+                    Map<String, Object> originalRef = objectMapper.readValue(original.getRefJson(), Map.class);
+                    payload.putAll(originalRef);
+                } catch (Exception ignored) {}
+            }
 
             if (media != null) {
                 payload.put("thumbnail", media.getUrl());

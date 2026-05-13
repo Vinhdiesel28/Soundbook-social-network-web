@@ -329,19 +329,21 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                   <div className="p-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] text-white font-bold overflow-hidden ${fallbackAvatar(livePost.sharedPost.id)}`}>
-                        {livePost.sharedPost.authorAvatar ? (
-                          <img src={livePost.sharedPost.authorAvatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{livePost.sharedPost.authorName?.[0]}</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold truncate">{livePost.sharedPost.authorName}</div>
-                        <div className="text-[10px] text-text-muted">
-                          {livePost.sharedPost.time || 'Vừa xong'}
+                      <Link to={`/profile/${livePost.sharedPost.authorId}`} className="flex items-center gap-2 group/author">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] text-white font-bold overflow-hidden transition-transform group-hover/author:scale-105 ${fallbackAvatar(livePost.sharedPost.authorId || livePost.sharedPost.id)}`}>
+                          {livePost.sharedPost.authorAvatar ? (
+                            <img src={livePost.sharedPost.authorAvatar} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{livePost.sharedPost.authorName?.[0]}</span>
+                          )}
                         </div>
-                      </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold truncate group-hover/author:text-primary-500 transition-colors">{livePost.sharedPost.authorName}</div>
+                          <div className="text-[10px] text-text-muted">
+                            {livePost.sharedPost.time || 'Vừa xong'}
+                          </div>
+                        </div>
+                      </Link>
                     </div>
                     {livePost.sharedPost.caption && (
                       <p className="text-xs mb-3 line-clamp-3 leading-relaxed text-text-color">
@@ -349,20 +351,24 @@ const PostDetailModal = ({ isOpen, onClose, post, isPlaying, onTogglePlay, onCha
                       </p>
                     )}
                     {livePost.sharedPost.thumbnail && (
-                      <div className="rounded-xl overflow-hidden aspect-video bg-black border border-gray-100 dark:border-gray-700">
-                        {livePost.sharedPost.mediaType === 'VIDEO' ? (
-                          <div className="w-full h-full relative">
-                            <img src={livePost.sharedPost.thumbnail} alt="" className="w-full h-full object-cover opacity-60" />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
-                                <Play size={20} className="text-white ml-0.5" fill="currentColor" />
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <img src={livePost.sharedPost.thumbnail} alt="" className="w-full h-full object-cover" />
-                        )}
-                      </div>
+                      <PostMediaCard 
+                        post={{
+                          type: livePost.sharedPost.type,
+                          media: {
+                            mediaType: livePost.sharedPost.mediaType,
+                            coverUrl: resolveUrl(livePost.sharedPost.thumbnail),
+                            title: livePost.sharedPost.title,
+                            artist: livePost.sharedPost.artist,
+                            author: livePost.sharedPost.artist,
+                            id: livePost.sharedPost.metadataType === 'youtube' ? livePost.sharedPost.videoId : null,
+                            ref: { 
+                              id: livePost.sharedPost.metadataType === 'youtube' ? livePost.sharedPost.videoId : null 
+                            }
+                          }
+                        }}
+                        isPlaying={isPlaying}
+                        onTogglePlay={onTogglePlay}
+                      />
                     )}
                   </div>
                 </div>

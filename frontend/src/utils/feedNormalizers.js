@@ -112,6 +112,7 @@ export const normalizePost = (post = {}) => {
     })(),
     sharedPost: ref?.sharedPostId ? {
       id: ref.sharedPostId,
+      authorId: ref.sharedAuthorId,
       authorName: ref.sharedAuthor,
       authorUsername: ref.sharedAuthorUsername,
       authorAvatar: ref.sharedAuthorAvatar,
@@ -121,6 +122,10 @@ export const normalizePost = (post = {}) => {
       type: ref.sharedType?.toLowerCase(),
       thumbnail: ref.thumbnail,
       mediaType: ref.mediaType,
+      title: ref.title,
+      artist: ref.artist || ref.channelTitle || (ref.subtitle || '').trim(),
+      videoId: ref.videoId || ref.id,
+      metadataType: ref.type || ref.metadataType,
     } : null,
     reactions: {
       like: post.reactions?.like || 0,

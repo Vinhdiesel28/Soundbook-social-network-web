@@ -189,18 +189,16 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(userDetails);
 
+        Optional<UserProfile> profileOpt = userProfileRepository.findById(user.getId());
+
         return AuthResponse.builder()
                 .token(jwtToken)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .displayName(user.getDisplayName())
                 .role(user.getRole().name())
-                .avatarUrl(userProfileRepository.findById(user.getId())
-                        .map(UserProfile::getAvatarUrl)
-                        .orElse(null))
-                .username(userProfileRepository.findById(user.getId())
-                        .map(UserProfile::getUsername)
-                        .orElse(null))
+                .avatarUrl(profileOpt.map(UserProfile::getAvatarUrl).orElse(null))
+                .username(profileOpt.map(UserProfile::getUsername).orElse(null))
                 .onboardingCompleted(userOnboardingRepository.findById(user.getId())
                         .map(onboarding -> Boolean.TRUE.equals(onboarding.getTasteDnaReady()))
                         .orElse(false))
