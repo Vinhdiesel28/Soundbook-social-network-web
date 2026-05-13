@@ -16,8 +16,4 @@ export const GOOGLE_CLIENT_ID = String(
   import.meta.env.VITE_GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID
 ).trim();
 
-export const GOOGLE_API_KEY = String(
-  import.meta.env.VITE_GOOGLE_API_KEY || 'AIzaSyBns0hSOFq6L_E8LtTBRzpUVJG0KvptfFk'
-).trim();
-
 export const isGoogleAuthConfigured = Boolean(GOOGLE_CLIENT_ID);
