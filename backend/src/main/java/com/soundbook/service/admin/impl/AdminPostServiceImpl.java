@@ -13,9 +13,11 @@ import com.soundbook.entity.Comment;
 import com.soundbook.entity.Post;
 import com.soundbook.entity.PostMedia;
 import com.soundbook.entity.Reaction;
+import com.soundbook.entity.enums.CommentStatus;
 import com.soundbook.entity.enums.PostStatus;
 import com.soundbook.entity.enums.ReactionType;
 import com.soundbook.entity.enums.TargetType;
+import com.soundbook.exception.ResourceNotFoundException;
 import com.soundbook.repository.CommentRepository;
 import com.soundbook.repository.PostRepository;
 import com.soundbook.repository.ReactionRepository;
@@ -150,18 +152,49 @@ public class AdminPostServiceImpl implements AdminPostService
 
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
 
-        Page<Comment> commentPage = commentRepository.findByPostId(postId, pageable);
+        // Use Admin method (includes deleted)
+        Page<Comment> commentPage = commentRepository.findByPostIdAndParentIsNullOrderByCreatedAtDescAdmin(postId, pageable);
 
-        Page<AdminCommentResponse> responsePage = commentPage.map(comment -> AdminCommentResponse.builder()
-                .id(comment.getId())
-                .postId(comment.getPost().getId())
-                .authorId(comment.getUser().getId())
-                .authorName(comment.getUser().getDisplayName())
-                .content(comment.getContent())
-                .createdAt(comment.getCreatedAt())
-                .build());
+        Page<AdminCommentResponse> responsePage = commentPage.map(this::mapToAdminCommentResponse);
 
         return PageMapper.toPageResponse(responsePage);
+    }
+
+    @Override
+    public java.util.List<AdminCommentResponse> getCommentReplies(Long commentId) {
+        // Use Admin method (includes deleted)
+        java.util.List<Comment> replies = commentRepository.findByParent_IdOrderByCreatedAtAscAdmin(commentId);
+        
+        return replies.stream()
+                .map(this::mapToAdminCommentResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private AdminCommentResponse mapToAdminCommentResponse(Comment comment) {
+        return AdminCommentResponse.builder()
+                .id(comment.getId())
+                .postId(comment.getPost().getId())
+                .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
+                .authorId(comment.getUser().getId())
+                .authorName(comment.getUser().getDisplayName())
+                .authorAvatar(comment.getUser().getProfile() != null ? comment.getUser().getProfile().getAvatarUrl() : null)
+                .content(comment.getContent())
+                .status(comment.getStatus())
+                // Count ALL replies for admin
+                .replyCount(commentRepository.countAllByParentId(comment.getId()))
+                .createdAt(comment.getCreatedAt())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void deleteComment(Long id)
+    {
+        Comment comment = commentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy comment"));
+
+        comment.setStatus(CommentStatus.DELETED);
+        commentRepository.save(comment);
     }
 
     private AdminPostResponse mapToAdminPostResponse(Post post)

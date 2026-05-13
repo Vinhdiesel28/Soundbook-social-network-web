@@ -121,10 +121,12 @@ const Newsfeed = () => {
       try { playerRef.current?.pauseVideo?.(); } catch (e) { /* ignore */ }
       setPlayingId(null);
     } else {
-      // Start new video - call loadVideoById DIRECTLY in click handler
+      // Start new video
       const targetPost = posts.find(p => p.id === id);
       const videoId = getPostVideoId(targetPost);
-      if (videoId && playerRef.current) {
+      const isAudio = targetPost?.type === 'audio' || targetPost?.type === 'music_quick_note';
+
+      if (videoId && playerRef.current && isAudio) {
         try {
           playerRef.current.unMute?.();
           playerRef.current.setVolume?.(100);
@@ -132,6 +134,9 @@ const Newsfeed = () => {
         } catch (e) {
           console.error('loadVideoById error:', e);
         }
+      } else if (!isAudio) {
+        // For video posts, stop the global player so it doesn't double play
+        try { playerRef.current?.stopVideo?.(); } catch (e) { /* ignore */ }
       }
       setPlayingId(id);
     }

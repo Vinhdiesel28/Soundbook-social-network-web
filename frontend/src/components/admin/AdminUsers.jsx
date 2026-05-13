@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Edit, Eye, Trash2, X } from 'lucide-react';
 import { getUsers, getUserById, createUser, updateUser, deleteUser } from '../../services/adminApi';
+import { resolveUrl } from '../../services/auth';
+import { fallbackAvatar } from '../../utils/feedNormalizers';
 
 const AdminUsers = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -14,9 +19,10 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
   const [detailUser, setDetailUser] = useState(null);
   const [formData, setFormData] = useState({ email: '', password: '', displayName: '', role: 'USER', status: 'ACTIVE', removeAvatar: false, removeCover: false, removeBio: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isFirstMount = useRef(true);
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(1);
   }, []);
 
   useEffect(() => {
@@ -25,15 +31,20 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
     }
   }, [initialSearchQuery]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = currentPage) => {
     try {
       setLoading(true);
-      const res = await getUsers();
+      const res = await getUsers({ page, size: 10, keyword: searchQuery });
       const payloadData = res.data || res;
       if (payloadData && payloadData.content) {
         setUsers(payloadData.content);
+        setTotalPages(payloadData.totalPages || 1);
+        setTotalElements(payloadData.totalElements || 0);
+        setCurrentPage(page);
       } else if (Array.isArray(payloadData)) {
         setUsers(payloadData);
+        setTotalPages(1);
+        setTotalElements(payloadData.length);
       }
     } catch (error) {
       console.error("Failed to fetch users:", error);
@@ -41,6 +52,17 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetchUsers(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
@@ -121,7 +143,7 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
   };
 
   return (
-    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden animate-in fade-in duration-300 relative">
+    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden relative">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="font-bold text-lg">{t('admin.title.users')}</h3>
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -140,7 +162,7 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[500px]">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase tracking-wider text-text-muted border-b border-gray-200 dark:border-gray-800">
@@ -153,15 +175,15 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-            {loading ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">Loading...</td></tr> : users.length === 0 ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">No users found</td></tr> : users.filter(user => 
-              user.id?.toString() === searchQuery ||
-              (user.displayName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
-              (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-            ).map(user => (
+            {loading ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">Loading...</td></tr> : users.length === 0 ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">No users found</td></tr> : users.map(user => (
               <tr key={user.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                 <td className="px-6 py-4 font-medium text-sm flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary-500 overflow-hidden flex items-center justify-center shrink-0">
-                    {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-xs font-bold">{user.displayName?.[0] || 'U'}</span>}
+                  <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 ${!(user.avatarUrl || user.avatar || user.avatar_url || user.avatarPath || user.profilePicture || user.image || user.picture || user.authorAvatar) ? fallbackAvatar(user.id || user.userId) : 'bg-primary-500'}`}>
+                    {(user.avatarUrl || user.avatar || user.avatar_url || user.avatarPath || user.profilePicture || user.image || user.picture || user.authorAvatar) ? (
+                      <img src={resolveUrl(user.avatarUrl || user.avatar || user.avatar_url || user.avatarPath || user.profilePicture || user.image || user.picture || user.authorAvatar)} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white text-xs font-bold">{user.displayName?.[0] || 'U'}</span>
+                    )}
                   </div>
                   {user.displayName}
                 </td>
@@ -189,6 +211,51 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
           </tbody>
         </table>
       </div>
+      
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <p className="text-sm text-text-muted">Tổng cộng {totalElements} người dùng</p>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => fetchUsers(currentPage - 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang trước
+            </button>
+            <div className="flex items-center gap-1.5 text-sm font-semibold">
+              <span>Trang</span>
+              <input 
+                type="number"
+                min={1}
+                max={totalPages}
+                defaultValue={currentPage}
+                key={currentPage}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt(e.currentTarget.value);
+                    if (val >= 1 && val <= totalPages) fetchUsers(val);
+                  }
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.currentTarget.value);
+                  if (val >= 1 && val <= totalPages && val !== currentPage) fetchUsers(val);
+                  else e.currentTarget.value = currentPage;
+                }}
+                className="w-12 py-0.5 text-center border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span>/ {totalPages}</span>
+            </div>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => fetchUsers(currentPage + 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang sau
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CREATE MODAL */}
       {showCreateModal && (
@@ -304,8 +371,8 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
             </div>
             
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-primary-500 overflow-hidden shrink-0 shadow-sm border-2 border-white dark:border-gray-800">
-                {detailUser.avatarUrl ? <img src={detailUser.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="w-full h-full flex items-center justify-center text-white text-xl font-bold">{detailUser.displayName?.[0] || 'U'}</span>}
+              <div className={`w-16 h-16 rounded-full overflow-hidden shrink-0 shadow-sm border-2 border-white dark:border-gray-800 flex items-center justify-center ${!detailUser.avatarUrl ? fallbackAvatar(detailUser.id) : 'bg-primary-500'}`}>
+                {detailUser.avatarUrl ? <img src={resolveUrl(detailUser.avatarUrl)} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-xl font-bold">{detailUser.displayName?.[0] || 'U'}</span>}
               </div>
               <div>
                 <h4 className="font-bold text-lg">{detailUser.displayName}</h4>

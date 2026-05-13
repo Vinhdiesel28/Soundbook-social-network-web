@@ -1,9 +1,10 @@
-import { Lock, MoreHorizontal, Pencil, Sparkles, Trash2, MessageSquareOff, Send, Flag } from 'lucide-react';
+import { Lock, MoreHorizontal, Pencil, Sparkles, Trash2, MessageSquareOff, Send, Flag, Smile, Image, Music, Book, Search, Loader2, X } from 'lucide-react';
 import PostHeaderBar from './PostHeaderBar';
 import PostMediaCard from './PostMediaCard';
 import PostReactionsBar from './PostReactionsBar';
 import PostComments from './PostComments';
 import { postsApi } from '../../services/posts';
+import { interactionsApi } from '../../services/interactionsApi';
 import ModalShell from '../common/ModalShell';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ReportModal from '../common/ReportModal';
@@ -44,8 +45,20 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
     visibility: post.original?.visibility || 'PUBLIC',
     moodTag: post.original?.moodTag || '',
     mediaUrl: post.media?.coverUrl || '',
+    mediaType: post.media?.type || 'IMAGE',
     commentsEnabled: post.commentsEnabled !== false,
+    metadata: post.original?.metadata || null,
   });
+  const [showEmojiPickerEdit, setShowEmojiPickerEdit] = useState(false);
+  const [showEmojiPickerShare, setShowEmojiPickerShare] = useState(false);
+
+  // Media Edit States
+  const [searchType, setSearchType] = useState(null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
 
   useEffect(() => {
     setLivePost(post);
@@ -54,8 +67,13 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
       visibility: post.original?.visibility || 'PUBLIC',
       moodTag: post.original?.moodTag || '',
       mediaUrl: post.media?.coverUrl || '',
+      mediaType: post.media?.type || 'IMAGE',
       commentsEnabled: post.commentsEnabled !== false,
+      metadata: post.original?.metadata || null,
     });
+    setSelectedFile(null);
+    setFilePreview(null);
+    setSearchType(null);
   }, [post]);
 
   const setUpdatedPost = (data, meta = { action: 'update' }) => {
@@ -84,12 +102,20 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
   };
 
   const handleReact = async (reactionType) => {
-    const result = await runAction(() => postsApi.react(livePost.id, reactionType));
-    if (result) setUpdatedPost(result);
+    // Ensure uppercase for backend
+    const apiType = String(reactionType).toUpperCase();
+    await runAction(async () => {
+      await interactionsApi.reactToPost(livePost.id, apiType);
+      
+      // Since interactionsApi returns void, we refresh the post info to get new counts
+      // We can use postsApi.getPostById which we just added
+      const updated = await postsApi.getPostById(livePost.id);
+      if (updated) setUpdatedPost(updated);
+    });
   };
 
-  const handleComment = async (content) => {
-    const result = await runAction(() => postsApi.comment(livePost.id, content), { keepMenu: true });
+  const handleComment = async (content, parentId = null) => {
+    const result = await runAction(() => interactionsApi.addComment(livePost.id, content, parentId), { keepMenu: true });
     if (!result) return;
     const newComment = normalizeComment(result);
     setLivePost(prev => ({
@@ -101,6 +127,18 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
       },
     }));
     onChanged?.(newComment, { action: 'comment', postId: livePost.id });
+    return result;
+  };
+
+  const handleDeleteComment = (commentId) => {
+    setLivePost(prev => ({
+      ...prev,
+      comments: (prev.comments || []).filter(c => c.id !== commentId),
+      reactions: {
+        ...(prev.reactions || {}),
+        comments: Math.max(0, (prev.reactions?.comments || 0) - 1),
+      },
+    }));
   };
 
   const submitShare = async () => {
@@ -135,17 +173,109 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
     if (result) setUpdatedPost(result);
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setFilePreview(URL.createObjectURL(file));
+      setSearchType(null);
+      setEditForm(prev => ({ ...prev, mediaType: file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE', metadata: null }));
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+    try {
+      setSearching(true);
+      if (searchType === 'MUSIC') {
+        const { searchYouTubeVideos } = await import('../../services/youtube');
+        const data = await searchYouTubeVideos(query);
+        setResults(data);
+      } else {
+        const { searchGoogleBooks, normalizeBook } = await import('../../services/books');
+        const data = await searchGoogleBooks(query);
+        setResults(data.map(normalizeBook));
+      }
+    } catch (err) {
+      console.error('Search failed', err);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!searchType || !query.trim()) {
+      setResults([]);
+      return;
+    }
+    const timer = setTimeout(() => handleSearch(), 600);
+    return () => clearTimeout(timer);
+  }, [query, searchType]);
+
+  const selectMedia = (item) => {
+    const isMusic = searchType === 'MUSIC';
+    const title = item.snippet?.title || item.title || 'Untitled';
+    const rawVideoId = item.id?.videoId || (typeof item.id === 'string' ? item.id : '');
+    const url = rawVideoId ? `https://www.youtube.com/watch?v=${rawVideoId}` : item.previewLink || item.url || '';
+    const thumbUrl = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || item.thumbnail || '';
+    const thumbMatch = thumbUrl.match(/\/vi\/([a-zA-Z0-9_-]{11})\//);
+    const videoId = rawVideoId || (thumbMatch ? thumbMatch[1] : '');
+    const subtitle = item.snippet?.channelTitle || (Array.isArray(item.authors) ? item.authors.join(', ') : item.authors) || '';
+
+    setEditForm(prev => ({
+      ...prev,
+      mediaUrl: url,
+      mediaType: isMusic ? 'VIDEO' : 'IMAGE',
+      metadata: {
+        type: isMusic ? 'youtube' : 'google_books',
+        title,
+        subtitle,
+        artist: subtitle,
+        thumbnail: thumbUrl,
+        id: videoId,
+        videoId,
+        url
+      }
+    }));
+    setSelectedFile(null);
+    setFilePreview(null);
+    setResults([]);
+    setSearchType(null);
+    setQuery('');
+  };
 
   const saveEdit = async () => {
-    const result = await runAction(() => postsApi.update(livePost.id, {
-      type: toApiType(livePost.type),
+    let finalMediaUrl = editForm.mediaUrl;
+
+    if (selectedFile) {
+      try {
+        setBusy(true);
+        const uploadedUrl = await postsApi.uploadMedia(selectedFile);
+        finalMediaUrl = uploadedUrl;
+      } catch (err) {
+        setActionError('Không thể tải tập tin lên.');
+        setBusy(false);
+        return;
+      }
+    }
+
+    const payload = {
       caption: editForm.caption,
       visibility: editForm.visibility,
       moodTag: editForm.moodTag,
-      mediaUrl: editForm.mediaUrl,
-      mediaType: 'IMAGE',
+      mediaUrl: finalMediaUrl,
+      mediaType: editForm.mediaType,
       commentsEnabled: editForm.commentsEnabled,
-    }));
+    };
+
+    if (editForm.metadata) {
+      payload.refJson = JSON.stringify(editForm.metadata);
+    }
+
+    const result = await runAction(() => postsApi.update(livePost.id, payload));
     if (result) {
       setUpdatedPost(result);
       setEditing(false);
@@ -215,39 +345,19 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
           setIsDetailOpen(true);
         }}
       >
-        {editing ? (
-          <div className="mb-4 space-y-3 rounded-2xl border border-primary-500/20 bg-primary-500/5 p-3">
-            <textarea value={editForm.caption} onChange={(event) => setEditForm(prev => ({ ...prev, caption: event.target.value }))} rows={4} className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none dark:border-gray-700 dark:bg-gray-900" />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <select value={editForm.visibility} onChange={(event) => setEditForm(prev => ({ ...prev, visibility: event.target.value }))} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
-                <option value="PUBLIC">Công khai</option>
-                <option value="FRIENDS">Bạn bè</option>
-                <option value="PRIVATE">Riêng tư</option>
-              </select>
-              <input value={editForm.moodTag} onChange={(event) => setEditForm(prev => ({ ...prev, moodTag: event.target.value }))} placeholder="Mood/tag" className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900" />
-              <input value={editForm.mediaUrl} onChange={(event) => setEditForm(prev => ({ ...prev, mediaUrl: event.target.value }))} placeholder="URL ảnh/cover" className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900" />
-            </div>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editForm.commentsEnabled} onChange={(event) => setEditForm(prev => ({ ...prev, commentsEnabled: event.target.checked }))} /> Cho phép bình luận</label>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setEditing(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800">Hủy</button>
-              <button onClick={saveEdit} disabled={busy} className="rounded-lg bg-primary-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">Lưu</button>
-            </div>
-          </div>
-        ) : (
-          livePost.content &&
+        {livePost.content &&
           livePost.content.trim().toLowerCase() !== (livePost.reason || '').trim().toLowerCase() && (
             <p className="text-sm mb-4 leading-relaxed whitespace-pre-line group-hover/post:text-primary-500 transition-colors">{livePost.content}</p>
-          )
-        )}
+          )}
 
         <PostMediaCard post={livePost} isPlaying={isPlaying} onTogglePlay={onTogglePlay} />
       </div>
 
       {livePost.commentsEnabled === false ? <div className="mb-2 mt-3 flex items-center gap-2 text-xs text-text-muted"><Lock size={13} /> Bình luận đang đóng</div> : null}
 
-      <PostReactionsBar post={livePost} onReact={handleReact} onFocusComment={() => setCommentFocusTick(tick => tick + 1)} onShare={() => setShareOpen(true)} onViewReactions={() => setIsReactionModalOpen(true)} />
+      <PostReactionsBar post={livePost} onReact={handleReact} onFocusComment={() => setIsDetailOpen(true)} onShare={() => setShareOpen(true)} onViewReactions={() => setIsReactionModalOpen(true)} />
 
-      <PostComments comments={comments} enabled={livePost.commentsEnabled !== false} onSubmitComment={handleComment} focusSignal={commentFocusTick} />
+
 
       <ModalShell
         open={shareOpen}
@@ -256,6 +366,49 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
         onClose={() => setShareOpen(false)}
         footer={(
           <>
+            <div className="flex-1 flex justify-start relative">
+              <button 
+                type="button" 
+                onClick={() => setShowEmojiPickerShare(!showEmojiPickerShare)}
+                className={`p-2 rounded-lg transition-colors ${showEmojiPickerShare ? 'bg-yellow-500/10 text-yellow-600' : 'text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+              >
+                <Smile size={18} />
+              </button>
+              {showEmojiPickerShare && (
+                <>
+                  <div className="fixed inset-0 z-[110]" onClick={() => setShowEmojiPickerShare(false)} />
+                  <div className="absolute bottom-full left-0 mb-2 p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-64 z-[120] animate-in fade-in zoom-in-95 duration-200">
+                    <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar grid grid-cols-6 gap-1 p-1 text-left">
+                      {[
+                        '😀', '😂', '🤣', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '🤨', '🧐',
+                        '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️',
+                        '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯',
+                        '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫',
+                        '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱',
+                        '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕',
+                        '👍', '👎', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+                        '👇', '✋', '🤚', '🖐️', '🖖', '👋', '💪', '🙏', '🤲', '👐', '🙌', '👏',
+                        '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓',
+                        '💗', '💖', '💘', '💝', '💟', '🔥', '✨', '🌟', '⭐', '🌈', '☁️', '❄️'
+                      ].map(emoji => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            setShareForm(prev => ({ ...prev, caption: prev.caption + emoji }));
+                            setShowEmojiPickerShare(false);
+                          }}
+                          className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-lg"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="absolute bottom-[-6px] left-3 w-3 h-3 bg-white dark:bg-gray-900 border-r border-b border-gray-100 dark:border-gray-800 rotate-45" />
+                  </div>
+                </>
+              )}
+            </div>
             <button type="button" onClick={() => setShareOpen(false)} disabled={busy} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-muted hover:bg-gray-100 disabled:opacity-60 dark:hover:bg-gray-800">Hủy</button>
             <button type="button" onClick={submitShare} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60">
               <Send size={15} /> {busy ? 'Đang chia sẻ...' : 'Chia sẻ'}
@@ -309,6 +462,224 @@ const FeedPost = ({ post, isPlaying, onTogglePlay, onChanged, onDeleted, onShare
         onClose={() => setIsReactionModalOpen(false)}
         targetId={livePost.id}
       />
+
+      <ModalShell
+        open={editing}
+        title="Chỉnh sửa bài viết"
+        description="Cập nhật lại nội dung hoặc cài đặt cho bài viết của bạn."
+        onClose={() => setEditing(false)}
+        footer={(
+          <>
+            <div className="flex-1 flex justify-start items-center gap-3 relative">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center text-[10px] text-white font-bold overflow-hidden">
+                  {livePost.user?.avatarUrl ? <img src={livePost.user.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span>{livePost.user?.name?.[0]}</span>}
+                </div>
+                <span className="text-xs font-bold truncate max-w-[100px]">{livePost.user?.name}</span>
+              </div>
+              <div className="h-6 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1" />
+              <button 
+                type="button" 
+                onClick={() => setShowEmojiPickerEdit(!showEmojiPickerEdit)}
+                className={`p-2 rounded-lg transition-colors ${showEmojiPickerEdit ? 'bg-yellow-500/10 text-yellow-600' : 'text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+              >
+                <Smile size={18} />
+              </button>
+              {showEmojiPickerEdit && (
+                <>
+                  <div className="fixed inset-0 z-[110]" onClick={() => setShowEmojiPickerEdit(false)} />
+                  <div className="absolute bottom-full left-0 mb-2 p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-64 z-[120] animate-in fade-in zoom-in-95 duration-200">
+                    <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar grid grid-cols-6 gap-1 p-1 text-left">
+                      {[
+                        '😀', '😂', '🤣', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '🤨', '🧐',
+                        '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️',
+                        '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯',
+                        '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫',
+                        '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱',
+                        '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕',
+                        '👍', '👎', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+                        '👇', '✋', '🤚', '🖐️', '🖖', '👋', '💪', '🙏', '🤲', '👐', '🙌', '👏',
+                        '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓',
+                        '💗', '💖', '💘', '💝', '💟', '🔥', '✨', '🌟', '⭐', '🌈', '☁️', '❄️'
+                      ].map(emoji => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            setEditForm(prev => ({ ...prev, caption: prev.caption + emoji }));
+                            setShowEmojiPickerEdit(false);
+                          }}
+                          className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-lg"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="absolute bottom-[-6px] left-3 w-3 h-3 bg-white dark:bg-gray-900 border-r border-b border-gray-100 dark:border-gray-800 rotate-45" />
+                  </div>
+                </>
+              )}
+            </div>
+            <button onClick={() => setEditing(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Hủy</button>
+            <button onClick={saveEdit} disabled={busy} className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/20">{busy ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+          </>
+        )}
+      >
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted ml-1">Nội dung bài viết</label>
+            <textarea 
+              value={editForm.caption} 
+              onChange={(event) => setEditForm(prev => ({ ...prev, caption: event.target.value }))} 
+              rows={5} 
+              className="w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900 transition-all" 
+              placeholder="Bạn đang nghĩ gì?"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted ml-1">Quyền riêng tư</label>
+              <select 
+                value={editForm.visibility} 
+                onChange={(event) => setEditForm(prev => ({ ...prev, visibility: event.target.value }))} 
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900 transition-all"
+              >
+                <option value="PUBLIC">Công khai</option>
+                <option value="FRIENDS">Bạn bè</option>
+                <option value="PRIVATE">Riêng tư</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted ml-1">Tâm trạng / Thẻ</label>
+              <input 
+                value={editForm.moodTag} 
+                onChange={(event) => setEditForm(prev => ({ ...prev, moodTag: event.target.value }))} 
+                placeholder="Mood/tag" 
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900 transition-all" 
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted ml-1">Hình ảnh / Nhạc / Sách</label>
+            <div className="flex gap-2">
+              <label className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold text-text-muted cursor-pointer hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 transition-all">
+                <Image size={18} className="text-emerald-500" />
+                <span className="hidden sm:inline">Ảnh / Video</span>
+                <input type="file" className="hidden" accept="image/*,video/*" onChange={handleFileChange} />
+              </label>
+              <button 
+                type="button" 
+                onClick={() => setSearchType(searchType === 'MUSIC' ? null : 'MUSIC')}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold transition-all ${searchType === 'MUSIC' ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-gray-50 text-text-muted hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900'}`}
+              >
+                <Music size={18} className="text-blue-500" />
+                <span className="hidden sm:inline">Nhạc</span>
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setSearchType(searchType === 'BOOK' ? null : 'BOOK')}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold transition-all ${searchType === 'BOOK' ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-gray-50 text-text-muted hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900'}`}
+              >
+                <Book size={18} className="text-orange-500" />
+                <span className="hidden sm:inline">Sách</span>
+              </button>
+            </div>
+          </div>
+
+          {searchType && (
+            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                <input
+                  autoFocus
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={searchType === 'MUSIC' ? "Tìm bài hát trên Youtube..." : "Tìm sách trên Google Books..."}
+                  className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+                />
+                {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary-500" size={16} />}
+              </div>
+              
+              {results.length > 0 && (
+                <div className="max-h-60 overflow-y-auto rounded-xl border border-gray-100 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-950 custom-scrollbar">
+                  {results.map((item, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => selectMedia(item)}
+                      className="flex w-full items-center gap-3 p-2 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-b border-gray-50 dark:border-gray-900 last:border-0"
+                    >
+                      <img 
+                        src={item.snippet?.thumbnails?.default?.url || item.thumbnail || 'https://via.placeholder.com/40'} 
+                        className="h-10 w-10 rounded-lg object-cover bg-gray-100" 
+                        alt="" 
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-sm font-bold">{item.snippet?.title || item.title}</div>
+                        <div className="truncate text-xs text-text-muted">{item.snippet?.channelTitle || (Array.isArray(item.authors) ? item.authors.join(', ') : item.authors)}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {(filePreview || editForm.mediaUrl || editForm.metadata) && !searchType && (
+            <div className="relative group rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-black">
+              {editForm.metadata ? (
+                <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900">
+                  <img src={editForm.metadata.thumbnail} className="w-16 h-16 rounded-lg object-cover shadow-md" alt="" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-primary-500 uppercase tracking-wider mb-1">{editForm.metadata.type === 'youtube' ? 'Đang chọn nhạc' : 'Đang chọn sách'}</div>
+                    <div className="text-sm font-bold truncate">{editForm.metadata.title}</div>
+                    <div className="text-xs text-text-muted truncate">{editForm.metadata.subtitle || editForm.metadata.artist}</div>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setEditForm(prev => ({ ...prev, mediaUrl: '', metadata: null }))}
+                    className="p-2 text-text-muted hover:text-red-500 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {editForm.mediaType === 'VIDEO' ? (
+                    <video src={filePreview || editForm.mediaUrl} className="w-full max-h-60 object-contain" controls />
+                  ) : (
+                    <img src={filePreview || editForm.mediaUrl} className="w-full max-h-60 object-contain" alt="Preview" />
+                  )}
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setFilePreview(null);
+                      setEditForm(prev => ({ ...prev, mediaUrl: '', metadata: null }));
+                    }}
+                    className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500 transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <X size={16} />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <input 
+              type="checkbox" 
+              checked={editForm.commentsEnabled} 
+              onChange={(event) => setEditForm(prev => ({ ...prev, commentsEnabled: event.target.checked }))} 
+              className="w-4 h-4 rounded text-primary-500 focus:ring-primary-500"
+            /> 
+            <span className="text-sm font-medium">Cho phép mọi người bình luận</span>
+          </label>
+        </div>
+      </ModalShell>
 
       <PostDetailModal
         isOpen={isDetailOpen}

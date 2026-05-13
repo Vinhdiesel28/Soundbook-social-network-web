@@ -29,4 +29,9 @@ public interface ReactionRepository extends JpaRepository<Reaction, Long> {
                                                Pageable pageable);
 
     long countByTargetIdAndTargetType(Long targetId, TargetType targetType);
+    
+    @Query("SELECT DISTINCT r.reactionType FROM Reaction r WHERE r.targetId = :targetId AND r.targetType = :targetType")
+    java.util.List<ReactionType> findDistinctReactionTypesByTargetIdAndTargetType(@Param("targetId") Long targetId, @Param("targetType") TargetType targetType);
+
+    Optional<Reaction> findByUserIdAndTargetIdAndTargetType(Long userId, Long targetId, TargetType targetType);
 }

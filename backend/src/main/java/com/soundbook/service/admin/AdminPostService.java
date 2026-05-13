@@ -23,4 +23,8 @@ public interface AdminPostService
     void unhidePost(Long id);
 
     PageResponse<AdminCommentResponse> getPostComments(Long postId, int page, int size);
+
+    java.util.List<AdminCommentResponse> getCommentReplies(Long commentId);
+
+    void deleteComment(Long id);
 }

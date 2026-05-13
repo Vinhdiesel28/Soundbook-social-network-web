@@ -179,7 +179,7 @@ public class FeedService {
         double authorMatchScore = authorMatch == null ? (post.getUser().getId().equals(currentUser.getId()) ? 100 : 0) : authorMatch.getFinalMatch();
         double tasteScore = calculateContentTasteScore(post, currentMusic, currentBook);
         FeedReactionSummaryResponse reactions = buildReactionSummary(post.getId());
-        double engagementScore = Math.min(20, (reactions.getLike() + reactions.getHeart() + reactions.getFire() + reactions.getLaugh() + reactions.getWow() + reactions.getSad() + reactions.getComments()) * 2.5);
+        double engagementScore = Math.min(20, (reactions.getLike() + reactions.getHeart() + reactions.getFire() + reactions.getHaha() + reactions.getWow() + reactions.getSad() + reactions.getAngry() + reactions.getComments()) * 2.5);
         double freshnessScore = freshnessScore(post.getCreatedAt());
         double finalScore = (authorMatchScore * 0.55) + (tasteScore * 0.30) + (engagementScore * 0.10) + (freshnessScore * 0.05);
 
@@ -238,9 +238,10 @@ public class FeedService {
                 .like(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.LIKE))
                 .heart(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.HEART))
                 .fire(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.FIRE))
-                .laugh(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.HAHA))
+                .haha(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.HAHA))
                 .wow(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.WOW))
                 .sad(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.SAD))
+                .angry(reactionRepository.countByTargetTypeAndTargetIdAndReactionType(TargetType.POST, postId, ReactionType.ANGRY))
                 .comments(commentRepository.countByPostId(postId))
                 .shares(postRepository.findById(postId).map(post -> post.getShareCount() == null ? 0L : post.getShareCount()).orElse(0L))
                 .build();
@@ -254,14 +255,16 @@ public class FeedService {
     }
 
     private List<FeedCommentResponse> buildComments(Long postId, User currentUser) {
-        List<Comment> comments = commentRepository.findByPostIdAndParentIsNullOrderByCreatedAtDesc(postId, PageRequest.of(0, 3));
+        List<Comment> comments = commentRepository.findByPostIdAndParentIsNullOrderByCreatedAtDescList(postId);
         Collections.reverse(comments);
         return comments.stream()
                     .map(comment -> FeedCommentResponse.builder()
                         .id(comment.getId())
-                        .user(buildUserResponse(comment.getUser(), currentUser))
+                        .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
+                        .user(buildUserResponse(comment.getUser()))
                         .text(comment.getContent())
                         .createdAt(comment.getCreatedAt())
+                        .replyCount(commentRepository.countByParent_IdAndStatusNot(comment.getId(), com.soundbook.entity.enums.CommentStatus.DELETED))
                         .reactsCount(reactionRepository.countByTargetIdAndTargetType(comment.getId(), TargetType.COMMENT))
                         .currentUserReaction(reactionRepository.findByUser_IdAndTargetTypeAndTargetId(currentUser.getId(), TargetType.COMMENT, comment.getId())
                                 .map(r -> r.getReactionType().name()).orElse(null))
@@ -291,9 +294,10 @@ public class FeedService {
         return post.getReactions().getLike()
                 + post.getReactions().getHeart()
                 + post.getReactions().getFire()
-                + post.getReactions().getLaugh()
+                + post.getReactions().getHaha()
                 + post.getReactions().getWow()
                 + post.getReactions().getSad()
+                + post.getReactions().getAngry()
                 + post.getReactions().getComments()
                 + post.getReactions().getShares();
     }

@@ -1,23 +1,134 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, Send, Flag, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry } from 'lucide-react';
+import { MoreHorizontal, Send, Smile, Flag, Heart, ThumbsUp, Flame, Laugh, Frown, Ghost, Angry, Trash2, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import ReportModal from '../common/ReportModal';
 import ReactionModal from '../common/ReactionModal';
 import { getCurrentUser, resolveUrl } from '../../services/auth';
 import { postsApi } from '../../services/posts';
+import { interactionsApi } from '../../services/interactionsApi';
+import { normalizeComment } from '../../utils/feedNormalizers';
 
-const CommentItem = ({ comment }) => {
+const REACTS = [
+  { key: 'like', api: 'LIKE', icon: ThumbsUp, label: 'Thích', color: 'text-blue-500', bg: 'bg-blue-500' },
+  { key: 'heart', api: 'HEART', icon: Heart, label: 'Yêu thích', color: 'text-rose-500', bg: 'bg-rose-500' },
+  { key: 'fire', api: 'FIRE', icon: Flame, label: 'Nhiệt', color: 'text-orange-500', bg: 'bg-orange-500' },
+  { key: 'haha', api: 'HAHA', icon: Laugh, label: 'Haha', color: 'text-yellow-500', bg: 'bg-yellow-500', noFill: true },
+  { key: 'wow', api: 'WOW', icon: Ghost, label: 'Wow', color: 'text-purple-500', bg: 'bg-purple-500', noFill: true },
+  { key: 'sad', api: 'SAD', icon: Frown, label: 'Buồn', color: 'text-indigo-400', bg: 'bg-indigo-400', noFill: true },
+  { key: 'angry', api: 'ANGRY', icon: Angry, label: 'Phẫn nộ', color: 'text-red-500', bg: 'bg-red-500', noFill: true },
+];
+
+const CommentItem = ({ comment, postOwnerId, onDelete, onReply, postId }) => {
   const { t } = useLanguage();
   const [react, setReact] = useState(comment.currentUserReaction?.toUpperCase() || null);
   const [reactCount, setReactCount] = useState(comment.reacts || 0);
   const [showReacts, setShowReacts] = useState(false);
   const [replying, setReplying] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [showReactors, setShowReactors] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const [topReacts, setTopReacts] = useState(() => {
+    const reactorTypes = comment.reactors ? [...new Set(comment.reactors.map(r => r.reactionType?.toUpperCase()))] : [];
+    if (reactorTypes.length > 0) {
+      return REACTS.filter(r => reactorTypes.includes(r.api)).slice(0, 3);
+    }
+    return comment.reacts > 0 ? [REACTS[0]] : [];
+  });
   const reactTimeout = useRef(null);
+
+  // Nested Replies State
+  const [showReplies, setShowReplies] = useState(false);
+  const [replies, setReplies] = useState([]);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+  const replyInputRef = useRef(null);
+
+  const fetchReplies = async () => {
+    if (loadingReplies) return;
+    try {
+      setLoadingReplies(true);
+      const data = await postsApi.getCommentReplies(postId, comment.id);
+      console.log('API Replies for comment', comment.id, ':', data);
+      const normalized = data.map(normalizeComment);
+      console.log('Normalized replies:', normalized);
+      setReplies(normalized);
+      setShowReplies(true);
+    } catch (err) {
+      console.error('Failed to fetch replies', err);
+    } finally {
+      setLoadingReplies(false);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      const res = await onReply?.(replyText);
+      if (res) {
+        // If it was a success, manually add to local replies if visible
+        if (showReplies) {
+          setReplies(prev => [...prev, normalizeComment(res)]);
+        } else if (comment.replyCount === 0) {
+          // If first reply, just show it
+          setReplies([normalizeComment(res)]);
+          setShowReplies(true);
+        }
+      }
+      setReplyText('');
+      setReplying(false);
+    } catch (err) {
+      console.error('Failed to reply', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleNewComment = (e) => {
+      const { comment: newComment, postId: eventPostId } = e.detail;
+      if (eventPostId === postId && newComment.parentId === comment.id) {
+        // If replies are already shown, add the new one
+        if (showReplies) {
+          setReplies(prev => {
+            if (prev.some(r => r.id === newComment.id)) return prev;
+            return [...prev, newComment];
+          });
+        }
+      }
+    };
+
+    window.addEventListener('soundbook_new_comment', handleNewComment);
+    return () => window.removeEventListener('soundbook_new_comment', handleNewComment);
+  }, [postId, comment.id, showReplies]);
+
+  // Sync props to local state ONLY when props change
+  useEffect(() => {
+    setReactCount(comment.reacts || 0);
+    setReact(comment.currentUserReaction?.toUpperCase() || null);
+  }, [comment.id, comment.reacts, comment.currentUserReaction]);
+
+  // Update topReacts based on reactors list AND current user reaction
+  useEffect(() => {
+    const reactorTypes = (comment.reactors || []).map(r => r.reactionType?.toUpperCase());
+    const myType = String(react || '').toUpperCase();
+    
+    // Combine them and remove nulls/empty
+    const combinedTypes = [...new Set([...reactorTypes, myType])].filter(Boolean);
+    
+    if (combinedTypes.length > 0) {
+      const objects = REACTS.filter(r => combinedTypes.includes(r.api)).slice(0, 3);
+      setTopReacts(objects);
+    } else if (reactCount > 0) {
+      setTopReacts([REACTS[0]]);
+    } else {
+      setTopReacts([]);
+    }
+  }, [comment.reactors, react, reactCount]);
 
   useEffect(() => {
     const handleUserUpdate = () => setCurrentUser(getCurrentUser());
@@ -25,15 +136,7 @@ const CommentItem = ({ comment }) => {
     return () => window.removeEventListener('soundbook_user_updated', handleUserUpdate);
   }, []);
 
-  const REACTS = [
-    { key: 'like', api: 'LIKE', icon: ThumbsUp, label: t('react.like'), color: 'text-blue-500', bg: 'bg-blue-500' },
-    { key: 'heart', api: 'HEART', icon: Heart, label: t('react.heart'), color: 'text-rose-500', bg: 'bg-rose-500' },
-    { key: 'fire', api: 'FIRE', icon: Flame, label: t('react.fire'), color: 'text-orange-500', bg: 'bg-orange-500' },
-    { key: 'haha', api: 'HAHA', icon: Laugh, label: t('react.haha'), color: 'text-yellow-500', bg: 'bg-yellow-500', noFill: true },
-    { key: 'wow', api: 'WOW', icon: Ghost, label: t('react.wow'), color: 'text-purple-500', bg: 'bg-purple-500', noFill: true },
-    { key: 'sad', api: 'SAD', icon: Frown, label: t('react.sad'), color: 'text-indigo-400', bg: 'bg-indigo-400', noFill: true },
-    { key: 'angry', api: 'ANGRY', icon: Angry, label: t('react.angry'), color: 'text-red-500', bg: 'bg-red-500', noFill: true },
-  ];
+
 
   const currentReact = REACTS.find(r => r.api === react);
 
@@ -49,13 +152,32 @@ const CommentItem = ({ comment }) => {
   const handleReact = async (rawType) => {
     const type = rawType.toUpperCase();
     const isRemoving = react === type;
+    
+    // Optimistic update
     setReact(isRemoving ? null : type);
     setReactCount(c => isRemoving ? c - 1 : (react ? c : c + 1));
     setShowReacts(false);
+    
     try {
-      await postsApi.reactComment(comment.id, type);
+      await interactionsApi.reactToComment(comment.id, type);
+      // The socket will eventually broadcast the total count update
     } catch (err) {
       console.error('Failed to react to comment', err);
+      // Rollback optimistic update on error
+      setReact(comment.currentUserReaction?.toUpperCase() || null);
+      setReactCount(comment.reacts || 0);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa bình luận này?")) {
+      try {
+        await interactionsApi.deleteComment(comment.id);
+        onDelete?.(comment.id);
+      } catch (err) {
+        console.error('Failed to delete comment', err);
+        alert('Lỗi khi xóa bình luận');
+      }
     }
   };
 
@@ -68,21 +190,29 @@ const CommentItem = ({ comment }) => {
     users: allReactors.filter(u => u.react === r.api).map(u => u.name),
   })).filter(r => r.users.length > 0);
 
-  const topReacts = REACTS.filter(r => allReactors.some(u => u.react === r.api)).slice(0, 3);
+
 
   return (
     <div className="flex items-start gap-2.5 group/comment">
-      {comment.user.avatarUrl ? (
-        <img src={resolveUrl(comment.user.avatarUrl)} alt={comment.user.name} className="h-7 w-7 rounded-full object-cover flex-shrink-0" />
-      ) : (
-        <div className={`w-7 h-7 rounded-full flex-shrink-0 ${comment.user.avatar} flex items-center justify-center text-[10px] font-bold text-white`}>{(comment.user.name || 'U').charAt(0).toUpperCase()}</div>
-      )}
+      <Link to={`/profile/${comment.user.id}`} className="flex-shrink-0 transition-transform active:scale-95">
+        {comment.user.avatarUrl ? (
+          <img 
+            src={`${resolveUrl(comment.user.avatarUrl)}${String(comment.user.avatarUrl).includes('?') ? '&' : '?'}t=${comment.original?.user?.updatedAt || Date.now()}`} 
+            alt={comment.user.name} 
+            className="h-7 w-7 rounded-full object-cover" 
+          />
+        ) : (
+          <div className={`w-7 h-7 rounded-full ${comment.user.avatar} flex items-center justify-center text-[10px] font-bold text-white`}>{(comment.user.name || 'U').charAt(0).toUpperCase()}</div>
+        )}
+      </Link>
       <div className="flex-1 min-w-0">
 
         <div className="flex items-center gap-2">
           <div className="relative inline-block max-w-full">
             <div className="bg-gray-100 dark:bg-gray-800/70 rounded-2xl px-3 py-2 flex flex-col">
-              <span className="text-[13px] font-semibold">{comment.user.name}</span>
+              <Link to={`/profile/${comment.user.id}`} className="text-[13px] font-semibold hover:text-primary-500 transition-colors">
+                {comment.user.name}
+              </Link>
               <span className="text-[13px] leading-snug">{comment.text}</span>
             </div>
           </div>
@@ -96,14 +226,28 @@ const CommentItem = ({ comment }) => {
               <MoreHorizontal size={16} />
             </button>
             {showMenu && (
-              <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 min-w-[140px]">
-                <button
-                  onClick={() => { setShowMenu(false); setIsReportModalOpen(true); }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-xs text-rose-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
-                >
-                  <Flag size={12} />
-                  {t('comment.report')}
-                </button>
+              <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 min-w-[140px] p-1">
+                {/* Delete option: if I wrote it OR I own the post */}
+                {(currentUser?.id === comment.user.id || currentUser?.id === postOwnerId) && (
+                  <button
+                    onClick={() => { setShowMenu(false); handleDelete(); }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition-colors font-medium"
+                  >
+                    <Trash2 size={12} />
+                    Xóa bình luận
+                  </button>
+                )}
+
+                {/* Report option: if it is NOT my comment */}
+                {currentUser?.id !== comment.user.id && (
+                  <button
+                    onClick={() => { setShowMenu(false); setIsReportModalOpen(true); }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition-colors font-medium"
+                  >
+                    <Flag size={12} />
+                    {t('comment.report')}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -143,7 +287,10 @@ const CommentItem = ({ comment }) => {
 
           {/* Reply */}
           <button
-            onClick={() => setReplying(r => !r)}
+            onClick={() => {
+              setReplying(true);
+              setReplyText(`@${comment.user.name} `);
+            }}
             className="text-[11px] font-semibold text-text-muted hover:text-primary-500 transition-colors"
           >
             {t('comment.reply')}
@@ -157,15 +304,22 @@ const CommentItem = ({ comment }) => {
               >
                 <span className="text-text-muted font-medium mr-1.5">{reactCount}</span>
                 <div className="flex -space-x-1">
-                  {topReacts.map((r, i) => (
-                    <div key={i} style={{ zIndex: 3 - i }} className={`p-0.5 bg-white dark:bg-gray-800 rounded-full ring-[1.5px] ring-white dark:ring-gray-800`}>
-                      <r.icon
-                        size={14}
-                        fill={r.noFill ? "none" : "currentColor"}
-                        className={r.color}
-                      />
+                  {topReacts.length > 0 ? (
+                    topReacts.map((r, i) => (
+                      <div key={i} style={{ zIndex: 3 - i }} className={`p-0.5 bg-white dark:bg-gray-800 rounded-full ring-[1.5px] ring-white dark:ring-gray-800`}>
+                        <r.icon
+                          size={14}
+                          fill={r.noFill ? "none" : "currentColor"}
+                          className={r.color}
+                        />
+                      </div>
+                    ))
+                  ) : (
+                    /* Fallback to default like icon if we have count but no specific reactor data yet */
+                    <div className="p-0.5 bg-white dark:bg-gray-800 rounded-full ring-[1.5px] ring-white dark:ring-gray-800">
+                      <ThumbsUp size={14} fill="currentColor" className="text-blue-500" />
                     </div>
-                  ))}
+                  )}
                 </div>
               </button>
 
@@ -198,21 +352,114 @@ const CommentItem = ({ comment }) => {
             </div>
             <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-800/70 rounded-full px-3 py-1 gap-2">
               <input
+                ref={replyInputRef}
                 autoFocus
                 type="text"
                 value={replyText}
                 onChange={e => setReplyText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSendReply(); }}
                 placeholder={t('comment.reply_placeholder').replace('{name}', comment.user.name)}
                 className="flex-1 bg-transparent text-xs outline-none text-text-color placeholder:text-text-muted"
               />
+              
+              <div className="relative">
+                <button 
+                  type="button" 
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={`transition-colors shrink-0 ${showEmojiPicker ? 'text-primary-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                >
+                  <Smile size={14} />
+                </button>
+
+                {showEmojiPicker && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowEmojiPicker(false)}
+                    />
+                    <div className="absolute bottom-full right-0 mb-3 p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-64 z-20 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar grid grid-cols-6 gap-1 p-1">
+                        {[
+                          '😀', '😂', '🤣', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '🤨', '🧐',
+                          '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️',
+                          '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯',
+                          '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫',
+                          '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱',
+                          '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕',
+                          '👍', '👎', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+                          '👇', '✋', '🤚', '🖐️', '🖖', '👋', '💪', '🙏', '🤲', '👐', '🙌', '👏',
+                          '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓',
+                          '💗', '💖', '💘', '💝', '💟', '🔥', '✨', '🌟', '⭐', '🌈', '☁️', '❄️'
+                        ].map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setReplyText(prev => prev + emoji);
+                              setShowEmojiPicker(false);
+                              replyInputRef.current?.focus();
+                            }}
+                            className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-lg"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="absolute bottom-[-6px] right-3 w-3 h-3 bg-white dark:bg-gray-900 border-r border-b border-gray-100 dark:border-gray-800 rotate-45" />
+                    </div>
+                  </>
+                )}
+              </div>
+
               <button
-                onClick={() => { setReplying(false); setReplyText(''); }}
-                className={`text-primary-500 transition-opacity ${replyText ? 'opacity-100' : 'opacity-30'}`}
-                disabled={!replyText}
+                onClick={handleSendReply}
+                className={`text-primary-500 transition-opacity ${replyText && !isSubmitting ? 'opacity-100' : 'opacity-30'}`}
+                disabled={!replyText || isSubmitting}
               >
-                <Send size={12} />
+                <Send size={12} className={isSubmitting ? 'animate-pulse' : ''} />
               </button>
             </div>
+          </div>
+        )}
+
+        {/* View Replies Button */}
+        {comment.replyCount > 0 && !showReplies && (
+          <div className="ml-8 mt-2">
+            <button 
+              onClick={fetchReplies}
+              className="flex items-center gap-2 text-[11px] font-bold text-primary-500 hover:text-primary-600 transition-colors py-1"
+            >
+              <div className="w-8 border-t-2 border-primary-500/30" />
+              {loadingReplies ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                `Xem ${comment.replyCount} câu trả lời`
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Recursive Replies */}
+        {showReplies && (
+          <div className="ml-8 mt-3 space-y-3 border-l-2 border-gray-100 dark:border-gray-800 pl-4">
+            {replies.length === 0 && <p className="text-[10px] text-text-muted italic">Đang tải hoặc không có phản hồi...</p>}
+            {replies.map(reply => (
+              <CommentItem 
+                key={reply.id} 
+                postId={postId}
+                comment={reply} 
+                postOwnerId={postOwnerId} 
+                onDelete={onDelete}
+                onReply={onReply}
+              />
+            ))}
+            {/* Option to hide */}
+            <button 
+              onClick={() => setShowReplies(false)}
+              className="text-[10px] font-bold text-text-muted hover:text-primary-500 transition-colors"
+            >
+              Ẩn câu trả lời
+            </button>
           </div>
         )}
       </div>

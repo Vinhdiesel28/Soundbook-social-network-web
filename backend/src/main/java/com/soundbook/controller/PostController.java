@@ -27,6 +27,11 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.success(url));
     }
 
+    @GetMapping("/{postId}")
+    public ResponseEntity<ApiResponse<FeedPostResponse>> getPost(Authentication authentication, @PathVariable Long postId) {
+        return ResponseEntity.ok(ApiResponse.success(postService.getPostDetail(authentication.getName(), postId)));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<FeedPostResponse>> createPost(Authentication authentication, @RequestBody PostMutationRequest request) {
         return ResponseEntity.ok(ApiResponse.success(postService.createPost(authentication.getName(), request)));
@@ -56,6 +61,23 @@ public class PostController {
     @PostMapping("/{postId}/comments")
     public ResponseEntity<ApiResponse<FeedCommentResponse>> comment(Authentication authentication, @PathVariable Long postId, @RequestBody PostCommentRequest request) {
         return ResponseEntity.ok(ApiResponse.success(postService.comment(authentication.getName(), postId, request)));
+    }
+
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<ApiResponse<com.soundbook.dto.common.response.PageResponse<FeedCommentResponse>>> getPostComments(
+            Authentication authentication,
+            @PathVariable Long postId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(ApiResponse.success(postService.getPostComments(authentication.getName(), postId, page, size)));
+    }
+
+    @GetMapping("/{postId}/comments/{commentId}/replies")
+    public ResponseEntity<ApiResponse<java.util.List<FeedCommentResponse>>> getCommentReplies(
+            Authentication authentication,
+            @PathVariable Long postId,
+            @PathVariable Long commentId) {
+        return ResponseEntity.ok(ApiResponse.success(postService.getCommentReplies(authentication.getName(), commentId)));
     }
 
     @DeleteMapping("/comments/{commentId}")

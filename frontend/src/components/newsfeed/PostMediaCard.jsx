@@ -1,4 +1,5 @@
 import { Play, Pause, BookOpen } from 'lucide-react';
+import YouTube from 'react-youtube';
 
 const Cover = ({ url, className, fallbackClass, children }) => {
   if (url) {
@@ -11,6 +12,45 @@ const PostMediaCard = ({ post, isPlaying, onTogglePlay }) => {
   if (!post?.media) return null;
 
   const isVideo = post.media?.mediaType === 'VIDEO' || post.media?.coverUrl?.match(/\.(mp4|webm|ogg|mov)$|video\/upload/i);
+  
+  // YouTube detection logic
+  const videoId = post.media?.id || post.media?.ref?.id || post.media?.ref?.videoId;
+
+  if (isVideo && videoId) {
+    if (isPlaying) {
+      return (
+        <div className="mb-4 rounded-2xl overflow-hidden aspect-video relative group bg-black shadow-lg">
+          <YouTube
+            videoId={videoId}
+            containerClassName="w-full h-full"
+            className="w-full h-full"
+            opts={{
+              width: '100%',
+              height: '100%',
+              playerVars: {
+                autoplay: 1,
+                modestbranding: 1,
+                rel: 0,
+              },
+            }}
+            onEnd={onTogglePlay}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="mb-4 rounded-2xl overflow-hidden aspect-video relative group cursor-pointer" onClick={onTogglePlay}>
+        <Cover url={post.media.coverUrl} className="w-full h-full group-hover:scale-105 transition-transform duration-500" fallbackClass="bg-black">
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-black/40 transition-colors">
+            <div className="w-16 h-16 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-2xl transform group-hover:scale-110 transition-transform">
+              <Play size={32} fill="currentColor" className="ml-1" />
+            </div>
+          </div>
+        </Cover>
+      </div>
+    );
+  }
 
   if (isVideo && post.media?.coverUrl) {
     return (
@@ -71,7 +111,8 @@ const PostMediaCard = ({ post, isPlaying, onTogglePlay }) => {
 
   const isBlog = post.type === 'blog';
 
-  if (isBlog && post.media?.coverUrl) {
+  if (isBlog) {
+    if (!post.media?.coverUrl) return null;
     return (
       <div className="mb-4 rounded-2xl overflow-hidden">
         <img 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Ban, Eye, X, Users, MessageSquare, ListMusic, Trash2 } from 'lucide-react';
 import { getRooms, endRoom, getRoomById, getRoomMembers, removeRoomMember, getRoomMessages, deleteRoomMessage, getRoomQueue, removeRoomQueueItem } from '../../services/adminApi';
 import { useToast } from '../../context/ToastContext';
@@ -7,6 +7,9 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailRoom, setDetailRoom] = useState(null);
@@ -16,9 +19,10 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
   const [messages, setMessages] = useState([]);
   const [queue, setQueue] = useState([]);
   const [activeTab, setActiveTab] = useState('info'); // 'info', 'members', 'messages', 'queue'
+  const isFirstMount = useRef(true);
 
   useEffect(() => {
-    fetchRooms();
+    fetchRooms(1);
   }, []);
 
   useEffect(() => {
@@ -27,14 +31,19 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
     }
   }, [initialSearchQuery]);
 
-  const fetchRooms = async () => {
+  const fetchRooms = async (page = currentPage) => {
     try {
       setLoading(true);
-      const res = await getRooms();
+      const res = await getRooms({ page, size: 10, keyword: searchQuery });
       if (res.data && res.data.content) {
         setRooms(res.data.content);
+        setTotalPages(res.data.totalPages || 1);
+        setTotalElements(res.data.totalElements || 0);
+        setCurrentPage(page);
       } else if (res.data && Array.isArray(res.data)) {
         setRooms(res.data);
+        setTotalPages(1);
+        setTotalElements(res.data.length);
       }
     } catch (error) {
       console.error("Failed to fetch rooms:", error);
@@ -42,6 +51,17 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetchRooms(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleEndRoom = async (id) => {
     const ok = await confirm({
@@ -140,7 +160,7 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
   };
 
   return (
-    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden animate-in fade-in duration-300 relative">
+    <div className="bg-surface-color rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden relative">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="font-bold text-lg">{t('admin.title.rooms') || 'Quản lý Phòng'}</h3>
         <div className="relative w-full sm:w-64">
@@ -154,7 +174,7 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
           />
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[500px]">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase tracking-wider text-text-muted border-b border-gray-200 dark:border-gray-800">
@@ -166,11 +186,7 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-            {loading ? <tr><td colSpan="5" className="text-center py-4 text-gray-500">Loading...</td></tr> : rooms.length === 0 ? <tr><td colSpan="5" className="text-center py-4 text-gray-500">No rooms found</td></tr> : rooms.filter(room => 
-              room.id?.toString() === searchQuery ||
-              (room.hostName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
-              (room.name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-            ).map(room => (
+            {loading ? <tr><td colSpan="5" className="text-center py-4 text-gray-500">Loading...</td></tr> : rooms.length === 0 ? <tr><td colSpan="5" className="text-center py-4 text-gray-500">No rooms found</td></tr> : rooms.map(room => (
               <tr key={room.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                 <td className="px-6 py-4 font-medium text-sm flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-primary-500 overflow-hidden flex items-center justify-center shrink-0">
@@ -200,6 +216,51 @@ const AdminRooms = ({ t, initialSearchQuery = '' }) => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <p className="text-sm text-text-muted">Tổng cộng {totalElements} phòng</p>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => fetchRooms(currentPage - 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang trước
+            </button>
+            <div className="flex items-center gap-1.5 text-sm font-semibold">
+              <span>Trang</span>
+              <input 
+                type="number"
+                min={1}
+                max={totalPages}
+                defaultValue={currentPage}
+                key={currentPage}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt(e.currentTarget.value);
+                    if (val >= 1 && val <= totalPages) fetchRooms(val);
+                  }
+                }}
+                onBlur={(e) => {
+                  const val = parseInt(e.currentTarget.value);
+                  if (val >= 1 && val <= totalPages && val !== currentPage) fetchRooms(val);
+                  else e.currentTarget.value = currentPage;
+                }}
+                className="w-12 py-0.5 text-center border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span>/ {totalPages}</span>
+            </div>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => fetchRooms(currentPage + 1)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+            >
+              Trang sau
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DETAIL MODAL */}
       {showDetailModal && detailRoom && detailRoom.info && (

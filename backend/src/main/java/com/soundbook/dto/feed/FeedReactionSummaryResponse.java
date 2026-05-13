@@ -13,9 +13,10 @@ public class FeedReactionSummaryResponse {
     private long like;
     private long heart;
     private long fire;
-    private long laugh;
+    private long haha;
     private long wow;
     private long sad;
+    private long angry;
     private long comments;
     private long shares;
 }

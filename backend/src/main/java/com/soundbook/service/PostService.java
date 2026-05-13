@@ -3,6 +3,7 @@ package com.soundbook.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.soundbook.common.exception.AppException;
 import com.soundbook.common.exception.ErrorCode;
+import com.soundbook.dto.common.response.PageResponse;
 import com.soundbook.dto.feed.FeedCommentResponse;
 import com.soundbook.dto.feed.FeedPostResponse;
 import com.soundbook.dto.socialcontent.PostCommentRequest;
@@ -13,6 +14,8 @@ import com.soundbook.entity.*;
 import com.soundbook.entity.enums.*;
 import com.soundbook.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,10 @@ public class PostService {
     private final ReactionRepository reactionRepository;
     private final FeedService feedService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public FeedPostResponse getPostDetail(String email, Long postId) {
+        return feedService.getPost(email, postId);
+    }
 
     @Transactional
     public FeedPostResponse createPost(String email, PostMutationRequest request) {
@@ -124,10 +131,11 @@ public class PostService {
     public void deletePost(String email, Long postId) {
         User user = currentUser(email);
         Post post = ownPost(user, postId);
-        commentRepository.deleteByPostId(post.getId());
-        reactionRepository.deleteByTargetTypeAndTargetId(TargetType.POST, post.getId());
-        postMediaRepository.deleteByPost_Id(post.getId());
-        postRepository.delete(post);
+//        commentRepository.deleteByPostId(post.getId());
+//        reactionRepository.deleteByTargetTypeAndTargetId(TargetType.POST, post.getId());
+//        postMediaRepository.deleteByPost_Id(post.getId());
+        post.setStatus(PostStatus.DELETED);
+        postRepository.save(post);
     }
 
     @Transactional
@@ -211,13 +219,78 @@ public class PostService {
                 .build());
         return FeedCommentResponse.builder()
                 .id(saved.getId())
+                .parentId(saved.getParent() != null ? saved.getParent().getId() : null)
                 .text(saved.getContent())
                 .createdAt(saved.getCreatedAt())
                 .user(com.soundbook.dto.feed.FeedUserResponse.builder()
                         .userId(user.getId())
                         .displayName(user.getDisplayName())
+                        .avatarUrl(user.getProfile() != null ? user.getProfile().getAvatarUrl() : null)
+                        .username(user.getProfile() != null ? user.getProfile().getUsername() : null)
                         .build())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public com.soundbook.dto.common.response.PageResponse<FeedCommentResponse> getPostComments(String email, Long postId, int page, int size) {
+        User currentUser = currentUser(email);
+        org.springframework.data.domain.Page<Comment> commentPage = commentRepository.findByPostIdAndParentIsNullOrderByCreatedAtDesc(
+                postId, org.springframework.data.domain.PageRequest.of(page, size));
+        java.util.List<Comment> commentList = new java.util.ArrayList<>(commentPage.getContent());
+        
+        java.util.Collections.reverse(commentList);
+        
+        long total = commentRepository.countByPost_IdAndParentIsNullAndStatusNot(postId, CommentStatus.DELETED);
+        
+        return com.soundbook.dto.common.response.PageResponse.<FeedCommentResponse>builder()
+                .content(commentList.stream().map(comment -> FeedCommentResponse.builder()
+                        .id(comment.getId())
+                        .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
+                        .text(comment.getContent())
+                        .createdAt(comment.getCreatedAt())
+                        .replyCount(commentRepository.countByParent_IdAndStatusNot(comment.getId(), CommentStatus.DELETED))
+                        .reactsCount(reactionRepository.countByTargetIdAndTargetType(comment.getId(), TargetType.COMMENT))
+                        .currentUserReaction(reactionRepository.findByUser_IdAndTargetTypeAndTargetId(currentUser.getId(), TargetType.COMMENT, comment.getId())
+                                .map(r -> r.getReactionType().name()).orElse(null))
+                        .user(com.soundbook.dto.feed.FeedUserResponse.builder()
+                                .userId(comment.getUser().getId())
+                                .displayName(comment.getUser().getDisplayName())
+                                .avatarUrl(comment.getUser().getProfile() != null ? comment.getUser().getProfile().getAvatarUrl() : null)
+                                .username(comment.getUser().getProfile() != null ? comment.getUser().getProfile().getUsername() : null)
+                                .build())
+                        .build()).toList())
+                .pageNumber(page)
+                .pageSize(size)
+                .totalElements(total)
+                .totalPages((int) Math.ceil((double) total / size))
+                .isFirst(page == 0)
+                .isLast((long) (page + 1) * size >= total)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<FeedCommentResponse> getCommentReplies(String email, Long commentId) {
+        User currentUser = currentUser(email);
+        java.util.List<Comment> replies = commentRepository.findAll().stream()
+                .filter(c -> c.getParent() != null && c.getParent().getId().equals(commentId) && c.getStatus() != CommentStatus.DELETED)
+                .sorted(java.util.Comparator.comparing(Comment::getCreatedAt))
+                .toList();
+
+        return replies.stream().map(comment -> FeedCommentResponse.builder()
+                .id(comment.getId())
+                .parentId(commentId)
+                .text(comment.getContent())
+                .createdAt(comment.getCreatedAt())
+                .reactsCount(reactionRepository.countByTargetIdAndTargetType(comment.getId(), TargetType.COMMENT))
+                .currentUserReaction(reactionRepository.findByUser_IdAndTargetTypeAndTargetId(currentUser.getId(), TargetType.COMMENT, comment.getId())
+                        .map(r -> r.getReactionType().name()).orElse(null))
+                .user(com.soundbook.dto.feed.FeedUserResponse.builder()
+                        .userId(comment.getUser().getId())
+                        .displayName(comment.getUser().getDisplayName())
+                        .avatarUrl(comment.getUser().getProfile() != null ? comment.getUser().getProfile().getAvatarUrl() : null)
+                        .username(comment.getUser().getProfile() != null ? comment.getUser().getProfile().getUsername() : null)
+                        .build())
+                .build()).toList();
     }
 
     @Transactional
@@ -227,8 +300,9 @@ public class PostService {
         if (!Objects.equals(comment.getUser().getId(), user.getId()) && !Objects.equals(comment.getPost().getUser().getId(), user.getId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
-        reactionRepository.deleteByTargetTypeAndTargetId(TargetType.COMMENT, comment.getId());
-        commentRepository.delete(comment);
+//        reactionRepository.deleteByTargetTypeAndTargetId(TargetType.COMMENT, comment.getId());
+        comment.setStatus(CommentStatus.DELETED);
+        commentRepository.save(comment);
     }
 
     @Transactional

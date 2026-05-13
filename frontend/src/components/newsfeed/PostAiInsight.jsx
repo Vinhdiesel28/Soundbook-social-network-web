@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, RefreshCw, MessageSquare, History, Maximize2, Minimize2, Paperclip } from 'lucide-react';
+import { Sparkles, X, Send, RefreshCw, MessageSquare, History, Maximize2, Minimize2 } from 'lucide-react';
 import { aiApi } from '../../services/ai';
 import { resolveUrl } from '../../services/auth';
 import ReactMarkdown from 'react-markdown';
@@ -90,7 +90,7 @@ const PostAiInsight = ({ isOpen, onClose, post }) => {
           initial={{ x: '100%', opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: '100%', opacity: 0 }}
-          className={`fixed right-6 bottom-6 z-[9999] bg-white dark:bg-gray-900 shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ${isMinimized ? 'h-14 w-64' : 'h-[600px] w-[400px] max-w-[calc(100vw-48px)]'
+          className={`fixed right-6 bottom-6 z-[9999] bg-white dark:bg-gray-900 shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden transition-all duration-300 ${isMinimized ? 'h-14 w-64' : 'h-[600px] w-[400px] max-w-[calc(100vw-48px)]'
             }`}
         >
           {/* Header */}
@@ -183,9 +183,6 @@ const PostAiInsight = ({ isOpen, onClose, post }) => {
               {/* Input Area */}
               <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
                 <div className="relative group">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-color cursor-pointer">
-                    <Paperclip size={18} />
-                  </div>
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -196,7 +193,7 @@ const PostAiInsight = ({ isOpen, onClose, post }) => {
                       }
                     }}
                     placeholder="Hỏi gì đó về bài viết này..."
-                    className="w-full bg-gray-50 dark:bg-gray-800 border-none outline-none rounded-2xl py-3 pl-10 pr-24 text-sm text-text-color placeholder-gray-400 focus:ring-1 focus:ring-primary-500/30 transition-all resize-none max-h-32"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border-none outline-none rounded-2xl py-3 pl-4 pr-24 text-sm text-text-color placeholder-gray-400 focus:ring-1 focus:ring-primary-500/30 transition-all resize-none max-h-32"
                     rows={1}
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">

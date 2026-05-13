@@ -18,6 +18,7 @@ import ReportModal from '../components/common/ReportModal';
 import { getCurrentUser, updateStoredUser } from '../services/auth';
 import { profileApi } from '../services/profile';
 import { searchYouTubeVideos, getYouTubeVideoDetails } from '../services/youtube';
+import { searchGoogleBooks, normalizeBook } from '../services/books';
 import { friendsApi } from '../services/friends';
 import { fallbackAvatar, normalizePost, normalizeShelfItem } from '../utils/feedNormalizers';
 
@@ -66,6 +67,7 @@ const Profile = () => {
   const [deleteShelf, setDeleteShelf] = useState(null);
   const [pinnedVideoDetails, setPinnedVideoDetails] = useState(null);
   const [pinnedModal, setPinnedModal] = useState({ open: false, query: '', loading: false, results: [], error: '' });
+  const [shelfSearch, setShelfSearch] = useState({ query: '', loading: false, results: [], error: '' });
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const targetId = id || 'me';
@@ -413,6 +415,7 @@ const Profile = () => {
           visibility: item?.visibility || 'PUBLIC',
         },
     });
+    setShelfSearch({ query: '', loading: false, results: [], error: '' });
   };
 
   const saveShelfModal = async () => {
@@ -465,12 +468,75 @@ const Profile = () => {
 
       replaceProfile(data, mode === 'add' ? 'Đã thêm mục vào kệ.' : 'Đã lưu chỉnh sửa kệ.');
       setShelfModal({ open: false, mode: 'add', shelfId: 'playlists', item: null, form: emptyMusicForm });
+      setShelfSearch({ query: '', loading: false, results: [], error: '' });
     } catch (err) {
       showNotice('error', err?.message || 'Không thể lưu kệ.');
     } finally {
       setBusy(false);
     }
   };
+
+  const handleShelfSearch = async () => {
+    const isMusic = shelfModal.shelfId === 'playlists';
+    const query = shelfSearch.query.trim();
+    if (!query) return;
+
+    try {
+      setShelfSearch(prev => ({ ...prev, loading: true, error: '' }));
+      if (isMusic) {
+        const results = await searchYouTubeVideos(query, 8);
+        setShelfSearch(prev => ({ ...prev, loading: false, results, error: results.length ? '' : 'Không tìm thấy kết quả.' }));
+      } else {
+        const raw = await searchGoogleBooks(query, 8);
+        const results = raw.map(normalizeBook);
+        setShelfSearch(prev => ({ ...prev, loading: false, results, error: results.length ? '' : 'Không tìm thấy kết quả.' }));
+      }
+    } catch (err) {
+      setShelfSearch(prev => ({ ...prev, loading: false, error: 'Lỗi tìm kiếm.' }));
+    }
+  };
+
+  const selectShelfResult = (item) => {
+    const isMusic = shelfModal.shelfId === 'playlists';
+    if (isMusic) {
+      setShelfModal(prev => ({
+        ...prev,
+        form: {
+          ...prev.form,
+          title: item.title,
+          subtitle: item.channelTitle,
+          coverUrl: item.thumbnail,
+          itemId: item.videoId,
+        }
+      }));
+    } else {
+      setShelfModal(prev => ({
+        ...prev,
+        form: {
+          ...prev.form,
+          title: item.title,
+          author: Array.isArray(item.authors) ? item.authors.join(', ') : item.authors,
+          coverUrl: item.thumbnail,
+          rating: Math.round(item.rating || 5),
+        }
+      }));
+    }
+    setShelfSearch(prev => ({ ...prev, results: [] }));
+  };
+
+  useEffect(() => {
+    const query = shelfSearch.query.trim();
+    if (query.length < 2) {
+      setShelfSearch(prev => ({ ...prev, results: [], error: '' }));
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      handleShelfSearch();
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [shelfSearch.query]);
 
   const deleteShelfItem = async () => {
     if (!deleteShelf?.item) return;
@@ -696,7 +762,7 @@ const Profile = () => {
       <ModalShell
         open={shelfModal.open}
         title={`${shelfModal.mode === 'add' ? 'Thêm' : 'Sửa'} ${currentShelfIsMusic ? 'playlist/bài nhạc' : 'sách/truyện'}`}
-        description="Điền thông tin rồi bấm Lưu."
+        description="Bạn có thể tìm kiếm để điền nhanh thông tin hoặc nhập thủ công bên dưới."
         onClose={() => setShelfModal({ open: false, mode: 'add', shelfId: 'playlists', item: null, form: emptyMusicForm })}
         footer={(
           <>
@@ -707,73 +773,136 @@ const Profile = () => {
           </>
         )}
       >
-        <div className="space-y-3">
-          <input
-            value={shelfModal.form.title || ''}
-            onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, title: event.target.value } }))}
-            placeholder={currentShelfIsMusic ? 'Tên playlist/bài hát' : 'Tên sách/truyện'}
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
-          />
-          <input
-            value={currentShelfIsMusic ? (shelfModal.form.subtitle || '') : (shelfModal.form.author || '')}
-            onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, [currentShelfIsMusic ? 'subtitle' : 'author']: event.target.value } }))}
-            placeholder={currentShelfIsMusic ? 'Nghệ sĩ/mô tả' : 'Tác giả'}
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
-          />
-          <input
-            value={shelfModal.form.coverUrl || ''}
-            onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, coverUrl: event.target.value } }))}
-            placeholder="URL ảnh bìa/cover"
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
-          />
-          {currentShelfIsMusic ? (
-            <div className="grid grid-cols-1 gap-2 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900/60">
-              <label className="text-[11px] font-semibold text-text-muted">YouTube videoId hoặc URL để phát được playlist/bài nhạc</label>
+        <div className="space-y-4">
+          {/* Search Section */}
+          <div className="bg-primary-500/5 p-4 rounded-2xl border border-primary-500/10 space-y-3">
+            <div className="flex gap-2">
               <input
-                value={shelfModal.form.itemId || ''}
-                onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, itemId: event.target.value } }))}
-                placeholder="https://www.youtube.com/watch?v=..."
+                value={shelfSearch.query}
+                onChange={(e) => setShelfSearch(prev => ({ ...prev, query: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleShelfSearch(); }}
+                placeholder={currentShelfIsMusic ? 'Tìm tên bài hát, playlist trên YouTube...' : 'Tìm tên sách, tác giả trên Google Books...'}
+                className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+              />
+              <button
+                type="button"
+                onClick={handleShelfSearch}
+                disabled={shelfSearch.loading}
+                className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60 transition-colors"
+              >
+                {shelfSearch.loading ? '...' : 'Tìm'}
+              </button>
+            </div>
+
+            {shelfSearch.results.length > 0 && (
+              <div className="max-h-60 overflow-y-auto space-y-2 mt-2 pr-1 custom-scrollbar">
+                {shelfSearch.results.map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => selectShelfResult(item)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-2 text-left hover:border-primary-500 hover:bg-white dark:border-gray-700 dark:hover:bg-gray-800 transition-all"
+                  >
+                    <img src={item.thumbnail} alt="" className="h-10 w-14 rounded object-cover flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-bold">{item.title}</p>
+                      <p className="truncate text-[10px] text-text-muted">
+                        {currentShelfIsMusic ? item.channelTitle : (Array.isArray(item.authors) ? item.authors.join(', ') : item.authors)}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full">Chọn</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {shelfSearch.error && <p className="text-xs text-red-500 px-1">{shelfSearch.error}</p>}
+          </div>
+
+          {/* Form Fields */}
+          <div className="space-y-3 pt-2">
+            <div className="grid grid-cols-1 gap-1">
+              <label className="text-[11px] font-bold text-text-muted uppercase px-1">Thông tin chi tiết</label>
+              <input
+                value={shelfModal.form.title || ''}
+                onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, title: event.target.value } }))}
+                placeholder={currentShelfIsMusic ? 'Tên playlist/bài hát' : 'Tên sách/truyện'}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
               />
             </div>
-          ) : null}
-          <select
-            value={shelfModal.form.visibility || 'PUBLIC'}
-            onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, visibility: event.target.value } }))}
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
-          >
-            <option value="PUBLIC">Công khai</option>
-            <option value="FOLLOWERS">Người theo dõi</option>
-            <option value="FRIENDS">Bạn bè</option>
-            <option value="PRIVATE">Chỉ mình tôi</option>
-          </select>
-          {!currentShelfIsMusic ? (
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="number"
-                min="1"
-                max="5"
-                value={shelfModal.form.rating || 5}
-                onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, rating: event.target.value } }))}
-                placeholder="Đánh giá 1-5"
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
-              />
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={shelfModal.form.progressPercent || 0}
-                onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, progressPercent: event.target.value } }))}
-                placeholder="Tiến độ %"
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
-              />
+            
+            <input
+              value={currentShelfIsMusic ? (shelfModal.form.subtitle || '') : (shelfModal.form.author || '')}
+              onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, [currentShelfIsMusic ? 'subtitle' : 'author']: event.target.value } }))}
+              placeholder={currentShelfIsMusic ? 'Nghệ sĩ/mô tả' : 'Tác giả'}
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+            />
+            
+            <input
+              value={shelfModal.form.coverUrl || ''}
+              onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, coverUrl: event.target.value } }))}
+              placeholder="URL ảnh bìa/cover (Tự động điền khi tìm kiếm)"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+            />
+            
+            {currentShelfIsMusic ? (
+              <div className="grid grid-cols-1 gap-2 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900/60">
+                <label className="text-[11px] font-semibold text-text-muted">YouTube videoId (Tự động điền khi tìm kiếm)</label>
+                <input
+                  value={shelfModal.form.itemId || ''}
+                  onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, itemId: event.target.value } }))}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+                />
+              </div>
+            ) : null}
+            
+            <div className="grid grid-cols-1 gap-1">
+              <label className="text-[11px] font-bold text-text-muted uppercase px-1">Quyền riêng tư</label>
+              <select
+                value={shelfModal.form.visibility || 'PUBLIC'}
+                onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, visibility: event.target.value } }))}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+              >
+                <option value="PUBLIC">Công khai</option>
+                <option value="FOLLOWERS">Người theo dõi</option>
+                <option value="FRIENDS">Bạn bè</option>
+                <option value="PRIVATE">Chỉ mình tôi</option>
+              </select>
             </div>
-          ) : null}
-          {shelfModal.form.coverUrl ? (
-            <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
-              <img src={shelfModal.form.coverUrl} alt="Cover preview" className="h-48 w-full object-cover" />
-            </div>
-          ) : null}
+
+            {!currentShelfIsMusic ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-text-muted uppercase px-1">Đánh giá</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={shelfModal.form.rating || 5}
+                    onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, rating: event.target.value } }))}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-text-muted uppercase px-1">Tiến độ (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={shelfModal.form.progressPercent || 0}
+                    onChange={(event) => setShelfModal(prev => ({ ...prev, form: { ...prev.form, progressPercent: event.target.value } }))}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 dark:border-gray-700 dark:bg-gray-900"
+                  />
+                </div>
+              </div>
+            ) : null}
+            
+            {shelfModal.form.coverUrl && (
+              <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 mt-2">
+                <img src={shelfModal.form.coverUrl} alt="Cover preview" className="h-40 w-full object-cover" />
+              </div>
+            )}
+          </div>
         </div>
       </ModalShell>
 

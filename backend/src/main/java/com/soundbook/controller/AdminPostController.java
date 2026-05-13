@@ -87,6 +87,17 @@ public class AdminPostController
                 .build());
     }
 
+    @DeleteMapping("{postId}/comments/{commentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteComment(
+            @PathVariable Long postId,
+            @PathVariable Long commentId)
+    {
+        adminPostService.deleteComment(commentId);
+
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .message("Đã hiển thị lại bài viết thành công")
+                .build());
+    }
 
     @GetMapping("/{id}/reactions")
     public ResponseEntity<ApiResponse<PageResponse<ReactionResponse>>> getPostReactions(
@@ -115,6 +126,18 @@ public class AdminPostController
 
         return ResponseEntity.ok(ApiResponse.<PageResponse<ReactionResponse>>builder()
                 .message("Lấy danh sách tương tác thành công")
+                .data(data)
+                .build());
+    }
+
+    @GetMapping("/{postId}/comments/{commentId}/replies")
+    public ResponseEntity<ApiResponse<java.util.List<AdminCommentResponse>>> getCommentReplies(
+            @PathVariable Long postId,
+            @PathVariable Long commentId)
+    {
+        java.util.List<AdminCommentResponse> data = adminPostService.getCommentReplies(commentId);
+        return ResponseEntity.ok(ApiResponse.<java.util.List<AdminCommentResponse>>builder()
+                .message("Lấy danh sách phản hồi thành công")
                 .data(data)
                 .build());
     }

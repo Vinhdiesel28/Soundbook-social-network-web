@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Image, Book, Send, Music, X, AlertCircle } from 'lucide-react';
+import { Image, Book, Send, Music, X, AlertCircle, Smile } from 'lucide-react';
 import { useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { postsApi } from '../../services/posts';
@@ -17,6 +17,7 @@ const CreatePost = ({ onCreated }) => {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
 
@@ -418,6 +419,53 @@ const CreatePost = ({ onCreated }) => {
             <Book size={18} className={activeTab === 'BOOK' ? 'text-orange-600' : 'text-orange-500'} />
             <span className={`text-sm font-bold hidden sm:block ${activeTab === 'BOOK' ? 'text-orange-600' : ''}`}>Sách</span>
           </button>
+
+          {/* Emoji Picker */}
+          <div className="relative">
+            <button 
+              type="button" 
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer ${showEmojiPicker ? 'bg-yellow-500/10 ring-1 ring-yellow-500/30 text-yellow-600' : 'text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+            >
+              <Smile size={18} className={showEmojiPicker ? 'text-yellow-600' : 'text-yellow-500'} />
+              <span className="text-sm font-bold hidden sm:block">Emoji</span>
+            </button>
+
+            {showEmojiPicker && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
+                <div className="absolute bottom-full left-0 mb-3 p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-64 z-20 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar grid grid-cols-6 gap-1 p-1">
+                    {[
+                      '😀', '😂', '🤣', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '🤨', '🧐',
+                      '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️',
+                      '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯',
+                      '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫',
+                      '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱',
+                      '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕',
+                      '👍', '👎', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+                      '👇', '✋', '🤚', '🖐️', '🖖', '👋', '💪', '🙏', '🤲', '👐', '🙌', '👏',
+                      '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓',
+                      '💗', '💖', '💘', '💝', '💟', '🔥', '✨', '🌟', '⭐', '🌈', '☁️', '❄️'
+                    ].map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          setForm(prev => ({ ...prev, caption: prev.caption + emoji }));
+                          setShowEmojiPicker(false);
+                        }}
+                        className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-lg"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="absolute bottom-[-6px] left-8 w-3 h-3 bg-white dark:bg-gray-900 border-r border-b border-gray-100 dark:border-gray-800 rotate-45" />
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {expanded ? <button type="button" onClick={reset} className="rounded-lg px-3 py-2 text-sm font-semibold text-text-muted hover:bg-gray-100 dark:hover:bg-gray-800"><X size={16} /></button> : null}
