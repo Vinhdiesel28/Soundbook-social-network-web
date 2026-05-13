@@ -1,24 +1,25 @@
-/**
- * Google Books API service
- * Documentation: https://developers.google.com/books/docs/v1/using
- */
+import { GOOGLE_API_KEY } from '../config/env';
 
 /**
  * Search for books using Google Books API
  * @param {string} query The search term
  * @param {number} maxResults Maximum number of results to return
+ * @param {boolean} useKey Whether to use the API Key or not
  * @returns {Promise<Array>} List of book items
  */
-export async function searchGoogleBooks(query, maxResults = 10) {
+export async function searchGoogleBooks(query, maxResults = 10, useKey = true) {
   if (!query || query.trim().length === 0) {
     return [];
   }
 
   try {
-    const response = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${maxResults}`
-    );
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${maxResults}${GOOGLE_API_KEY && useKey ? `&key=${GOOGLE_API_KEY}` : ''}`;
+    const response = await fetch(url);
     
+    if (response.status === 429) {
+      throw new Error('QUOTA_EXCEEDED');
+    }
+
     if (!response.ok) {
       throw new Error('Google Books API request failed');
     }
@@ -27,6 +28,9 @@ export async function searchGoogleBooks(query, maxResults = 10) {
     return data.items || [];
   } catch (error) {
     console.error('Error searching Google Books:', error);
+    if (error.message === 'QUOTA_EXCEEDED') {
+      throw error; 
+    }
     return [];
   }
 }

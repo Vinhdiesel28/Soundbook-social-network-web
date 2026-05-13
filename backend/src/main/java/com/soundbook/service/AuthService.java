@@ -130,6 +130,11 @@ public class AuthService {
             String pictureUrl = (String) payload.get("picture");
 
             User user = userRepository.findByEmail(email).map(existingUser -> {
+                if (existingUser.getStatus().equals(UserStatus.BANNED))
+                {
+                    throw new AppException(ErrorCode.USER_BANNED);
+                }
+
                 boolean changed = false;
 
                 if ((existingUser.getGoogleSub() == null || existingUser.getGoogleSub().isBlank())

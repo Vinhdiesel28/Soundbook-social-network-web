@@ -537,7 +537,10 @@ const Profile = () => {
         setShelfSearch(prev => ({ ...prev, loading: false, results, error: results.length ? '' : 'Không tìm thấy kết quả.' }));
       }
     } catch (err) {
-      setShelfSearch(prev => ({ ...prev, loading: false, error: 'Lỗi tìm kiếm.' }));
+      const errorMsg = err.message === 'QUOTA_EXCEEDED' 
+        ? 'Tìm kiếm quá nhanh. Vui lòng thử lại sau vài giây.' 
+        : 'Lỗi tìm kiếm.';
+      setShelfSearch(prev => ({ ...prev, loading: false, error: errorMsg }));
     }
   };
 
