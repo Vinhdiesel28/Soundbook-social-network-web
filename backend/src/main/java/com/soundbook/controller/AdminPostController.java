@@ -95,7 +95,7 @@ public class AdminPostController
         adminPostService.deleteComment(commentId);
 
         return ResponseEntity.ok(ApiResponse.<Void>builder()
-                .message("Đã hiển thị lại bài viết thành công")
+                .message("Đã xóa bình luận thành công")
                 .build());
     }
 

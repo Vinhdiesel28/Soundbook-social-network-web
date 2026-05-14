@@ -67,6 +67,7 @@ public class AdminUserServiceImpl implements AdminUserService
                 .avatarUrl(profile != null ? profile.getAvatarUrl() : "")
                 .coverUrl(profile != null ? profile.getCoverUrl() : "")
                 .bio(profile != null ? profile.getBio() : "")
+                .pinnedTrackId(profile != null ? profile.getPinnedTrackId() : "")
                 .musicConnected(onboarding != null && onboarding.getMusicConnected())
                 .tasteDnaReady(onboarding != null && onboarding.getTasteDnaReady())
                 .build();

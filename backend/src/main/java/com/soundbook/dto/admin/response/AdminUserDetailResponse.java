@@ -24,6 +24,7 @@ public class AdminUserDetailResponse
     private String avatarUrl;
     private String coverUrl;
     private String bio;
+    private String pinnedTrackId;
 
     private boolean musicConnected;
     private boolean tasteDnaReady;

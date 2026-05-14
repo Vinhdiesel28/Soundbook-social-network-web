@@ -20,7 +20,8 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
     @Query("SELECT r FROM Room r JOIN FETCH r.host h " +
             "WHERE (:keyword IS NULL OR :keyword = '' " +
             "OR LOWER(r.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(h.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            "OR LOWER(h.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR CAST(r.id AS string) = :keyword)")
     Page<Room> searchRooms(@Param("keyword") String keyword, Pageable pageable);
 
     long countByStatus(RoomStatus status);

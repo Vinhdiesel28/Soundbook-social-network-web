@@ -58,11 +58,15 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(value = "SELECT p FROM Post p JOIN FETCH p.user u " +
             "WHERE (:keyword IS NULL OR :keyword = '') " +
             "OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))",
+            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(p.caption) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR CAST(p.id AS string) = :keyword",
             countQuery = "SELECT COUNT(p) FROM Post p JOIN p.user u " +
                     "WHERE :keyword IS NULL OR :keyword = '' " +
                     "OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+                    "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR LOWER(p.caption) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR CAST(p.id AS string) = :keyword")
     Page<Post> searchAllWithAuthor(@Param("keyword") String keyword, Pageable pageable);
 
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);

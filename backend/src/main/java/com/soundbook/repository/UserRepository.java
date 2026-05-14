@@ -46,7 +46,8 @@ public interface UserRepository extends JpaRepository<User, Long>
     @Query("SELECT u FROM User u WHERE " +
             ":keyword IS NULL OR :keyword = '' " +
             "OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
-            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
+            "OR CAST(u.id AS string) = :keyword")
     Page<User> searchUsers(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("SELECT u FROM User u " +

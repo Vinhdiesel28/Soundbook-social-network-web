@@ -3,6 +3,7 @@ import { Search, Edit, Eye, Trash2, X } from 'lucide-react';
 import { getUsers, getUserById, createUser, updateUser, deleteUser } from '../../services/adminApi';
 import { resolveUrl } from '../../services/auth';
 import { fallbackAvatar } from '../../utils/feedNormalizers';
+import { getYouTubeVideoDetails } from '../../services/youtube';
 
 const AdminUsers = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
@@ -19,6 +20,7 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
   const [detailUser, setDetailUser] = useState(null);
   const [formData, setFormData] = useState({ email: '', password: '', displayName: '', role: 'USER', status: 'ACTIVE', removeAvatar: false, removeCover: false, removeBio: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pinnedTrackInfo, setPinnedTrackInfo] = useState(null);
   const isFirstMount = useRef(true);
 
   useEffect(() => {
@@ -78,8 +80,20 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
   const handleViewDetail = async (id) => {
     try {
       const res = await getUserById(id);
-      setDetailUser(res.data || res);
+      const userData = res.data || res;
+      setDetailUser(userData);
+      setPinnedTrackInfo(null);
       setShowDetailModal(true);
+
+      // Fetch pinned track info if exists
+      if (userData.pinnedTrackId) {
+        try {
+          const info = await getYouTubeVideoDetails(userData.pinnedTrackId);
+          if (info) setPinnedTrackInfo(info);
+        } catch (e) {
+          console.error("Failed to fetch pinned track info", e);
+        }
+      }
     } catch (error) {
       console.error(error);
       alert('Lỗi lấy thông tin chi tiết');
@@ -398,8 +412,15 @@ const AdminUsers = ({ t, initialSearchQuery = '' }) => {
                 <span className="col-span-2 italic text-gray-500">{detailUser.bio || 'Chưa cập nhật'}</span>
               </div>
               <div className="grid grid-cols-3 py-2 border-b border-gray-100 dark:border-gray-800">
-                <span className="text-text-muted font-medium">Spotify:</span>
-                <span className="col-span-2">{detailUser.musicConnected ? <span className="text-green-500 font-medium">Đã kết nối</span> : 'Chưa kết nối'}</span>
+                <span className="text-text-muted font-medium">Pinned Track:</span>
+                <span className="col-span-2 font-semibold">
+                  {detailUser.pinnedTrackId ? (
+                    <div className="flex flex-col">
+                      <span className="text-primary-500">{pinnedTrackInfo?.title || detailUser.pinnedTrackId}</span>
+                      {pinnedTrackInfo?.artist && <span className="text-[10px] text-text-muted font-normal">{pinnedTrackInfo.artist}</span>}
+                    </div>
+                  ) : 'Không có'}
+                </span>
               </div>
               <div className="grid grid-cols-3 py-2 border-b border-gray-100 dark:border-gray-800">
                 <span className="text-text-muted font-medium">Ngày tham gia:</span>

@@ -41,12 +41,14 @@ public interface DmThreadRepository extends JpaRepository<DmThread, Long> {
             "OR LOWER(u1.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(u1.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(u2.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(u2.email) LIKE LOWER(CONCAT('%', :keyword, '%'))",
+            "OR LOWER(u2.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR CAST(t.id AS string) = :keyword",
             countQuery = "SELECT COUNT(t) FROM DmThread t JOIN t.user1 u1 JOIN t.user2 u2 " +
                     "WHERE :keyword IS NULL OR :keyword = '' " +
                     "OR LOWER(u1.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                     "OR LOWER(u1.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                     "OR LOWER(u2.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "OR LOWER(u2.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+                    "OR LOWER(u2.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                    "OR CAST(t.id AS string) = :keyword")
     Page<DmThread> searchThreadsWithUsers(@Param("keyword") String keyword, Pageable pageable);
 }

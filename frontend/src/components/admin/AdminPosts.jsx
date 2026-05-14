@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Trash2, Eye, EyeOff, X, MessageCircle, Heart, ChevronDown, ChevronUp } from 'lucide-react';
 import { getPosts, getPostById, deletePost, hidePost, unhidePost, getPostComments, getPostReactions, getCommentReactions, deleteComment, getCommentReplies } from '../../services/adminApi';
 import PostMediaCard from '../newsfeed/PostMediaCard';
-import { normalizePost } from '../../utils/feedNormalizers';
+import { normalizePost, normalizeComment, fallbackAvatar } from '../../utils/feedNormalizers';
 
 const AdminPosts = ({ t, initialSearchQuery = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
@@ -47,12 +47,13 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
       const res = await getPosts({ page, size: 10, keyword: searchQuery });
       const payloadData = res.data || res;
       if (payloadData && payloadData.content) {
-        setPosts(payloadData.content);
+        setPosts(payloadData.content.map(normalizePost));
         setTotalPages(payloadData.totalPages || 1);
         setTotalElements(payloadData.totalElements || 0);
         setCurrentPage(page);
       } else if (Array.isArray(payloadData)) {
-        setPosts(payloadData);
+        const normalized = payloadData.map(normalizePost);
+        setPosts(normalized);
         setTotalPages(1);
         setTotalElements(payloadData.length);
       }
@@ -116,7 +117,7 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
         getPostReactions(id).catch(() => ({ data: { content: [] } }))
       ]);
       setDetailPost(normalizePost(postRes.data));
-      setComments(commentsRes.data?.content || []);
+      setComments((commentsRes.data?.content || []).map(normalizeComment));
       setCommentsTotalPages(commentsRes.data?.totalPages || 1);
       setCommentsTotalElements(commentsRes.data?.totalElements || 0);
       setReactions(reactionsRes.data?.content || []);
@@ -155,7 +156,8 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
     try {
       setLoadingReplies(prev => ({ ...prev, [commentId]: true }));
       const res = await getCommentReplies(detailPost.id, commentId);
-      setExpandedReplies(prev => ({ ...prev, [commentId]: res.data || [] }));
+      const normalized = (res.data || []).map(normalizeComment);
+      setExpandedReplies(prev => ({ ...prev, [commentId]: normalized }));
     } catch (err) {
       console.error("Failed to load replies", err);
     } finally {
@@ -179,7 +181,8 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
     try {
       const nextPage = commentsPage + 1;
       const res = await getPostComments(detailPost.id, nextPage, 10);
-      setComments(prev => [...prev, ...(res.data?.content || [])]);
+      const normalized = (res.data?.content || []).map(normalizeComment);
+      setComments(prev => [...prev, ...normalized]);
       setCommentsPage(nextPage);
       setCommentsTotalPages(res.data?.totalPages || 1);
       setCommentsTotalElements(res.data?.totalElements || 0);
@@ -218,10 +221,24 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
             {loading ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">Loading...</td></tr> : posts.length === 0 ? <tr><td colSpan="6" className="text-center py-4 text-gray-500">No posts found</td></tr> : posts.map(post => (
               <tr key={post.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                <td className="px-6 py-4 font-medium text-sm">{post.authorName || 'Unknown'}</td>
-                <td className="px-6 py-4 text-sm text-text-muted truncate max-w-xs">{post.caption || 'Không có nội dung'}</td>
+                <td className="px-6 py-4 font-medium text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] text-white font-bold overflow-hidden ${post.user?.avatar || 'bg-primary-500'}`}>
+                      {post.user?.avatarUrl ? <img src={post.user.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span>{post.user?.name?.[0]}</span>}
+                    </div>
+                    <span className="truncate max-w-[120px]">{post.user?.name || 'Unknown'}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-text-muted truncate max-w-xs">
+                  {post.sharedPost && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-bold mr-2 uppercase">
+                      Share
+                    </span>
+                  )}
+                  {post.content || 'Không có nội dung'}
+                </td>
                 <td className="px-6 py-4 text-sm">
-                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-semibold">{post.type || 'Standard'}</span>
+                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-semibold uppercase">{post.type || 'Standard'}</span>
                 </td>
                 <td className="px-6 py-4 flex flex-wrap gap-1">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -335,8 +352,57 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                       {detailPost.content && (
                         <p className="text-sm whitespace-pre-wrap leading-relaxed mb-4">{detailPost.content}</p>
                       )}
-                      <PostMediaCard post={detailPost} />
-                      {!detailPost.content && !detailPost.media?.id && !detailPost.media?.coverUrl && (
+                      
+                      {!detailPost.sharedPost && <PostMediaCard post={detailPost} />}
+                      
+                      {detailPost.sharedPost && (
+                        <div className="mt-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 overflow-hidden">
+                          <div className="p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] text-white font-bold overflow-hidden ${fallbackAvatar(detailPost.sharedPost.authorId)}`}>
+                                {detailPost.sharedPost.authorAvatar ? (
+                                  <img src={detailPost.sharedPost.authorAvatar} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>{detailPost.sharedPost.authorName?.[0]}</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-bold truncate">{detailPost.sharedPost.authorName}</div>
+                                <div className="text-[10px] text-text-muted">
+                                  {detailPost.sharedPost.time || 'Vừa xong'}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {detailPost.sharedPost.caption && (
+                              <p className="text-xs mb-3 line-clamp-3 leading-relaxed text-text-color italic">
+                                "{detailPost.sharedPost.caption}"
+                              </p>
+                            )}
+
+                            {detailPost.sharedPost.thumbnail && (
+                              <PostMediaCard 
+                                post={{
+                                  type: detailPost.sharedPost.type,
+                                  media: {
+                                    mediaType: detailPost.sharedPost.mediaType,
+                                    coverUrl: detailPost.sharedPost.thumbnail,
+                                    title: detailPost.sharedPost.title,
+                                    artist: detailPost.sharedPost.artist,
+                                    author: detailPost.sharedPost.artist,
+                                    id: detailPost.sharedPost.metadataType === 'youtube' ? detailPost.sharedPost.videoId : null,
+                                    ref: { 
+                                      id: detailPost.sharedPost.metadataType === 'youtube' ? detailPost.sharedPost.videoId : null 
+                                    }
+                                  }
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {!detailPost.content && !detailPost.media?.id && !detailPost.media?.coverUrl && !detailPost.sharedPost && (
                         <p className="italic text-gray-500 text-sm">Không có nội dung văn bản hoặc media</p>
                       )}
                     </div>
@@ -374,9 +440,9 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                           <div className="flex flex-1 flex-wrap items-center gap-2">
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 rounded-full bg-primary-500 overflow-hidden flex items-center justify-center shrink-0">
-                                {comment.authorAvatar ? <img src={comment.authorAvatar} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-[10px] font-bold">{comment.authorName?.[0] || 'U'}</span>}
+                                {comment.user?.avatarUrl ? <img src={comment.user.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-[10px] font-bold">{comment.user?.name?.[0] || 'U'}</span>}
                               </div>
-                              <p className="text-sm font-bold">{comment.authorName}</p>
+                              <p className="text-sm font-bold">{comment.user?.name}</p>
                             </div>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               comment.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' :
@@ -399,7 +465,7 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                             )}
                           </div>
                         </div>
-                        <p className="text-sm pl-8 mb-2">{comment.content}</p>
+                        <p className="text-sm pl-8 mb-2">{comment.text}</p>
                         
                         <div className="pl-8 flex items-center gap-4">
                           <button 
@@ -449,9 +515,9 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                                 <div className="flex items-center justify-between mb-1">
                                   <div className="flex items-center gap-2">
                                     <div className="w-5 h-5 rounded-full bg-blue-500 overflow-hidden flex items-center justify-center shrink-0">
-                                      {reply.authorAvatar ? <img src={reply.authorAvatar} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-[8px] font-bold">{reply.authorName?.[0] || 'U'}</span>}
+                                      {reply.user?.avatarUrl ? <img src={reply.user.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-[8px] font-bold">{reply.user?.name?.[0] || 'U'}</span>}
                                     </div>
-                                    <p className="text-xs font-bold">{reply.authorName}</p>
+                                    <p className="text-xs font-bold">{reply.user?.name}</p>
                                     <span className="px-1.5 py-0.2 bg-gray-100 dark:bg-gray-800 rounded text-[9px] font-bold text-text-muted">PHẢN HỒI</span>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -476,7 +542,7 @@ const AdminPosts = ({ t, initialSearchQuery = '' }) => {
                                   </div>
                                 </div>
                                 <p className="text-xs pl-7 text-text-muted italic mb-1">Phản hồi bình luận #{comment.id}</p>
-                                <p className="text-sm pl-7">{reply.content}</p>
+                                <p className="text-sm pl-7">{reply.text}</p>
 
                                 {/* Reply Reactions */}
                                 {expandedCommentId === reply.id && (
