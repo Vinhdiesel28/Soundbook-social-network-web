@@ -3,6 +3,7 @@ package com.soundbook.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -34,6 +35,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/",
                                 "/index.html",
@@ -47,11 +49,14 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/google",
-                                "/api/v1/auth/logout",
                                 "/api/v1/integrations/spotify/callback"
                         ).permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "MODERATOR")
-                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers(
+                                "/api/v1/auth/me",
+                                "/api/v1/auth/logout"
+                        ).hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/**").hasRole("USER")
                         .anyRequest().permitAll()
                 )
                 .exceptionHandling(ex -> ex

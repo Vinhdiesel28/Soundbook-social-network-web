@@ -1,6 +1,8 @@
 package com.soundbook.controller;
 
 import com.soundbook.common.dto.ApiResponse;
+import com.soundbook.common.exception.AppException;
+import com.soundbook.common.exception.ErrorCode;
 import com.soundbook.dto.common.request.GoogleLoginRequest;
 import com.soundbook.dto.common.request.LoginRequest;
 import com.soundbook.dto.common.request.RegisterRequest;
@@ -11,6 +13,7 @@ import com.soundbook.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +26,11 @@ public class AuthController {
     private final UserService userService;
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            Authentication authentication,
+            @Valid @RequestBody LoginRequest request
+    ) {
+        rejectIfAlreadyAuthenticated(authentication);
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.<AuthResponse>builder()
                 .code(200)
@@ -33,7 +40,11 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> register(
+            Authentication authentication,
+            @Valid @RequestBody RegisterRequest request
+    ) {
+        rejectIfAlreadyAuthenticated(authentication);
         AuthResponse response = authService.register(request);
         return ResponseEntity.ok(ApiResponse.<AuthResponse>builder()
                 .code(200)
@@ -43,7 +54,11 @@ public class AuthController {
     }
 
     @PostMapping("/google")
-    public ResponseEntity<ApiResponse<AuthResponse>> loginWithGoogle(@RequestBody GoogleLoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> loginWithGoogle(
+            Authentication authentication,
+            @RequestBody GoogleLoginRequest request
+    ) {
+        rejectIfAlreadyAuthenticated(authentication);
         AuthResponse response = authService.loginWithGoogle(request.getIdToken());
         return ResponseEntity.ok(ApiResponse.<AuthResponse>builder()
                 .code(200)
@@ -72,5 +87,13 @@ public class AuthController {
                 .code(200)
                 .message("Logout successful")
                 .build());
+    }
+
+    private void rejectIfAlreadyAuthenticated(Authentication authentication) {
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)) {
+            throw new AppException(ErrorCode.ALREADY_LOGGED_IN);
+        }
     }
 }

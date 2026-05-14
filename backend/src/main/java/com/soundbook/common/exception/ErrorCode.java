@@ -29,6 +29,7 @@ public enum ErrorCode {
     // Lỗi Đăng nhập / Xác thực (401/403)
     UNAUTHENTICATED(401, "Unauthenticated", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(403, "You do not have permission", HttpStatus.FORBIDDEN),
+    ALREADY_LOGGED_IN(409, "Bạn đang đăng nhập. Vui lòng đăng xuất trước khi đăng nhập lại.", HttpStatus.CONFLICT),
     BAD_CREDENTIALS(401, "Incorrect email or password", HttpStatus.UNAUTHORIZED),
     USER_BANNED(403, "Tài khoản của bạn đã bị cấm truy cập. Vui lòng liên hệ quản trị viên.", HttpStatus.FORBIDDEN),
     USER_MOVED(401, "User exists but please log in via Google", HttpStatus.UNAUTHORIZED),

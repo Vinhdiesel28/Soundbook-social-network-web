@@ -45,6 +45,7 @@ public class AuthService {
     private final UserProfileRepository userProfileRepository;
     private final UserOnboardingRepository userOnboardingRepository;
     private final TokenBlacklistService tokenBlacklistService;
+    private final AuthSessionService authSessionService;
 
     @Value("${google.client-id:}")
     private String googleClientId;
@@ -74,6 +75,8 @@ public class AuthService {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, request.getPassword())
         );
+
+        ensureUserIsNotAlreadyLoggedIn(email);
 
         return generateAuthResponse(user);
     }
@@ -130,6 +133,11 @@ public class AuthService {
             String pictureUrl = (String) payload.get("picture");
 
             User user = userRepository.findByEmail(email).map(existingUser -> {
+                if (existingUser.getStatus().equals(UserStatus.DELETED))
+                {
+                    throw new AppException(ErrorCode.USER_DELETED);
+                }
+
                 if (existingUser.getStatus().equals(UserStatus.BANNED))
                 {
                     throw new AppException(ErrorCode.USER_BANNED);
@@ -164,6 +172,8 @@ public class AuthService {
                 return savedUser;
             });
 
+            ensureUserIsNotAlreadyLoggedIn(email);
+
             return generateAuthResponse(user);
         } catch (AppException exception) {
             throw exception;
@@ -174,17 +184,30 @@ public class AuthService {
 
     public void logout(String email, String authorizationHeader) {
         try {
-            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7).trim();
-                if (!token.isEmpty()) {
-                    String tokenEmail = jwtService.extractUsername(token);
-                    if (email == null || email.isBlank() || email.equals(tokenEmail)) {
-                        tokenBlacklistService.blacklistToken(token, jwtService.extractExpiration(token));
-                    }
-                }
+            if (email == null || email.isBlank()) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
             }
-        } catch (Exception ignored) {
-            // Logout must be idempotent: even with an expired/invalid token, the client should be able to clear its local session.
+
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            String token = authorizationHeader.substring(7).trim();
+            if (token.isEmpty() || tokenBlacklistService.isBlacklisted(token)) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            String tokenEmail = jwtService.extractUsername(token);
+            if (tokenEmail == null || !email.equals(tokenEmail)) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            tokenBlacklistService.blacklistToken(token, jwtService.extractExpiration(token));
+            authSessionService.removeSession(tokenEmail, token);
+        } catch (AppException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
         } finally {
             SecurityContextHolder.clearContext();
         }
@@ -193,6 +216,7 @@ public class AuthService {
     private AuthResponse generateAuthResponse(User user) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(userDetails);
+        authSessionService.saveSession(user.getEmail(), jwtToken, jwtService.extractExpiration(jwtToken));
 
         Optional<UserProfile> profileOpt = userProfileRepository.findById(user.getId());
 
@@ -208,6 +232,12 @@ public class AuthService {
                         .map(onboarding -> Boolean.TRUE.equals(onboarding.getTasteDnaReady()))
                         .orElse(false))
                 .build();
+    }
+
+    private void ensureUserIsNotAlreadyLoggedIn(String email) {
+        if (authSessionService.hasActiveSession(email)) {
+            throw new AppException(ErrorCode.ALREADY_LOGGED_IN);
+        }
     }
 
     private void createDefaultProfileAndOnboarding(User user, String avatarUrl) {
